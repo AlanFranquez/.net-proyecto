@@ -6,6 +6,7 @@ using Espectaculos.Application.Commands.CrearOrden;
 using Espectaculos.Application.Commands.CreateEvento;
 using Espectaculos.Application.Commands.PublicarEvento;
 using Espectaculos.Application.Commands.CrearUsuario;
+using Espectaculos.Application.Espacios.Commands.CreateEspacio;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
@@ -134,8 +135,15 @@ builder.Services.AddScoped<IValidator<CrearOrdenCommand>, CrearOrdenValidator>()
 builder.Services.AddScoped<CrearUsuarioHandler>();
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(
-        typeof(CreateUsuarioCommand).Assembly,  // Tu capa Application, donde están los handlers
-        Assembly.GetExecutingAssembly()          // La capa WebApi
+        typeof(CreateEspacioHandler).Assembly,
+        Assembly.GetExecutingAssembly()
+    )
+);
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssemblies(
+        typeof(CreateUsuarioCommand).Assembly,
+        Assembly.GetExecutingAssembly()
     )
 );
 
@@ -146,6 +154,7 @@ builder.Services.AddScoped<IEventoRepository, EventoRepository>();
 builder.Services.AddScoped<IEntradaRepository, EntradaRepository>();
 builder.Services.AddScoped<IOrdenRepository, OrdenRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
 // Seeder
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddRouting();
