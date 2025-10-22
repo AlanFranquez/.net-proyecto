@@ -1,25 +1,52 @@
-﻿namespace AppNetCredenciales
+﻿using AppNetCredenciales.Data;
+using System.Threading.Tasks;
+
+namespace AppNetCredenciales
 {
     public partial class MainPage : ContentPage
     {
-        int count = 0;
-
-        public MainPage()
+        private readonly LocalDBService _dbService;
+        private int _editCustomerId;
+        public MainPage(LocalDBService dbService)
         {
             InitializeComponent();
+            _dbService = dbService;
+            Task.Run(async () => listView.ItemsSource = await _dbService.GetUsuariosAsync());
         }
        
 
-        private void OnCounterClicked(object sender, EventArgs e)
+        private async void saveButton_Clicked(object sender, EventArgs e)
         {
-            count++;
+            await _dbService.SaveUsuarioAsync(new models.Usuario
+            {
+                Nombre = nameEntryField.Text,
+                Apellido = lastNameEntryField.Text,
+                email = emailEntryField.Text
+            });
 
-            if (count == 1)
-                CounterBtn.Text = $"Clicked {count} time";
-            else
-                CounterBtn.Text = $"Clicked {count} times";
+            listView.ItemsSource = await _dbService.GetUsuariosAsync();
+        }
 
-            SemanticScreenReader.Announce(CounterBtn.Text);
+
+        private async void listView_ItemTapped(object sender, ItemTappedEventArgs e)
+        {
+            var usuario = (models.Usuario)e.Item;
+            var action = await DisplayActionSheet("Action", "Cancel", null, "Edit", "Delete");
+
+            switch (action)
+            {
+                case "Edit":
+                    nameEntryField.Text = usuario.Nombre;
+                    lastNameEntryField.Text = usuario.Apellido;
+                    emailEntryField.Text = usuario.email;
+                    _editCustomerId = usuario.Id;
+                    break;
+                case "Delete":
+                    await _dbService.DeleteUsuarioAsync(usuario);
+                    listView.ItemsSource = await _dbService.GetUsuariosAsync();
+                    break;
+            }
+        
         }
     }
 
