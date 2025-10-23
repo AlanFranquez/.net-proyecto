@@ -21,6 +21,7 @@ using Espectaculos.WebApi.Options;
 using Espectaculos.WebApi.Security;
 using Espectaculos.WebApi.SerilogConfig;
 using FluentValidation;
+// Notificaciones replaces Novedades; no legacy using required here.
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
@@ -188,10 +189,14 @@ builder.Services.AddScoped<IValidator<CrearOrdenCommand>, CrearOrdenValidator>()
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
 builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
 builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
+<<<<<<< Updated upstream
 builder.Services.AddScoped<IValidator<CreateReglaCommand>, CreateReglaValidator>();
 builder.Services.AddScoped<IValidator<UpdateReglaCommand>, UpdateReglaValidator>();
 builder.Services.AddScoped<IValidator<DeleteReglaCommand>, DeleteReglaValidator>();
 builder.Services.AddScoped<CrearUsuarioHandler>();
+=======
+    builder.Services.AddScoped<CrearUsuarioHandler>();
+>>>>>>> Stashed changes
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateEspacioCommand).Assembly));
@@ -216,6 +221,10 @@ builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
 builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioRepository>();
 builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
 builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
+// Novedades renombrado a Notificaciones. Se mantiene Novedades temporalmente para compatibilidad.
+builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
+// Novedad removed: no registration required
+// builder.Services.AddScoped<INovedadRepository, NovedadRepository>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -256,6 +265,8 @@ api.MapOrdenesEndpoints();
 api.MapReglasDeAccesoEndpoints();
 api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
+    // Novedades endpoints removed; use Notificaciones endpoints
+    api.MapNotificacionesEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

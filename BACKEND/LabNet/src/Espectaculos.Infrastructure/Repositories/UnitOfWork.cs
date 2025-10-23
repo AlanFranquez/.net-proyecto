@@ -18,7 +18,8 @@ public class UnitOfWork : IUnitOfWork
                       IBeneficioRepository beneficios,
                       IBeneficioUsuarioRepository beneficioUsuarios,
                       IBeneficioEspacioRepository beneficioEspacios,
-                      ICanjeRepository canjes)
+                      ICanjeRepository canjes,
+                      INotificacionRepository notificaciones)
     {
         _db = db;
         Eventos = eventos;
@@ -31,6 +32,7 @@ public class UnitOfWork : IUnitOfWork
         BeneficioUsuarios = beneficioUsuarios;
         BeneficioEspacios = beneficioEspacios;
         Canjes = canjes;
+        Notificaciones = notificaciones;
     }
 
     public IEventoRepository Eventos { get; }
@@ -43,6 +45,7 @@ public class UnitOfWork : IUnitOfWork
     public IBeneficioUsuarioRepository BeneficioUsuarios { get; }
     public IBeneficioEspacioRepository BeneficioEspacios { get; }
     public ICanjeRepository Canjes { get; }
+    public INotificacionRepository Notificaciones { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

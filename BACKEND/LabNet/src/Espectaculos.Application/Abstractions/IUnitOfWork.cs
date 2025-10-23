@@ -14,6 +14,7 @@ public interface IUnitOfWork
     IBeneficioUsuarioRepository BeneficioUsuarios { get; }
     IBeneficioEspacioRepository BeneficioEspacios { get; }
     ICanjeRepository Canjes { get; }
+    INotificacionRepository Notificaciones { get; }
 
 Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

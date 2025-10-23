@@ -24,6 +24,8 @@ public class EspectaculosDbContext : DbContext
     
     
     public DbSet<Usuario> Usuario => Set<Usuario>();
+    // Novedad removed - use Notificaciones instead
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(EspectaculosDbContext).Assembly);
