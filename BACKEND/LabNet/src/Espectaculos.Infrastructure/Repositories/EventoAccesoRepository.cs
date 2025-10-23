@@ -30,5 +30,35 @@ namespace Espectaculos.Infrastructure.Repositories
             if (toUtc.HasValue)   q = q.Where(x => x.MomentoDeAcceso <= toUtc.Value);
             return await q.ToListAsync(ct);
         }
+        
+        
+        public virtual async Task<IReadOnlyList<EventoAcceso>> ListAsync(CancellationToken ct = default)
+            => await _set.AsNoTracking().Include(r => r.Credencial).Include(r => r.Espacio).ToListAsync(ct);
+        public async Task AddAsync(EventoAcceso evento, CancellationToken ct = default)
+            => await _db.Set<EventoAcceso>().AddAsync(evento, ct);
+
+    
+        public async Task<EventoAcceso?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => await _db.Set<EventoAcceso>().FirstOrDefaultAsync(e => e.EventoId == id, ct);
+
+        
+        public async Task UpdateAsync(EventoAcceso evento, CancellationToken ct = default)
+        {
+            _db.Set<EventoAcceso>().Update(evento);
+            await Task.CompletedTask;
+        }
+
+        public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            var entity = await _db.Set<EventoAcceso>().FindAsync(new object?[] { id }, ct);
+            if (entity != null)
+                _db.Set<EventoAcceso>().Remove(entity);
+        }
+        
+        public async Task<IReadOnlyList<EventoAcceso>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            var idArray = ids.Distinct().ToArray();
+            return await _db.Set<EventoAcceso>().Where(r => idArray.Contains(r.EventoId)).ToListAsync(ct);
+        }
     }
 }

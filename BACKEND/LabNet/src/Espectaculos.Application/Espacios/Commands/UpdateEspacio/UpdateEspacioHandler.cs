@@ -74,7 +74,7 @@ public class UpdateEspacioHandler : IRequestHandler<UpdateEspacioCommand, Guid>
         if (command.EventoAccesoIds is not null)
         {
             espacio.EventoAccesos = command.EventoAccesoIds
-                .Select(eid => new EventoAcceso { EventoId = eid })
+                .Select(eid => new Domain.Entities.EventoAcceso { EventoId = eid })
                 .ToList();
         }
 

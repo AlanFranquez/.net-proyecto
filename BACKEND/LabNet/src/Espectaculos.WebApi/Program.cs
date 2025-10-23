@@ -27,6 +27,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Serilog;
 using Espectaculos.WebApi.Security;
 using System.Text.Json.Serialization;
+using Espectaculos.Application.EventoAcceso.Commands.DeleteEvento;
+using Espectaculos.Application.EventoAcceso.Commands.UpdateEvento;
 using Espectaculos.Application.ReglaDeAcceso.Commands.CreateReglaDeAcceso;
 using Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
 using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
@@ -191,12 +193,17 @@ builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValida
 builder.Services.AddScoped<IValidator<CreateReglaCommand>, CreateReglaValidator>();
 builder.Services.AddScoped<IValidator<UpdateReglaCommand>, UpdateReglaValidator>();
 builder.Services.AddScoped<IValidator<DeleteReglaCommand>, DeleteReglaValidator>();
+builder.Services.AddScoped<IValidator<CreateEventoCommand>, CreateEventoValidator>();
+builder.Services.AddScoped<IValidator<UpdateEventoCommand>, UpdateEventoValidator>();
+builder.Services.AddScoped<IValidator<DeleteEventoCommand>, DeleteEventoValidator>();
 builder.Services.AddScoped<CrearUsuarioHandler>();
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateEspacioCommand).Assembly));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateReglaCommand).Assembly));
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateEventoCommand).Assembly));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(
         typeof(CreateUsuarioCommand).Assembly,
@@ -216,6 +223,7 @@ builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
 builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioRepository>();
 builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
 builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
+builder.Services.AddScoped<IEventoAccesoRepository, EventoAccesoRepository>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -256,6 +264,7 @@ api.MapOrdenesEndpoints();
 api.MapReglasDeAccesoEndpoints();
 api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
+api.MapEventosAccesosEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

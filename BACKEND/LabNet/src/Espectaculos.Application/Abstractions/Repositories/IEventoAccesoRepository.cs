@@ -7,9 +7,15 @@ using Espectaculos.Application.Abstractions.Repositories;
 
 namespace Espectaculos.Application.Abstractions.Repositories
 {
-    public interface IEventoAccesoRepository : IRepository<EventoAcceso, (Guid EventoId, DateTime MomentoDeAcceso, Guid CredencialId, Guid EspacioId)>
+    public interface IEventoAccesoRepository : IRepository<Domain.Entities.EventoAcceso, (Guid EventoId, DateTime MomentoDeAcceso, Guid CredencialId, Guid EspacioId)>
     {
-        Task<IReadOnlyList<EventoAcceso>> ListByEventoAsync(Guid eventoId, DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken ct = default);
-        Task<IReadOnlyList<EventoAcceso>> ListByCredencialAsync(Guid credencialId, DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken ct = default);
+        Task<IReadOnlyList<Domain.Entities.EventoAcceso>> ListByEventoAsync(Guid eventoId, DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken ct = default);
+        Task<IReadOnlyList<Domain.Entities.EventoAcceso>> ListByCredencialAsync(Guid credencialId, DateTime? fromUtc = null, DateTime? toUtc = null, CancellationToken ct = default);
+        
+        Task<IReadOnlyList<Domain.Entities.EventoAcceso>> ListAsync(CancellationToken ct = default);
+        Task<Domain.Entities.EventoAcceso?> GetByIdAsync(Guid id, CancellationToken ct = default);
+        Task UpdateAsync(Domain.Entities.EventoAcceso eventoAcceso, CancellationToken ct = default);
+        Task DeleteAsync(Guid id, CancellationToken ct = default);
+        Task<IReadOnlyList<Domain.Entities.EventoAcceso>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     }
 }
