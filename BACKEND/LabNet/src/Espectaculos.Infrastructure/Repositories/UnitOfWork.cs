@@ -12,19 +12,29 @@ public class UnitOfWork : IUnitOfWork
                       IEventoRepository eventos,
                       IEntradaRepository entradas,
                       IOrdenRepository ordenes,
-                      IUsuarioRepository usuarios)
+                      IUsuarioRepository usuarios,
+                      IEspacioRepository espacios,
+                      IReglaDeAccesoRepository reglas,
+                      IBeneficioRepository beneficios
+                      )
     {
         _db = db;
         Eventos = eventos;
         Entradas = entradas;
         Ordenes = ordenes;
         Usuarios = usuarios;
+        Espacios = espacios;
+        Reglas = reglas;
+        Beneficios = beneficios;
     }
 
     public IEventoRepository Eventos { get; }
     public IEntradaRepository Entradas { get; }
     public IOrdenRepository Ordenes { get; }
     public IUsuarioRepository Usuarios { get; }
+    public IEspacioRepository Espacios { get; }
+    public IReglaDeAccesoRepository Reglas { get; }
+    public IBeneficioRepository Beneficios { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         => _db.SaveChangesAsync(cancellationToken);

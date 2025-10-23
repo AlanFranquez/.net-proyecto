@@ -2,6 +2,6 @@
 
 public enum Modo
 {
-    Online,
-    Offline
+    Online = 0,
+    Offline = 1
 }

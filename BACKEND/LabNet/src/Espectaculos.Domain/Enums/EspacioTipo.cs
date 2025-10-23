@@ -2,10 +2,10 @@
 
 public enum EspacioTipo
 {
-    Aula,
-    Laboratorio,
-    Biblioteca,
-    Gimnasio,
-    Auditorio,
-    Otro
+    Aula = 0,
+    Laboratorio = 1,
+    Biblioteca = 2,
+    Gimnasio = 3,
+    Auditorio = 4,
+    Otro = 5
 }

@@ -1,6 +1,7 @@
-﻿namespace Espectaculos.Application.Espacios.Queries.ListarEspacios;
+﻿using MediatR;
+using Espectaculos.Application.DTOs;
 
-public class ListarEspaciosQuery
+namespace Espectaculos.Application.Espacios.Queries.ListarEspacios
 {
-    
+    public record ListarEspaciosQuery() : IRequest<List<EspacioDTO>>;
 }

@@ -1,5 +1,6 @@
 using Espectaculos.Application.Espacios.Commands.CreateEspacio;
 using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
+using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
 using Espectaculos.Application.Espacios.Queries.ListarEspacios;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -18,20 +19,29 @@ public static class EspaciosEndpoints
             var espacios = await mediator.Send(query);
 
             return Results.Ok(espacios);
-        }).WithName("ListarEspacios").WithOpenApi();
+        }).WithName("ListarEspacios").WithTags("Espacios").WithOpenApi();
         
         
         group.MapDelete("/", async ([FromBody] DeleteEspacioCommand command, [FromServices]IMediator mediator) =>
         {
             await mediator.Send(command);
             return Results.NoContent();
-        });
+        }).WithName("EliminarEspacio").WithTags("Espacios");
         
-        group.MapPost("/", async ([FromBody] CreateEspacioCommand command, [FromServices]IMediator mediator) =>
+        group.MapPost("/", async (CreateEspacioCommand command, IMediator mediator) =>
         {
-            await mediator.Send(command);
-            return Results.NoContent();
-        });
+            var id = await mediator.Send(command);
+            return Results.Ok(id);
+        }).WithName("CrearEspacio").WithTags("Espacios");
+        
+        group.MapPut("/{id:guid}", async (Guid id, UpdateEspacioCommand cmd, IMediator mediator) =>
+        {
+            cmd.Id = id; // Asegura que el id de la ruta se copie al comando
+            var updatedId = await mediator.Send(cmd);
+            return Results.Ok(updatedId);
+        })
+        .WithName("EditarEspacio")
+        .WithTags("Espacios");
         
 
 #if DEMO_ENABLE_ADMIN
