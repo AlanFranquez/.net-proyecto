@@ -1,12 +1,17 @@
-﻿namespace AppNetCredenciales
+﻿using AppNetCredenciales.ViewModel;
+using AppNetCredenciales.Views;
+using AppNetCredenciales.services;
+using AppNetCredenciales.Data;
+
+namespace AppNetCredenciales
 {
     public partial class App : Application
     {
-        public App(MainPage mainPage)
+        public App(LocalDBService db, AuthService auth, LoginView loginView, LoginViewModel loginViewModel)
         {
             InitializeComponent();
 
-            MainPage = mainPage;
+            MainPage = new NavigationPage(loginView);
         }
     }
 }

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AppNetCredenciales.Views.RegisterView"
+            
+             BackgroundColor="#1E1E1E">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="30" Spacing="15">
+
+            <Label Text="Registro de Usuario"
+                   FontSize="24"
+                   HorizontalOptions="Center"
+                   TextColor="White"/>
+
+            <Entry Placeholder="Nombre"
+                   Text="{Binding Nombre}"
+                   TextColor="White"
+                   PlaceholderColor="Gray"/>
+
+            <Entry Placeholder="Apellido"
+                   Text="{Binding Apellido}"
+                   TextColor="White"
+                   PlaceholderColor="Gray"/>
+
+            <Entry Placeholder="Documento"
+                   Text="{Binding Documento}"
+                   TextColor="White"
+                   PlaceholderColor="Gray"/>
+
+            <Entry Placeholder="Correo electrónico"
+                   Text="{Binding Email}"
+                   Keyboard="Email"
+                   TextColor="White"
+                   PlaceholderColor="Gray"/>
+
+            <Entry Placeholder="Contraseña"
+                   Text="{Binding Password}"
+                   IsPassword="True"
+                   TextColor="White"
+                   PlaceholderColor="Gray"/>
+
+            <ActivityIndicator IsRunning="{Binding Trabajando}"
+                               IsVisible="{Binding Trabajando}" />
+
+            <Button Text="Registrarse"
+                    Command="{Binding RegisterCommand}"
+                    BackgroundColor="#007AFF"
+                    TextColor="White" />
+
+            <Button Text="Login" Command="{Binding NavigateToLogin}"/>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

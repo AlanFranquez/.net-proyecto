@@ -21,7 +21,7 @@ namespace AppNetCredenciales
             {
                 Nombre = nameEntryField.Text,
                 Apellido = lastNameEntryField.Text,
-                email = emailEntryField.Text
+                Email = emailEntryField.Text
             });
 
             listView.ItemsSource = await _dbService.GetUsuariosAsync();
@@ -38,8 +38,7 @@ namespace AppNetCredenciales
                 case "Edit":
                     nameEntryField.Text = usuario.Nombre;
                     lastNameEntryField.Text = usuario.Apellido;
-                    emailEntryField.Text = usuario.email;
-                    _editCustomerId = usuario.Id;
+                    emailEntryField.Text = usuario.Email;
                     break;
                 case "Delete":
                     await _dbService.DeleteUsuarioAsync(usuario);

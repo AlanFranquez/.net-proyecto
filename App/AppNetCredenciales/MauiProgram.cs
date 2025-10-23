@@ -1,4 +1,8 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using AppNetCredenciales.Data;
+using AppNetCredenciales.services;
+using AppNetCredenciales.ViewModel;
+using AppNetCredenciales.Views;
+using Microsoft.Extensions.Logging;
 
 namespace AppNetCredenciales
 {
@@ -15,8 +19,17 @@ namespace AppNetCredenciales
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
 
-            builder.Services.AddSingleton<Data.LocalDBService>();
+            builder.Services.AddSingleton<LocalDBService>();
+
             builder.Services.AddTransient<MainPage>();
+
+            builder.Services.AddSingleton<AuthService>();
+            builder.Services.AddSingleton<LoginViewModel>();
+            builder.Services.AddSingleton<LoginView>();
+            builder.Services.AddSingleton<App>();
+            builder.Services.AddSingleton<RegisterView>();
+            builder.Services.AddSingleton<EventoView>();
+            builder.Services.AddSingleton<EventoViewModel>();
 
 #if DEBUG
             builder.Logging.AddDebug();
