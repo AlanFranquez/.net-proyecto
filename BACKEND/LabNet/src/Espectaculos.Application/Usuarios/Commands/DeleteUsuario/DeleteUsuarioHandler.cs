@@ -18,7 +18,7 @@ namespace Espectaculos.Application.Usuarios.Commands.DeleteUsuario
         public async Task Handle(DeleteUsuarioCommand request, CancellationToken ct)
         {
             await _repo.DeleteAsync(request.UsuarioId, ct);
-            await _repo.SaveChangesAsync(ct); // guardamos cambios desde el repositorio
+            await _repo.SaveChangesAsync(ct);
         }
     }
 }

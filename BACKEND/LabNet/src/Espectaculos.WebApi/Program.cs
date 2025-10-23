@@ -1,11 +1,15 @@
 using System.Reflection;
+using System.Text.Json.Serialization;
 using Espectaculos.Application;
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
 using Espectaculos.Application.Commands.CrearOrden;
+using Espectaculos.Application.Commands.CrearUsuario;
 using Espectaculos.Application.Commands.CreateEvento;
 using Espectaculos.Application.Commands.PublicarEvento;
-using Espectaculos.Application.Commands.CrearUsuario;
+using Espectaculos.Application.Espacios.Commands.CreateEspacio;
+using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
+using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
@@ -14,12 +18,13 @@ using Espectaculos.Infrastructure.Repositories;
 using Espectaculos.WebApi.Endpoints;
 using Espectaculos.WebApi.Health;
 using Espectaculos.WebApi.Options;
+using Espectaculos.WebApi.Security;
 using Espectaculos.WebApi.SerilogConfig;
 using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-                    using Serilog;
 using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
+using Serilog;
 using Espectaculos.WebApi.Security;
 using System.Text.Json.Serialization;
 
@@ -56,6 +61,8 @@ string connectionString =
 
 // ---- Servicios
 builder.Services.AddEndpointsApiExplorer();
+
+// ===== CONFIGURACIÓN CONSOLIDADA DE SWAGGER =====
 builder.Services.AddSwaggerGen(o =>
 {
     o.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -64,6 +71,30 @@ builder.Services.AddSwaggerGen(o =>
         Version = "v1",
         Description = "API pública para la demo. Incluye endpoints de eventos y órdenes. Endpoints de administración permanecen ocultos por defecto."
     });
+
+    // Agrupar endpoints por categorías basadas en el primer segmento después de "api"
+    // Ejemplo: /api/espacios/{id} => categoría "Espacios"
+    o.TagActionsBy(apiDesc =>
+    {
+        var relativePath = apiDesc.RelativePath ?? string.Empty;
+        var segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        
+        // Si la ruta empieza con "api", tomamos el siguiente segmento
+        if (segments.Length >= 2 && segments[0].Equals("api", StringComparison.OrdinalIgnoreCase))
+        {
+            // Capitalizar la primera letra para que se vea más prolijo
+            var category = segments[1];
+            return new[] { char.ToUpper(category[0]) + category.Substring(1) };
+        }
+        
+        if (segments.Length >= 1)
+            return new[] { segments[0] };
+            
+        return new[] { "General" };
+    });
+
+    // Mostrar enums como strings en lugar de números en Swagger UI
+    o.UseInlineDefinitionsForEnums();
 });
 
 // Aceptar enums representados como strings en JSON (p.ej. "Comedor") y case-insensitive
@@ -134,16 +165,34 @@ if (isDev)
     });
 }
 
+// ===== CONFIGURACIÓN GLOBAL DE JSON PARA ENUMS =====
+// Permite enviar y recibir enums como strings en lugar de números
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
 // Validators (Application)
 builder.Services.AddScoped<IValidator<CreateEventoCommand>, CreateEventoValidator>();
 builder.Services.AddScoped<IValidator<PublicarEventoCommand>, PublicarEventoValidator>();
 builder.Services.AddScoped<IValidator<CrearOrdenCommand>, CrearOrdenValidator>();
-//builder.Services.AddScoped<IValidator<CrearUsuarioCommand>, CrearUsuarioValidator>();
+builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
+builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
+builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
 builder.Services.AddScoped<CrearUsuarioHandler>();
+
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateEspacioCommand).Assembly));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(
-        typeof(CreateUsuarioCommand).Assembly,  // Tu capa Application, donde están los handlers
-        Assembly.GetExecutingAssembly()          // La capa WebApi
+        typeof(CreateUsuarioCommand).Assembly,
+        Assembly.GetExecutingAssembly()
     )
 );
 
@@ -153,8 +202,8 @@ builder.Services.AddScoped<IEventoRepository, EventoRepository>();
 builder.Services.AddScoped<IEntradaRepository, EntradaRepository>();
 builder.Services.AddScoped<IOrdenRepository, OrdenRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-
-// Beneficios / Canjes (necesarios para UnitOfWork)
+builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
+builder.Services.AddScoped<IReglaDeAccesoRepository, ReglaDeAccesoRepository>();
 builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
 builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioRepository>();
 builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
@@ -194,12 +243,10 @@ var api = app.MapGroup("/api");
 // Mapea tus endpoints SOBRE el grupo (usar rutas relativas en las extensiones)
 api.MapEventosEndpoints();
 api.MapUsuariosEndpoints();
-
-
+api.MapEspaciosEndpoints();
 api.MapOrdenesEndpoints();
 api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
-
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

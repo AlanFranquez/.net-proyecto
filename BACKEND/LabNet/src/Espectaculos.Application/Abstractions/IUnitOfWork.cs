@@ -8,6 +8,8 @@ public interface IUnitOfWork
     IEntradaRepository Entradas { get; }
     IOrdenRepository Ordenes { get; }
     IUsuarioRepository Usuarios { get; }
+    IEspacioRepository Espacios { get; }
+    IReglaDeAccesoRepository Reglas { get; }
     IBeneficioRepository Beneficios { get; }
     IBeneficioUsuarioRepository BeneficioUsuarios { get; }
     IBeneficioEspacioRepository BeneficioEspacios { get; }

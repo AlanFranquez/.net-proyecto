@@ -13,6 +13,8 @@ public class UnitOfWork : IUnitOfWork
                       IEntradaRepository entradas,
                       IOrdenRepository ordenes,
                       IUsuarioRepository usuarios,
+                      IEspacioRepository espacios,
+                      IReglaDeAccesoRepository reglas,
                       IBeneficioRepository beneficios,
                       IBeneficioUsuarioRepository beneficioUsuarios,
                       IBeneficioEspacioRepository beneficioEspacios,
@@ -23,6 +25,8 @@ public class UnitOfWork : IUnitOfWork
         Entradas = entradas;
         Ordenes = ordenes;
         Usuarios = usuarios;
+        Espacios = espacios;
+        Reglas = reglas;
         Beneficios = beneficios;
         BeneficioUsuarios = beneficioUsuarios;
         BeneficioEspacios = beneficioEspacios;
@@ -33,6 +37,8 @@ public class UnitOfWork : IUnitOfWork
     public IEntradaRepository Entradas { get; }
     public IOrdenRepository Ordenes { get; }
     public IUsuarioRepository Usuarios { get; }
+    public IEspacioRepository Espacios { get; }
+    public IReglaDeAccesoRepository Reglas { get; }
     public IBeneficioRepository Beneficios { get; }
     public IBeneficioUsuarioRepository BeneficioUsuarios { get; }
     public IBeneficioEspacioRepository BeneficioEspacios { get; }
