@@ -16,8 +16,9 @@ namespace Espectaculos.Infrastructure.Repositories
         public EspacioRepository(EspectaculosDbContext db) : base(db) { }
 
         public async Task<IReadOnlyList<Espacio>> ListActivosAsync(CancellationToken ct = default)
-            => await _set.AsNoTracking().Where(e => e.Activo).ToListAsync(ct);
-        
+            => await _set.AsNoTracking().Where(e => e.Activo).Include(r => r.Reglas).ToListAsync(ct);
+        public virtual async Task<IReadOnlyList<Espectaculos.Domain.Entities.Espacio>> ListAsync(CancellationToken ct = default)
+            => await _set.AsNoTracking().Include(r => r.Reglas).ToListAsync(ct);
         public async Task AddAsync(Espacio espacio, CancellationToken ct = default)
             => await _db.Set<Espacio>().AddAsync(espacio, ct);
 
@@ -37,6 +38,24 @@ namespace Espectaculos.Infrastructure.Repositories
             var entity = await _db.Set<Espacio>().FindAsync(new object?[] { id }, ct);
             if (entity != null)
                 _db.Set<Espacio>().Remove(entity);
+        }
+        
+        public async Task<IReadOnlyList<Espacio>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            var idArray = ids.Distinct().ToArray();
+            return await _db.Set<Espacio>().Where(r => idArray.Contains(r.Id)).ToListAsync(ct);
+        }
+        
+        public async Task RemoveReglasRelacionadas(Guid id, CancellationToken ct = default)
+        {
+            var relaciones = await _db.Set<EspacioReglaDeAcceso>()
+                .Where(era => era.EspacioId == id)
+                .ToListAsync(ct);
+
+            if (relaciones.Any())
+            {
+                _db.Set<EspacioReglaDeAcceso>().RemoveRange(relaciones);
+            }
         }
         
         public async Task SaveChangesAsync(CancellationToken ct = default)

@@ -40,15 +40,15 @@ public class UpdateEspacioHandler : IRequestHandler<UpdateEspacioCommand, Guid>
             var reglasExistentes = await _uow.Reglas.ListByIdsAsync(command.ReglaIds, ct);
             if (reglasExistentes.Count() != command.ReglaIds.Distinct().Count())
                 throw new KeyNotFoundException("Alguna regla enviada no existe.");
+            await _uow.Espacios.RemoveReglasRelacionadas(espacio.Id, ct);
 
             // Reemplazamos la colección de join-entities
             espacio.Reglas = command.ReglaIds
                 .Distinct()
                 .Select(rid => new EspacioReglaDeAcceso
                 {
-                    EspacioId = espacio.Id, // importante si la join-entity tiene esta propiedad
+                    EspacioId = espacio.Id,
                     ReglaId = rid
-                    // Si tu join-entity tiene otras props (ej: CreatedAt), setéalas aquí
                 })
                 .ToList();
         }

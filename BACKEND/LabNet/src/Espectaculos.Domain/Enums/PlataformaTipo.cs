@@ -2,6 +2,6 @@
 
 public enum PlataformaTipo
 {
-    Android,
-    IOS
+    Android = 0,
+    IOS = 1
 }

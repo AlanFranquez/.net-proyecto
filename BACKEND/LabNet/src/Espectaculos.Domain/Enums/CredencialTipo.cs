@@ -2,6 +2,6 @@
 
 public enum CredencialTipo
 {
-    Campus,
-    Empresa
+    Campus = 0,
+    Empresa = 1
 }

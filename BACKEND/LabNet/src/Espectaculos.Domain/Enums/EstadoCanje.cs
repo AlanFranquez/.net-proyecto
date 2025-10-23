@@ -2,7 +2,7 @@
 
 public enum EstadoCanje
 {
-    Confirmado,
-    Anulado,
-    Pendiente
+    Confirmado = 0,
+    Anulado = 1,
+    Pendiente = 2
 }

@@ -11,11 +11,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Espectaculos.Infrastructure.Repositories
 {
-    public class ReglaDeAccesoRepository : BaseEfRepository<ReglaDeAcceso, Guid>, IReglaDeAccesoRepository
+    public class ReglaDeAccesoRepository : BaseEfRepository<Espectaculos.Domain.Entities.ReglaDeAcceso, Guid>, IReglaDeAccesoRepository
     {
         public ReglaDeAccesoRepository(EspectaculosDbContext db) : base(db) { }
 
-        public async Task<IReadOnlyList<ReglaDeAcceso>> ListVigentesAsync(DateTime onDateUtc, CancellationToken ct = default)
+        public async Task<IReadOnlyList<Espectaculos.Domain.Entities.ReglaDeAcceso>> ListVigentesAsync(DateTime onDateUtc, CancellationToken ct = default)
             => await _set.AsNoTracking()
                          .Where(r => (!r.VigenciaInicio.HasValue || r.VigenciaInicio <= onDateUtc)
                                   && (!r.VigenciaFin.HasValue     || r.VigenciaFin   >= onDateUtc))
@@ -23,8 +23,10 @@ namespace Espectaculos.Infrastructure.Repositories
         public async Task AddAsync(ReglaDeAcceso regla, CancellationToken ct = default)
             => await _db.Set<ReglaDeAcceso>().AddAsync(regla, ct);
 
-    
-        public async Task<ReglaDeAcceso?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        public virtual async Task<IReadOnlyList<Espectaculos.Domain.Entities.ReglaDeAcceso>> ListAsync(CancellationToken ct = default)
+            => await _set.AsNoTracking().Include(r => r.Espacios).ToListAsync(ct);
+        
+        public async Task<Espectaculos.Domain.Entities.ReglaDeAcceso?> GetByIdAsync(Guid id, CancellationToken ct = default)
             => await _db.Set<ReglaDeAcceso>().FirstOrDefaultAsync(e => e.ReglaId == id, ct);
 
         
@@ -40,10 +42,22 @@ namespace Espectaculos.Infrastructure.Repositories
             if (entity != null)
                 _db.Set<ReglaDeAcceso>().Remove(entity);
         }
-        public async Task<IReadOnlyList<ReglaDeAcceso>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        public async Task<IReadOnlyList<Espectaculos.Domain.Entities.ReglaDeAcceso>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
         {
             var idArray = ids.Distinct().ToArray();
             return await _db.Set<ReglaDeAcceso>().Where(r => idArray.Contains(r.ReglaId)).ToListAsync(ct);
+        }
+        
+        public async Task RemoveEspaciosRelacionados(Guid reglaId, CancellationToken ct = default)
+        {
+            var relaciones = await _db.Set<EspacioReglaDeAcceso>()
+                .Where(era => era.ReglaId == reglaId)
+                .ToListAsync(ct);
+
+            if (relaciones.Any())
+            {
+                _db.Set<EspacioReglaDeAcceso>().RemoveRange(relaciones);
+            }
         }
         
         public async Task SaveChangesAsync(CancellationToken ct = default)

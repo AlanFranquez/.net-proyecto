@@ -2,6 +2,6 @@
 
 public enum DispositivoTipo
 {
-    Enrolado,
-    Revocado
+    Enrolado = 0,
+    Revocado = 1
 }

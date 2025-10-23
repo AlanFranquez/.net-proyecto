@@ -1,6 +1,9 @@
-﻿namespace Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
+﻿using MediatR;
 
-public class DeleteReglaCommand
+
+namespace Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
+
+public class DeleteReglaCommand : IRequest<Guid>
 {
-    
+    public Guid ReglaId { get; set; }
 }

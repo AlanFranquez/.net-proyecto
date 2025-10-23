@@ -2,6 +2,6 @@
 
 public enum AccesoTipo
 {
-    Permitir,
-    Denegar
+    Permitir = 0,
+    Denegar = 1
 }

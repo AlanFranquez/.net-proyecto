@@ -1,6 +1,13 @@
-﻿namespace Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
+﻿using FluentValidation;
 
-public class UpdateReglaValidator
+namespace Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
+
+public class UpdateReglaValidator: AbstractValidator<UpdateReglaCommand>
 {
-    
+    public UpdateReglaValidator()
+    {
+        RuleFor(x => x.ReglaId)
+            .NotEmpty()
+            .WithMessage("El ID es obligatorio.");
+    }
 }

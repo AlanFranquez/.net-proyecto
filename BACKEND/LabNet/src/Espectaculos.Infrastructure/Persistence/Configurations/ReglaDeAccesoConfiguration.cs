@@ -10,7 +10,6 @@ public class ReglaDeAccesoConfiguration : IEntityTypeConfiguration<ReglaDeAcceso
     {
         builder.ToTable("regla_de_acceso");
         builder.HasKey(e => e.ReglaId);
-        builder.Property(e => e.ObjetivoTipo).IsRequired();
         builder.Property(e => e.VentanaHoraria).IsRequired();
         builder.Property(e => e.VigenciaInicio).IsRequired();
         builder.Property(e => e.VigenciaFin).IsRequired();

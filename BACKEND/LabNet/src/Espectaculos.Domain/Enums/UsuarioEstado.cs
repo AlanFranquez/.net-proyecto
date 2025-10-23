@@ -2,7 +2,7 @@
 
 public enum UsuarioEstado
 {
-    Activo,
-    Inactivo,
-    Suspendido
+    Activo = 0,
+    Inactivo = 1,
+    Suspendido = 2
 }

@@ -1,6 +1,7 @@
-﻿namespace Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso;
+﻿using MediatR;
+using Espectaculos.Application.DTOs;
 
-public class ListarReglasQuery
+namespace Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso
 {
-    
+    public record ListarReglasQuery() : IRequest<List<ReglaDeAccesoDTO>>;
 }

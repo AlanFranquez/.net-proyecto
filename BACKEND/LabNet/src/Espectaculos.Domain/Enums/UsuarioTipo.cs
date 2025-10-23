@@ -2,6 +2,6 @@
 
 public enum UsuarioTipo
 {
-    Estudiante,
-    Funcionario
+    Estudiante = 0,
+    Funcionario = 1
 }
