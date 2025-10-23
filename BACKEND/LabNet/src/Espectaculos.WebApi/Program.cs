@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.StaticFiles;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Espectaculos.WebApi.Security;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +64,13 @@ builder.Services.AddSwaggerGen(o =>
         Version = "v1",
         Description = "API pública para la demo. Incluye endpoints de eventos y órdenes. Endpoints de administración permanecen ocultos por defecto."
     });
+});
+
+// Aceptar enums representados como strings en JSON (p.ej. "Comedor") y case-insensitive
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts =>
+{
+    opts.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    opts.SerializerOptions.Converters.Add(new Espectaculos.WebApi.Json.CaseInsensitiveEnumConverterFactory());
 });
 
 // Options: ValidationTokens (fail-fast)
@@ -140,12 +148,20 @@ builder.Services.AddMediatR(cfg =>
 );
 
 
-// Repos + UoW
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+// Repos + UoW: registrar repositorios primero, luego IUnitOfWork
 builder.Services.AddScoped<IEventoRepository, EventoRepository>();
 builder.Services.AddScoped<IEntradaRepository, EntradaRepository>();
 builder.Services.AddScoped<IOrdenRepository, OrdenRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+
+// Beneficios / Canjes (necesarios para UnitOfWork)
+builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
+builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioRepository>();
+builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
+builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
+
+// Finalmente el UnitOfWork (depende de los repos registrados arriba)
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Seeder
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddRouting();
@@ -181,6 +197,8 @@ api.MapUsuariosEndpoints();
 
 
 api.MapOrdenesEndpoints();
+api.MapBeneficiosEndpoints();
+api.MapCanjesEndpoints();
 
 
 // Health root para readiness checks fuera de /api

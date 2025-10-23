@@ -17,10 +17,7 @@ public static class DependencyInjection
         services.AddDbContext<EspectaculosDbContext>(options =>
             options.UseNpgsql(connectionString)); // or SqlServer, etc.
 
-        // Unit of Work
-        services.AddScoped<IUnitOfWork, UnitOfWork>();
-
-        // Repositories (SCOPED is typical for EF)
+    // Repositories (SCOPED is typical for EF)
         services.AddScoped<IDispositivoRepository, DispositivoRepository>();
         services.AddScoped<IBeneficioRepository, BeneficioRepository>();
         services.AddScoped<ICanjeRepository, CanjeRepository>();
@@ -40,6 +37,9 @@ public static class DependencyInjection
         services.AddScoped<IEventoAccesoRepository, EventoAccesoRepository>();
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
         services.AddScoped<IUsuarioRolRepository, UsuarioRolRepository>();
+
+    // Unit of Work (registrar después de repositorios para evitar validación fallida en tiempo de diseño)
+    services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }

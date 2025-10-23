@@ -12,20 +12,42 @@ public class UnitOfWork : IUnitOfWork
                       IEventoRepository eventos,
                       IEntradaRepository entradas,
                       IOrdenRepository ordenes,
-                      IUsuarioRepository usuarios)
+                      IUsuarioRepository usuarios,
+                      IBeneficioRepository beneficios,
+                      IBeneficioUsuarioRepository beneficioUsuarios,
+                      IBeneficioEspacioRepository beneficioEspacios,
+                      ICanjeRepository canjes)
     {
         _db = db;
         Eventos = eventos;
         Entradas = entradas;
         Ordenes = ordenes;
         Usuarios = usuarios;
+        Beneficios = beneficios;
+        BeneficioUsuarios = beneficioUsuarios;
+        BeneficioEspacios = beneficioEspacios;
+        Canjes = canjes;
     }
 
     public IEventoRepository Eventos { get; }
     public IEntradaRepository Entradas { get; }
     public IOrdenRepository Ordenes { get; }
     public IUsuarioRepository Usuarios { get; }
+    public IBeneficioRepository Beneficios { get; }
+    public IBeneficioUsuarioRepository BeneficioUsuarios { get; }
+    public IBeneficioEspacioRepository BeneficioEspacios { get; }
+    public ICanjeRepository Canjes { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        => _db.SaveChangesAsync(cancellationToken);
+    {
+        try
+        {
+            return _db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
+        {
+            // map to application-level concurrency exception
+            throw new Espectaculos.Application.Common.Exceptions.ConcurrencyException("Concurrency conflict during SaveChanges", ex);
+        }
+    }
 }

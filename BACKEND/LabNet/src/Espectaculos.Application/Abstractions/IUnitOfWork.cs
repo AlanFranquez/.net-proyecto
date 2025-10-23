@@ -8,6 +8,10 @@ public interface IUnitOfWork
     IEntradaRepository Entradas { get; }
     IOrdenRepository Ordenes { get; }
     IUsuarioRepository Usuarios { get; }
+    IBeneficioRepository Beneficios { get; }
+    IBeneficioUsuarioRepository BeneficioUsuarios { get; }
+    IBeneficioEspacioRepository BeneficioEspacios { get; }
+    ICanjeRepository Canjes { get; }
 
 Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
