@@ -11,6 +11,9 @@ public interface IUnitOfWork
     IEspacioRepository Espacios { get; }
     IReglaDeAccesoRepository Reglas { get; }
     IBeneficioRepository Beneficios { get; }
+    IBeneficioUsuarioRepository BeneficioUsuarios { get; }
+    IBeneficioEspacioRepository BeneficioEspacios { get; }
+    ICanjeRepository Canjes { get; }
 
 Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

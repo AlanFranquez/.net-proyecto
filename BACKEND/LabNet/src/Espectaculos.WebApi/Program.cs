@@ -25,6 +25,8 @@ using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Serilog;
+using Espectaculos.WebApi.Security;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -93,6 +95,13 @@ builder.Services.AddSwaggerGen(o =>
 
     // Mostrar enums como strings en lugar de números en Swagger UI
     o.UseInlineDefinitionsForEnums();
+});
+
+// Aceptar enums representados como strings en JSON (p.ej. "Comedor") y case-insensitive
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts =>
+{
+    opts.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    opts.SerializerOptions.Converters.Add(new Espectaculos.WebApi.Json.CaseInsensitiveEnumConverterFactory());
 });
 
 // Options: ValidationTokens (fail-fast)
@@ -188,8 +197,7 @@ builder.Services.AddMediatR(cfg =>
 );
 
 
-// Repos + UoW
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+// Repos + UoW: registrar repositorios primero, luego IUnitOfWork
 builder.Services.AddScoped<IEventoRepository, EventoRepository>();
 builder.Services.AddScoped<IEntradaRepository, EntradaRepository>();
 builder.Services.AddScoped<IOrdenRepository, OrdenRepository>();
@@ -197,6 +205,12 @@ builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
 builder.Services.AddScoped<IReglaDeAccesoRepository, ReglaDeAccesoRepository>();
 builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
+builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioRepository>();
+builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
+builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
+
+// Finalmente el UnitOfWork (depende de los repos registrados arriba)
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // Seeder
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddRouting();
@@ -231,6 +245,8 @@ api.MapEventosEndpoints();
 api.MapUsuariosEndpoints();
 api.MapEspaciosEndpoints();
 api.MapOrdenesEndpoints();
+api.MapBeneficiosEndpoints();
+api.MapCanjesEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");
