@@ -27,6 +27,9 @@ using Npgsql.EntityFrameworkCore.PostgreSQL;
 using Serilog;
 using Espectaculos.WebApi.Security;
 using System.Text.Json.Serialization;
+using Espectaculos.Application.ReglaDeAcceso.Commands.CreateReglaDeAcceso;
+using Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
+using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -185,10 +188,15 @@ builder.Services.AddScoped<IValidator<CrearOrdenCommand>, CrearOrdenValidator>()
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
 builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
 builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
+builder.Services.AddScoped<IValidator<CreateReglaCommand>, CreateReglaValidator>();
+builder.Services.AddScoped<IValidator<UpdateReglaCommand>, UpdateReglaValidator>();
+builder.Services.AddScoped<IValidator<DeleteReglaCommand>, DeleteReglaValidator>();
 builder.Services.AddScoped<CrearUsuarioHandler>();
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateEspacioCommand).Assembly));
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateReglaCommand).Assembly));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssemblies(
         typeof(CreateUsuarioCommand).Assembly,
@@ -245,6 +253,7 @@ api.MapEventosEndpoints();
 api.MapUsuariosEndpoints();
 api.MapEspaciosEndpoints();
 api.MapOrdenesEndpoints();
+api.MapReglasDeAccesoEndpoints();
 api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
 
