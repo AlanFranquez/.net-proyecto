@@ -16,9 +16,9 @@ namespace Espectaculos.Infrastructure.Repositories
         public EspacioRepository(EspectaculosDbContext db) : base(db) { }
 
         public async Task<IReadOnlyList<Espacio>> ListActivosAsync(CancellationToken ct = default)
-            => await _set.AsNoTracking().Where(e => e.Activo).Include(r => r.Reglas).ToListAsync(ct);
+            => await _set.AsNoTracking().Where(e => e.Activo).Include(r => r.Reglas).Include(r => r.Beneficios).ToListAsync(ct);
         public virtual async Task<IReadOnlyList<Espectaculos.Domain.Entities.Espacio>> ListAsync(CancellationToken ct = default)
-            => await _set.AsNoTracking().Include(r => r.Reglas).ToListAsync(ct);
+            => await _set.AsNoTracking().Include(r => r.Reglas).Include(r => r.Beneficios).ToListAsync(ct);
         public async Task AddAsync(Espacio espacio, CancellationToken ct = default)
             => await _db.Set<Espacio>().AddAsync(espacio, ct);
 
@@ -55,6 +55,18 @@ namespace Espectaculos.Infrastructure.Repositories
             if (relaciones.Any())
             {
                 _db.Set<EspacioReglaDeAcceso>().RemoveRange(relaciones);
+            }
+        }
+
+        public async Task RemoveBeneficiosRelacionados(Guid id, CancellationToken ct = default)
+        {
+            var relaciones = await _db.Set<BeneficioEspacio>()
+                .Where(be => be.EspacioId == id)
+                .ToListAsync(ct);
+
+            if (relaciones.Any())
+            {
+                _db.Set<BeneficioEspacio>().RemoveRange(relaciones);
             }
         }
         

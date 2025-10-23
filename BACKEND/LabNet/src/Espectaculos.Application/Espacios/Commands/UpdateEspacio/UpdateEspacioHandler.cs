@@ -58,6 +58,8 @@ public class UpdateEspacioHandler : IRequestHandler<UpdateEspacioCommand, Guid>
             var beneficiosExistentes = await _uow.Beneficios.ListByIdsAsync(command.BeneficioIds, ct);
             if (beneficiosExistentes.Count() != command.BeneficioIds.Distinct().Count())
                 throw new KeyNotFoundException("Algún beneficio enviado no existe.");
+            
+            await _uow.Espacios.RemoveBeneficiosRelacionados(espacio.Id, ct);
 
             espacio.Beneficios = command.BeneficioIds
                 .Distinct()

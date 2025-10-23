@@ -36,18 +36,11 @@ public static class BeneficiosEndpoints
             return Results.Created($"/beneficios/{id}", new { id });
         });
 
-        api.MapPut("/beneficios/{id:guid}", async (Guid id, Espectaculos.WebApi.Endpoints.Dtos.UpdateBeneficioDto dto, IMediator mediator) =>
+        api.MapPut("/beneficios/{id:guid}", async (Guid id, UpdateBeneficioCommand cmd, IMediator mediator) =>
         {
-            if (id != dto.Id) return Results.BadRequest("Id mismatch");
+            if (!id.Equals(null)) 
+                cmd.Id = id;
 
-            Espectaculos.Domain.Enums.BeneficioTipo? tipo = null;
-            if (dto.Tipo != null)
-            {
-                if (!TryParseTipo(dto.Tipo, out var parsed)) return Results.BadRequest("Tipo inválido");
-                tipo = parsed;
-            }
-
-            var cmd = new UpdateBeneficioCommand(dto.Id, dto.Nombre, dto.Descripcion, dto.VigenciaInicio, dto.VigenciaFin, dto.CupoTotal);
             try
             {
                 var ok = await mediator.Send(cmd);

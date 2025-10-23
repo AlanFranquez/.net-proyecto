@@ -17,6 +17,7 @@ namespace Espectaculos.Application.Abstractions.Repositories
         Task DeleteAsync(Guid id, CancellationToken ct = default);
         Task<IReadOnlyList<Espacio>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
         Task RemoveReglasRelacionadas(Guid id, CancellationToken ct = default);
+        Task RemoveBeneficiosRelacionados(Guid id, CancellationToken ct = default);
         
         Task SaveChangesAsync(CancellationToken ct = default);
     }

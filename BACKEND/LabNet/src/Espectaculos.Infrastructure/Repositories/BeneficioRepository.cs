@@ -14,6 +14,9 @@ namespace Espectaculos.Infrastructure.Repositories
     public class BeneficioRepository : BaseEfRepository<Beneficio, Guid>, IBeneficioRepository
     {
         public BeneficioRepository(EspectaculosDbContext db) : base(db) { }
+        
+        public virtual async Task<IReadOnlyList<Espectaculos.Domain.Entities.Beneficio>> ListAsync(CancellationToken ct = default)
+            => await _set.AsNoTracking().Include(r => r.Espacios).ToListAsync(ct);
 
         public async Task<IReadOnlyList<Beneficio>> ListVigentesAsync(DateTime onDateUtc, CancellationToken ct = default)
             => await _set.AsNoTracking()
@@ -49,6 +52,19 @@ namespace Espectaculos.Infrastructure.Repositories
             var idArray = ids.Distinct().ToArray();
             return await _db.Set<Beneficio>().Where(r => idArray.Contains(r.BeneficioId)).ToListAsync(ct);
         }
+        
+        public async Task RemoveEspaciosRelacionados(Guid id, CancellationToken ct = default)
+        {
+            var relaciones = await _db.Set<BeneficioEspacio>()
+                .Where(be => be.BeneficioId == id)
+                .ToListAsync(ct);
+
+            if (relaciones.Any())
+            {
+                _db.Set<BeneficioEspacio>().RemoveRange(relaciones);
+            }
+        }
+        
         public async Task SaveChangesAsync(CancellationToken ct = default)
         {
             await _db.SaveChangesAsync(ct);

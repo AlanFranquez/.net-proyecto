@@ -1,7 +1,7 @@
 using MediatR;
 using System.Collections.Generic;
-using Espectaculos.Domain.Entities;
+using Espectaculos.Application.DTOs;
 
 namespace Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 
-public record ListBeneficiosQuery() : IRequest<IReadOnlyList<Beneficio>>;
+public record ListBeneficiosQuery() : IRequest<IReadOnlyList<BeneficioDTO>>;

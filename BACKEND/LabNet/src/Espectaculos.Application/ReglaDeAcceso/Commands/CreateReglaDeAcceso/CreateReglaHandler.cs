@@ -19,6 +19,9 @@ public class CreateReglaHandler : IRequestHandler<CreateReglaCommand, Guid>
     public async Task<Guid> Handle(CreateReglaCommand command, CancellationToken ct = default)
     {
         await _validator.ValidateAndThrowAsync(command, ct);
+        if (command.VigenciaInicio.HasValue && command.VigenciaInicio > command.VigenciaFin)
+            throw new ArgumentException("VigenciaInicio debe ser anterior o igual a VigenciaFin");
+        
         var e = new Espectaculos.Domain.Entities.ReglaDeAcceso
         {
             ReglaId = Guid.NewGuid(),

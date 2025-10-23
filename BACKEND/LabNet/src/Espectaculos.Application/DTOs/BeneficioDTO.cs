@@ -1,10 +1,8 @@
-using MediatR;
-using System;
-using Espectaculos.Domain.Enums;
+﻿using Espectaculos.Domain.Enums;
 
-namespace Espectaculos.Application.Beneficios.Commands.UpdateBeneficio;
+namespace Espectaculos.Application.DTOs;
 
-public record UpdateBeneficioCommand : IRequest<bool>
+public class BeneficioDTO
 {
     public Guid Id { get; set; }
     public BeneficioTipo? Tipo { get; set; } = null;
