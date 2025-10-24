@@ -30,13 +30,18 @@ namespace AppNetCredenciales.models
 
         [SQLite.Column("email")]
         public string Email { get; set; }
-        //public UsuarioEstado Estado { get; set; }
-        //public ICollection<UsuarioRol> UsuarioRoles { get; set; } = new List<UsuarioRol>();
 
-        //public ICollection<Dispositivo> Dispositivos { get; set; } = new List<Dispositivo>();
-        //public ICollection<BeneficioUsuario> Beneficios { get; set; } = new List<BeneficioUsuario>();
-        //public ICollection<Canje> Canjes { get; set; } = new List<Canje>();
 
+        [SQLite.Column("falta_cargar")]
+        public bool FaltaCargar { get; set; }
+
+        [SQLite.Column("credencial_id")]
+        public int CredencialId { get; set; }
+
+        [Ignore]
+        public Credencial Credencial { get; set; }
+
+        
 
     }
 }

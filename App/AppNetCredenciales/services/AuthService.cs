@@ -34,10 +34,9 @@ namespace AppNetCredenciales.services
             return true;
         }
 
-        public async Task<bool> isUserLogged(string email)
+        public async Task<bool> isUserLogged()
         {
-            var consulta = await SessionManager.isLogged();
-
+            var consulta = await SessionManager.IsLoggedAsync();
             return consulta;
         }
 

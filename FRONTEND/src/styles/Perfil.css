@@ -1,75 +1,177 @@
+/* ------ sane defaults for this page ------ */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html, body { max-width: 100%; }
+
+/* utils */
+.profile-wrap .sr-only {
+  position: absolute !important; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+  white-space: nowrap; border: 0;
+}
+
+/* ------ wrapper & card ------ */
 .profile-wrap {
   padding: 24px 12px 48px;
+  display: grid;
+  place-items: start center;
+  background: #f6f7f8;
 }
 
 .profile-card {
+  width: 100%;
   max-width: 1100px;
   margin: 0 auto;
   background: #fff;
   border: 6px solid #000;
   box-shadow: inset 0 0 0 6px #fff, 10px 10px 0 rgba(0,0,0,.7);
   padding: 28px 24px 16px;
+  border-radius: 12px;
 }
 
-/* Header */
-.profile-head {
+/* ------ header ------ */
+.profile-card .profile-head {
   display: grid;
-  grid-template-columns: 140px 1fr 140px;
+  grid-template-columns: 112px 1fr 240px; /* smaller avatar by default */
   gap: 18px;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.avatar {
-  width: 140px; height: 140px;
+.profile-card .avatar {
+  width: 96px; height: 96px;          /* tighter */
   border: 3px solid #000; border-radius: 999px;
-  display: grid; place-items: center; font-size: 64px;
+  display: grid; place-items: center;
+  font-size: 40px; line-height: 1;     /* tighter emoji */
+  background: #fafafa;
+  justify-self: start;
 }
 
-.title-block .user-name {
-  font-size: 36px; font-weight: 800; margin: 0;
+.profile-card .title-block .user-name {
+  font-size: clamp(20px, 3vw, 30px);
+  font-weight: 800; margin: 0;
   letter-spacing: .5px;
+  overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;                 /* keep to one line on desktop */
 }
-.title-block .cred-state {
-  margin: 6px 0 0; color: #333; font-size: 18px;
+.profile-card .title-block .cred-state {
+  margin: 6px 0 0; color: #333; font-size: 14px;
 }
 
-/* Roles box */
-.roles {
+/* roles box (scoped) */
+.profile-card .roles {
   justify-self: end;
   display: inline-flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   border: 6px solid #000;
   background: #eee;
   padding: 10px 14px;
   border-radius: 8px;
   box-shadow: 4px 4px 0 rgba(0,0,0,.4);
+  max-width: 100%;
 }
-.roles span { font-family: ui-monospace, Menlo, monospace; font-size: 22px; }
+.profile-card .roles span {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 16px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
-/* Datos */
-.data-box {
+/* ------ datos ------ */
+.profile-card .data-box {
   margin: 18px 0 16px;
   border: 4px solid #000;
   padding: 14px 16px 20px;
+  border-radius: 10px;
 }
-.data-title {
+
+.profile-card .data-title {
   text-align: center;
   color: #9b9b9b;
-  font-size: 32px;
+  font-size: clamp(18px, 3vw, 28px);
   margin: 0 0 8px;
   letter-spacing: 2px;
 }
-.data-list { padding: 6px 8px 4px; line-height: 1.9; font-size: 18px; }
 
-/* Footer */
-.card-footer {
+/* key/value grid */
+.profile-card .data-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 10px 14px;
+  padding: 6px 8px 4px;
+  line-height: 1.7;
+  font-size: 16px;
+}
+.profile-card .data-grid .k { font-weight: 800; color: #0f172a; }
+.profile-card .data-grid .v { color: #1f2937; overflow-wrap: anywhere; }
+
+/* ------ footer ------ */
+.profile-card .card-footer {
   display: flex; justify-content: space-between; align-items: center;
   margin-top: 6px;
+  gap: 12px;
+  border-top: 4px solid #000;
+  padding-top: 12px;
 }
-.theme { font-size: 28px; letter-spacing: 1px; }
-.edit-btn {
-  font-size: 26px; letter-spacing: 2px;
-  background: transparent; border: none; cursor: pointer;
+.profile-card .theme { font-size: clamp(14px, 2vw, 22px); letter-spacing: 1px; }
+.profile-card .edit-btn {
+  font-size: clamp(14px, 2vw, 20px);
+  letter-spacing: 2px;
+  background: transparent; border: 2px solid #000;
+  border-radius: 10px; padding: 10px 16px;
+  cursor: pointer;
+}
+
+/* ------ responsive ------ */
+@media (max-width: 880px) {
+  .profile-card .profile-head {
+    grid-template-columns: 84px 1fr;
+    grid-template-areas:
+      "avatar title"
+      "roles  roles";
+    align-items: start;
+  }
+  .profile-card .avatar      { grid-area: avatar; width: 84px; height: 84px; font-size: 36px; }
+  .profile-card .title-block { grid-area: title; }
+  .profile-card .roles {
+    grid-area: roles;
+    justify-self: stretch;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+  }
+  .profile-card .roles span {
+    background: #fff;
+    border: 2px solid #000;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 14px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,.3);
+  }
+  .profile-card .data-grid { grid-template-columns: 200px 1fr; }
+}
+
+@media (max-width: 560px) {
+  .profile-card { padding: 20px 16px 14px; box-shadow: inset 0 0 0 6px #fff, 6px 6px 0 rgba(0,0,0,.7); }
+
+  .profile-card .title-block .user-name {
+    white-space: normal;         /* allow wrapping on narrow screens */
+  }
+  .profile-card .title-block .cred-state { font-size: 13px; }
+
+  .profile-card .data-grid {
+    grid-template-columns: 1fr;
+    font-size: 15px;
+  }
+  .profile-card .data-grid .k { font-size: 12px; color: #6b7280; }
+  .profile-card .data-grid .v { font-size: 15px; }
+
+  .profile-card .card-footer { flex-wrap: wrap; }
+  .profile-card .edit-btn { width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .profile-card .roles span { font-size: 12px; }
 }

@@ -1,0 +1,46 @@
+/* ===== CSS Layers: base first, your components after ===== */
+@layer reset, base, components, overrides;
+
+/* ===== Reset: predictable sizing, remove default margins ===== */
+@layer reset {
+  *, *::before, *::after { box-sizing: border-box; }
+  :where(html) { line-height: 1.15; -webkit-text-size-adjust: 100%; }
+  :where(body, h1, h2, h3, h4, p, figure, blockquote, dl, dd) { margin: 0; }
+  :where(ul, ol) { margin: 0; padding: 0; }
+  :where(button, input, select, textarea) { font: inherit; color: inherit; }
+  :where(img, svg, video, canvas, audio, iframe, embed, object) { display: block; }
+  :where(img, svg, video) { max-width: 100%; height: auto; }
+  :where(a) { color: inherit; text-decoration: none; }
+}
+
+/* ===== Base: sensible defaults & mobile safety ===== */
+@layer base {
+  html, body { height: 100%; max-width: 100%; overflow-x: hidden; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+         background: #f6f7f8; color: #0f172a; }
+
+  /* Grids & flex: allow children to shrink (prevents horizontal scroll) */
+  :where(.grid, [class*="grid"], .flex, [class*="flex"]) > * { min-width: 0; }
+
+  /* Long tokens won’t blow layouts */
+  * { overflow-wrap: anywhere; word-break: break-word; }
+
+  /* Focus visibility */
+  :where(button, [role="button"], a, input, select, textarea):focus-visible {
+    outline: 2px solid #2563eb; outline-offset: 2px;
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  }
+
+  /* Screen-reader utility (used across pages) */
+  .sr-only {
+    position: absolute !important; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+}
+
+/* ===== components/overrides layers are left for your page CSS ===== */

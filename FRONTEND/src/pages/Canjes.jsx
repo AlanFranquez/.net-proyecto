@@ -3,51 +3,11 @@ import Navbar from "../components/Navbar";
 import "../styles/Canjes.css";
 
 const RAW_ITEMS = [
-  {
-    id: "12345",
-    fecha: "2025-10-31",
-    estado: "pendiente",
-    monto: 0,
-    metodo: "NFC",
-    corr: "abc123",
-    beneficio: "Comedor Gratuito",
-  },
-  {
-    id: "12344",
-    fecha: "2025-10-30",
-    estado: "completado",
-    monto: 50,
-    metodo: "Efectivo",
-    corr: "def456",
-    beneficio: "Completado",
-  },
-  {
-    id: "12343",
-    fecha: "2025-10-29",
-    estado: "cancelado",
-    monto: 0,
-    metodo: "NFC",
-    corr: "ghi789",
-    beneficio: "Concelddo",
-  },
-  {
-    id: "12342",
-    fecha: "2025-10-28",
-    estado: "completado",
-    monto: 30,
-    metodo: "Efectivo",
-    corr: "jkl012",
-    beneficio: "Completado",
-  },
-  {
-    id: "12341",
-    fecha: "2025-10-27",
-    estado: "pendiente",
-    monto: 0,
-    metodo: "NFC",
-    corr: "mno345",
-    beneficio: "—",
-  },
+  { id: "12345", fecha: "2025-10-31", estado: "pendiente",  monto: 0,  metodo: "NFC",     corr: "abc123", beneficio: "Comedor Gratuito" },
+  { id: "12344", fecha: "2025-10-30", estado: "completado", monto: 50, metodo: "Efectivo", corr: "def456", beneficio: "Completado" },
+  { id: "12343", fecha: "2025-10-29", estado: "cancelado",  monto: 0,  metodo: "NFC",     corr: "ghi789", beneficio: "Cancelado" },
+  { id: "12342", fecha: "2025-10-28", estado: "completado", monto: 30, metodo: "Efectivo", corr: "jkl012", beneficio: "Completado" },
+  { id: "12341", fecha: "2025-10-27", estado: "pendiente",  monto: 0,  metodo: "NFC",     corr: "mno345", beneficio: "—" },
 ];
 
 export default function Canjes({ isLoggedIn = true, onToggle }) {
@@ -71,7 +31,7 @@ export default function Canjes({ isLoggedIn = true, onToggle }) {
         if (!hay) return false;
       }
 
-      // date range filter (inclusive)
+      // rango inclusivo
       if (desde && r.fecha < desde) return false;
       if (hasta && r.fecha > hasta) return false;
 
@@ -84,86 +44,92 @@ export default function Canjes({ isLoggedIn = true, onToggle }) {
       <Navbar isLoggedIn={isLoggedIn} onToggle={onToggle} />
 
       <main className="canjes-wrap">
-        <section className="canjes-card">
-          <h1 className="canjes-title">Historial de Canjes</h1>
+        <section className="canjes-card" aria-labelledby="cj-title">
+          <h1 id="cj-title" className="canjes-title">Historial de Canjes</h1>
 
           {/* Filtros */}
-          <div className="filters">
+          <div className="filters" role="region" aria-label="Filtros">
             <div className="search">
               <span className="search-icon" aria-hidden>🔎</span>
               <input
-                placeholder="Buscar"
+                placeholder="Buscar por ID, beneficio, método o corr."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                aria-label="Buscar"
               />
             </div>
 
             <div className="date-range">
-              <label>Rango de fechas</label>
-              <input
-                type="date"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-              />
+              <label className="sr-only" htmlFor="desde">Desde</label>
+              <input id="desde" type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
               <span className="dash">—</span>
-              <input
-                type="date"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-              />
+              <label className="sr-only" htmlFor="hasta">Hasta</label>
+              <input id="hasta" type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
             </div>
 
-            <div className="status">
+            <div className="status" role="group" aria-label="Estado">
               <button
                 className={`chip ${estado === "pendiente" ? "on pending" : ""}`}
-                onClick={() =>
-                  setEstado(estado === "pendiente" ? "all" : "pendiente")
-                }
+                onClick={() => setEstado(estado === "pendiente" ? "all" : "pendiente")}
               >
                 Pendiente
               </button>
               <button
                 className={`chip ${estado === "completado" ? "on done" : ""}`}
-                onClick={() =>
-                  setEstado(estado === "completado" ? "all" : "completado")
-                }
+                onClick={() => setEstado(estado === "completado" ? "all" : "completado")}
               >
                 Completado
+              </button>
+              <button
+                className={`chip ${estado === "cancelado" ? "on cancel" : ""}`}
+                onClick={() => setEstado(estado === "cancelado" ? "all" : "cancelado")}
+              >
+                Cancelado
               </button>
             </div>
           </div>
 
-          {/* Tabla */}
-          <div className="table">
-            <div className="thead">
-              <div>Fecha</div>
-              <div>Fecha</div>
-              <div>Estado</div>
-              <div>Monto</div>
-              <div>Método</div>
-              <div>Correlation ID</div>
-              <div></div>
+          {/* Tabla / Cards responsive */}
+          <div className="table" role="table" aria-label="Resultados">
+            <div className="thead" role="row">
+              <div role="columnheader">Canje</div>
+              <div role="columnheader">Fecha</div>
+              <div role="columnheader">Estado</div>
+              <div role="columnheader">Monto</div>
+              <div role="columnheader">Método</div>
+              <div role="columnheader">Correlation ID</div>
+              <div role="columnheader"></div>
             </div>
 
             <div className="tbody">
               {items.map((r) => (
-                <div key={r.id} className="row">
-                  <div className="col-main">
+                <div key={r.id} className="row" role="row">
+                  <div className="col-main" role="cell">
                     <div className="bold">Canje #{r.id}</div>
                     <div className="sub">Beneficio: {r.beneficio}</div>
                   </div>
 
-                  <div className="col">{formatDate(r.fecha)}</div>
+                  <div className="col" data-label="Fecha" role="cell">
+                    {formatDate(r.fecha)}
+                  </div>
 
-                  <div className="col">
+                  <div className="col" data-label="Estado" role="cell">
                     <span className={`badge ${r.estado}`}>{title(r.estado)}</span>
                   </div>
 
-                  <div className="col">${r.monto}</div>
-                  <div className="col">{r.metodo}</div>
-                  <div className="col">{r.corr}</div>
+                  <div className="col" data-label="Monto" role="cell">
+                    {formatMoney(r.monto)}
+                  </div>
 
-                  <div className="col action">
+                  <div className="col" data-label="Método" role="cell">
+                    {r.metodo}
+                  </div>
+
+                  <div className="col" data-label="Correlation ID" role="cell">
+                    {r.corr}
+                  </div>
+
+                  <div className="col action" role="cell">
                     <button className="link" onClick={() => setDetalle(r)}>
                       Ver Detalle
                     </button>
@@ -172,36 +138,29 @@ export default function Canjes({ isLoggedIn = true, onToggle }) {
               ))}
 
               {items.length === 0 && (
-                <div className="empty">Sin resultados con los filtros actuales.</div>
+                <div className="empty" role="note">Sin resultados con los filtros actuales.</div>
               )}
             </div>
 
             {/* Paginación fake */}
-            <div className="pager">Página 1 de 5 ▸</div>
+            <div className="pager" aria-live="polite">Página 1 de 5 ▸</div>
           </div>
         </section>
       </main>
 
-      {/* Modal de detalle (placeholder) */}
+      {/* Modal de detalle */}
       {detalle && (
-        <div className="cj-modal-overlay" onClick={() => setDetalle(null)}>
+        <div className="cj-modal-overlay" onClick={() => setDetalle(null)} role="dialog" aria-modal="true" aria-labelledby="cj-modal-title">
           <div className="cj-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Detalle de Canje</h3>
+            <h3 id="cj-modal-title">Detalle de Canje</h3>
             <div className="cj-grid">
-              <span className="k">ID</span>
-              <span>{detalle.id}</span>
-              <span className="k">Fecha</span>
-              <span>{formatDate(detalle.fecha)}</span>
-              <span className="k">Estado</span>
-              <span>{title(detalle.estado)}</span>
-              <span className="k">Beneficio</span>
-              <span>{detalle.beneficio}</span>
-              <span className="k">Método</span>
-              <span>{detalle.metodo}</span>
-              <span className="k">Correlation ID</span>
-              <span>{detalle.corr}</span>
-              <span className="k">Monto</span>
-              <span>${detalle.monto}</span>
+              <span className="k">ID</span><span>{detalle.id}</span>
+              <span className="k">Fecha</span><span>{formatDate(detalle.fecha)}</span>
+              <span className="k">Estado</span><span>{title(detalle.estado)}</span>
+              <span className="k">Beneficio</span><span>{detalle.beneficio}</span>
+              <span className="k">Método</span><span>{detalle.metodo}</span>
+              <span className="k">Correlation ID</span><span>{detalle.corr}</span>
+              <span className="k">Monto</span><span>{formatMoney(detalle.monto)}</span>
             </div>
 
             <div className="cj-actions">
@@ -224,10 +183,14 @@ function title(s) {
 }
 
 function formatDate(iso) {
-  // muestra DD/MM/YYYY
   const d = new Date(iso + "T00:00:00");
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatMoney(n) {
+  // ajusta la moneda si necesitas otra
+  return new Intl.NumberFormat("es-UY", { style: "currency", currency: "UYU", maximumFractionDigits: 0 }).format(n);
 }

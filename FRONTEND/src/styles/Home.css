@@ -1,9 +1,9 @@
 .home {
   position: relative;
-  min-height: calc(100vh - 60px); 
+  height: 100vh;               /* Always full viewport height */
   display: grid;
   place-items: center;
-  padding: 32px 16px;
+  padding: 16px;               /* Reduced padding for less vertical space */
   background:
     url("../assets/library-bg.jpg") center/cover no-repeat fixed;
 }
@@ -19,36 +19,54 @@
 .hero-card {
   position: relative;
   width: 100%;
-  max-width: 540px;
+  max-width: 520px;            /* Slightly narrower */
   background: #fff;
   border-radius: 10px;
-  padding: 28px 28px 24px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  padding: 22px 22px 18px;     /* Smaller padding */
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
   border: 1px solid rgba(0,0,0,.05);
 }
 
-.hand { font-size: 28px; margin-bottom: 8px; }
+.hand { font-size: 26px; margin-bottom: 6px; }
+
 .title {
-  font-size: 28px; line-height: 1.15; font-weight: 800;
-  color: #0f172a; margin: 0 0 10px;
-}
-.subtitle {
-  color: #334155; margin: 0 0 18px; line-height: 1.5;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px;
 }
 
-.cta { display: flex; gap: 12px; margin-bottom: 16px; }
+.subtitle {
+  color: #334155;
+  margin: 0 0 14px;
+  line-height: 1.4;
+}
+
+.cta { display: flex; gap: 12px; margin-bottom: 14px; }
+
 .btn {
   display: inline-block;
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 8px 14px;           /* Slightly smaller buttons */
+  border-radius: 8px;
   background: #0f172a;
   color: #fff;
   text-decoration: none;
-  font-weight: 400;
+  font-weight: 500;
 }
 .btn.primary { background: #0b1220; } 
 .btn + .btn { background: #111827; opacity: .92; }
 .btn:hover { opacity: .9; }
 
-.features { list-style: none; padding: 0; margin: 16px 0 0; color: #111827; }
-.features li { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  color: #111827;
+}
+.features li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0;              /* More compact */
+}

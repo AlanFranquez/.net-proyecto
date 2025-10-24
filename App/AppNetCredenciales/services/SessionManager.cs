@@ -29,11 +29,11 @@ namespace AppNetCredenciales.services
             return email.ToString();
         }
 
-        public static async Task<bool> isLogged()
+        public static async Task<bool> IsLoggedAsync()
         {
             var id = await SecureStorage.GetAsync("id");
             return !string.IsNullOrEmpty(id);
-        } 
+        }
 
         public static void Logout()
         {
