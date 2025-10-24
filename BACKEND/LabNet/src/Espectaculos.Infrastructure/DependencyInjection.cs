@@ -25,7 +25,7 @@ public static class DependencyInjection
         services.AddScoped<IEntradaRepository, EntradaRepository>();
         services.AddScoped<IEspacioRepository, EspacioRepository>();
         services.AddScoped<IEventoRepository, EventoRepository>();
-        services.AddScoped<INotificacionRepository, NotificacionRepository>();
+            services.AddScoped<INotificacionRepository, NotificacionRepository>();
         services.AddScoped<IOrdenRepository, OrdenRepository>();
         services.AddScoped<IOrdenItemRepository, OrdenItemRepository>();
         services.AddScoped<IReglaDeAccesoRepository, ReglaDeAccesoRepository>();

@@ -16,6 +16,7 @@ public interface IUnitOfWork
     ICanjeRepository Canjes { get; }
     IEventoAccesoRepository EventosAccesos { get; }
     ICredencialRepository Credenciales { get; }
+    INotificacionRepository Notificaciones { get; }
 
 Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

@@ -21,6 +21,7 @@ using Espectaculos.WebApi.Options;
 using Espectaculos.WebApi.Security;
 using Espectaculos.WebApi.SerilogConfig;
 using FluentValidation;
+// Notificaciones replaces Novedades; no legacy using required here.
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Npgsql.EntityFrameworkCore.PostgreSQL;
@@ -224,6 +225,7 @@ builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioReposito
 builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
 builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
 builder.Services.AddScoped<IEventoAccesoRepository, EventoAccesoRepository>();
+builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -265,6 +267,7 @@ api.MapReglasDeAccesoEndpoints();
 api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
 api.MapEventosAccesosEndpoints();
+api.MapNotificacionesEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");
