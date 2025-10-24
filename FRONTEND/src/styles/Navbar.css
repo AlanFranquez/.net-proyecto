@@ -1,0 +1,123 @@
+/* NAV WRAPPER (fixed height, no growth) */
+.nav {
+  background: #000;
+  color: #fff;
+  position: sticky; /* optional; remove if you don't want sticky */
+  top: 0;
+  z-index: 50;
+}
+
+/* Use a fixed height + center alignment to prevent inflation */
+.nav-inner {
+  max-width: 1150px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;       /* vertically center */
+  justify-content: space-between;
+  height: 64px;              /* FIXED HEIGHT */
+  padding: 0 16px;           /* NO vertical padding -> height stays 64px */
+  overflow: hidden;          /* guard against wrapping artifacts */
+  box-sizing: border-box;
+}
+
+/* Book (home) */
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+  flex: 0 0 auto;
+}
+
+/* Menu: never wrap to a second line */
+.menu {
+  display: flex;
+  gap: 10px;
+  flex-wrap: nowrap;         
+  white-space: nowrap;       
+  overflow-x: auto;         
+  scrollbar-width: none;    
+}
+.menu::-webkit-scrollbar { display: none; }
+
+/* Buttons are inline-flex, fixed height */
+.menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;           
+  padding: 0 12px;
+  border: 1px solid #fff;
+  border-radius: 6px;
+  background: #000;
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 1px 0 rgba(0,0,0,.5);
+  flex: 0 0 auto;            /* never stretch tall */
+}
+.menu-btn.is-active {
+  background: #111;          /* simple active state */
+}
+
+/* Right cluster */
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.login-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.toggle {
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: #444;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1;         
+  height: 36px;         
+}
+
+.bell { position: relative; display: inline-block; }
+.badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  color: #e11;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+}
+.avatar { font-size: 20px; }
+
+@media (max-width: 720px) {
+  .nav-inner { height: 60px; }
+  .menu-btn { height: 32px; }
+  .login-pill { height: 32px; }
+}

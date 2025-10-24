@@ -1,0 +1,54 @@
+.home {
+  position: relative;
+  min-height: calc(100vh - 60px); 
+  display: grid;
+  place-items: center;
+  padding: 32px 16px;
+  background:
+    url("../assets/library-bg.jpg") center/cover no-repeat fixed;
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(4px);
+  background: rgba(255,255,255,0.55);
+}
+
+/* Card */
+.hero-card {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 28px 28px 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.15);
+  border: 1px solid rgba(0,0,0,.05);
+}
+
+.hand { font-size: 28px; margin-bottom: 8px; }
+.title {
+  font-size: 28px; line-height: 1.15; font-weight: 800;
+  color: #0f172a; margin: 0 0 10px;
+}
+.subtitle {
+  color: #334155; margin: 0 0 18px; line-height: 1.5;
+}
+
+.cta { display: flex; gap: 12px; margin-bottom: 16px; }
+.btn {
+  display: inline-block;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #0f172a;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 400;
+}
+.btn.primary { background: #0b1220; } 
+.btn + .btn { background: #111827; opacity: .92; }
+.btn:hover { opacity: .9; }
+
+.features { list-style: none; padding: 0; margin: 16px 0 0; color: #111827; }
+.features li { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
