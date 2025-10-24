@@ -55,7 +55,7 @@ namespace AppNetCredenciales.ViewModel
             {
                 if (Application.Current?.MainPage is not null)
                 {
-                    await Application.Current.MainPage.Navigation.PushAsync(new RegisterView(authService));
+                    await Shell.Current.GoToAsync("register");
                 }
             });
         }
@@ -106,7 +106,8 @@ namespace AppNetCredenciales.ViewModel
             {
                 await SessionManager.SaveUserAsync(u.UsuarioId, Email);
 
-                await App.Current.MainPage.Navigation.PushAsync(new EventoView(authService));
+
+                await Shell.Current.GoToAsync("evento");
             }
             catch (Exception ex)
             {

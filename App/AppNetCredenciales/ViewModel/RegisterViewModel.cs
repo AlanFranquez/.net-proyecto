@@ -69,7 +69,7 @@ namespace AppNetCredenciales.ViewModel
             {
                 if (Application.Current?.MainPage is not null)
                 {
-                    await Application.Current.MainPage.Navigation.PushAsync(new LoginView(authService));
+                    await Shell.Current.GoToAsync("login");
                 }
             });
         }

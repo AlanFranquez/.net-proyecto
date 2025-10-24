@@ -30,6 +30,8 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<RegisterView>();
             builder.Services.AddSingleton<EventoView>();
             builder.Services.AddSingleton<EventoViewModel>();
+            builder.Services.AddSingleton<ConectivityService>();
+            builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
 
 #if DEBUG
             builder.Logging.AddDebug();
