@@ -27,7 +27,7 @@ namespace Espectaculos.Application.Espacios.Commands.CreateEspacio
                 Activo = command.Activo,
                 Tipo = command.Tipo,
                 Modo = command.Modo,
-                EventoAccesos = new List<EventoAcceso>(),
+                EventoAccesos = new List<Domain.Entities.EventoAcceso>(),
                 Reglas = new List<EspacioReglaDeAcceso>(),
                 Beneficios = new List<BeneficioEspacio>()
             };

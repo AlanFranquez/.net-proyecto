@@ -4,9 +4,6 @@ namespace Espectaculos.Application.Abstractions;
 
 public interface IUnitOfWork
 {
-    IEventoRepository Eventos { get; }
-    IEntradaRepository Entradas { get; }
-    IOrdenRepository Ordenes { get; }
     IUsuarioRepository Usuarios { get; }
     IEspacioRepository Espacios { get; }
     IReglaDeAccesoRepository Reglas { get; }

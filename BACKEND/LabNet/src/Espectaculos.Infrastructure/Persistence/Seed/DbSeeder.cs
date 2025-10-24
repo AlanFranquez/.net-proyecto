@@ -38,9 +38,9 @@ public class DbSeeder
             ct);
 
         // Cargar dataset completo
-        var eventos = SeedData.GetEventosSeed().ToList();
-        _log.LogInformation("Insertando {Count} eventos (con sus entradas)…", eventos.Count);
-        await _db.Eventos.AddRangeAsync(eventos, ct);
+        //var eventos = SeedData.GetEventosSeed().ToList();
+        //_log.LogInformation("Insertando {Count} eventos (con sus entradas)…", eventos.Count);
+        //await _db.Eventos.AddRangeAsync(eventos, ct);
         await _db.SaveChangesAsync(ct);
 
         _log.LogInformation("Seed OK.");

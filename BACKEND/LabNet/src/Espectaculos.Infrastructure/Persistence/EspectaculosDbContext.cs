@@ -15,13 +15,6 @@ public class EspectaculosDbContext : DbContext
     {
         _auditableInterceptor = auditableInterceptor;
     }
-
-    public DbSet<Evento> Eventos => Set<Evento>();
-    public DbSet<Entrada> Entradas => Set<Entrada>();
-    public DbSet<Orden> Ordenes => Set<Orden>();
-    public DbSet<OrdenItem> OrdenItems => Set<OrdenItem>();
-    
-    
     
     public DbSet<Usuario> Usuario => Set<Usuario>();
     // Novedad removed - use Notificaciones instead

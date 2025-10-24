@@ -9,9 +9,6 @@ public class UnitOfWork : IUnitOfWork
     private readonly EspectaculosDbContext _db;
 
     public UnitOfWork(EspectaculosDbContext db,
-                      IEventoRepository eventos,
-                      IEntradaRepository entradas,
-                      IOrdenRepository ordenes,
                       IUsuarioRepository usuarios,
                       IEspacioRepository espacios,
                       IReglaDeAccesoRepository reglas,
@@ -25,9 +22,6 @@ public class UnitOfWork : IUnitOfWork
     )
     {
         _db = db;
-        Eventos = eventos;
-        Entradas = entradas;
-        Ordenes = ordenes;
         Usuarios = usuarios;
         Espacios = espacios;
         Reglas = reglas;
@@ -39,10 +33,6 @@ public class UnitOfWork : IUnitOfWork
         Credenciales = credenciales;
         Notificaciones = notificaciones;
     }
-
-    public IEventoRepository Eventos { get; }
-    public IEntradaRepository Entradas { get; }
-    public IOrdenRepository Ordenes { get; }
     public IUsuarioRepository Usuarios { get; }
     public IEspacioRepository Espacios { get; }
     public IReglaDeAccesoRepository Reglas { get; }

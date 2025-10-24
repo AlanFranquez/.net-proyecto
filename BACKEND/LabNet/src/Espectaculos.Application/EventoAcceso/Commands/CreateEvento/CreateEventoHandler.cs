@@ -25,16 +25,14 @@ namespace Espectaculos.Application.EventoAcceso.Commands.CreateEvento
             // ------- DESCOMENTAR UNA VEZ EXISTA CREDENCIAL
             //var credencial = await _uow.Credenciales.GetByIdAsync(command.CredencialId, ct)
             //                 ?? throw new KeyNotFoundException("La credencial indicada no existe.");
-
-            var credencial = espacio;
             
             var evento = new Domain.Entities.EventoAcceso
             {
                 EventoId = Guid.NewGuid(),
                 MomentoDeAcceso = command.MomentoDeAcceso,
-                CredencialId = command.CredencialId,
+                CredencialId = null,
                 // ------- DESCOMENTAR UNA VEZ EXISTA CREDENCIAL
-                //Credencial = credencial,
+                Credencial = null,
                 EspacioId = command.EspacioId,
                 Espacio = espacio,
                 Resultado = command.Resultado,

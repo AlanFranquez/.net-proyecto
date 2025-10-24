@@ -4,6 +4,7 @@ namespace Espectaculos.Infrastructure.Persistence.Seed;
 
 public static class SeedData
 {
+    /*
     public static IEnumerable<Evento> GetEventosSeed()
     {
         {
@@ -1431,5 +1432,5 @@ public static class SeedData
 
             return list;
         }
-    }
+    }*/
 }

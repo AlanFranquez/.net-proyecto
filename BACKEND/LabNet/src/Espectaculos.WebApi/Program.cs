@@ -3,10 +3,6 @@ using System.Text.Json.Serialization;
 using Espectaculos.Application;
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
-using Espectaculos.Application.Commands.CrearOrden;
-using Espectaculos.Application.Commands.CrearUsuario;
-using Espectaculos.Application.Commands.CreateEvento;
-using Espectaculos.Application.Commands.PublicarEvento;
 using Espectaculos.Application.Espacios.Commands.CreateEspacio;
 using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
 using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
@@ -29,10 +25,14 @@ using Serilog;
 using Espectaculos.WebApi.Security;
 using System.Text.Json.Serialization;
 using Espectaculos.Application.EventoAcceso.Commands.DeleteEvento;
+using Espectaculos.Application.EventoAcceso.Commands.CreateEvento;
 using Espectaculos.Application.EventoAcceso.Commands.UpdateEvento;
 using Espectaculos.Application.ReglaDeAcceso.Commands.CreateReglaDeAcceso;
 using Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
 using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
+using FluentValidation;
+using MediatR;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -185,9 +185,6 @@ builder.Services.AddControllers()
     });
 
 // Validators (Application)
-builder.Services.AddScoped<IValidator<CreateEventoCommand>, CreateEventoValidator>();
-builder.Services.AddScoped<IValidator<PublicarEventoCommand>, PublicarEventoValidator>();
-builder.Services.AddScoped<IValidator<CrearOrdenCommand>, CrearOrdenValidator>();
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
 builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
 builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
@@ -197,7 +194,14 @@ builder.Services.AddScoped<IValidator<DeleteReglaCommand>, DeleteReglaValidator>
 builder.Services.AddScoped<IValidator<CreateEventoCommand>, CreateEventoValidator>();
 builder.Services.AddScoped<IValidator<UpdateEventoCommand>, UpdateEventoValidator>();
 builder.Services.AddScoped<IValidator<DeleteEventoCommand>, DeleteEventoValidator>();
-builder.Services.AddScoped<CrearUsuarioHandler>();
+
+
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(Assembly.Load("Espectaculos.Application"));
+});
+
+//builder.Services.AddValidatorsFromAssembly(Assembly.Load("Espectaculos.Application"));
 
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateEspacioCommand).Assembly));
@@ -205,26 +209,18 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateReglaCommand).Assembly));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateEventoCommand).Assembly));
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssemblies(
-        typeof(CreateUsuarioCommand).Assembly,
-        Assembly.GetExecutingAssembly()
-    )
-);
 
 
 // Repos + UoW: registrar repositorios primero, luego IUnitOfWork
-builder.Services.AddScoped<IEventoRepository, EventoRepository>();
-builder.Services.AddScoped<IEntradaRepository, EntradaRepository>();
-builder.Services.AddScoped<IOrdenRepository, OrdenRepository>();
-builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
 builder.Services.AddScoped<IReglaDeAccesoRepository, ReglaDeAccesoRepository>();
 builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IBeneficioUsuarioRepository, BeneficioUsuarioRepository>();
 builder.Services.AddScoped<IBeneficioEspacioRepository, BeneficioEspacioRepository>();
 builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
 builder.Services.AddScoped<IEventoAccesoRepository, EventoAccesoRepository>();
+builder.Services.AddScoped<ICredencialRepository, CredencialRepository>();
 builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
@@ -259,10 +255,7 @@ app.UseSwaggerUI(c =>
 var api = app.MapGroup("/api");
 
 // Mapea tus endpoints SOBRE el grupo (usar rutas relativas en las extensiones)
-api.MapEventosEndpoints();
-api.MapUsuariosEndpoints();
 api.MapEspaciosEndpoints();
-api.MapOrdenesEndpoints();
 api.MapReglasDeAccesoEndpoints();
 api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
@@ -277,57 +270,6 @@ api.MapHealthChecks("/health");
 // Uso: POST /admin/quick-seed?count=70&publish=true
 var enableAdmin = (Environment.GetEnvironmentVariable("DEMO_ENABLE_ADMIN") ?? config["DEMO_ENABLE_ADMIN"] ?? "false")
     .Equals("true", StringComparison.OrdinalIgnoreCase);
-if (enableAdmin)
-{
-    app.MapPost("/admin/quick-seed", async (int count, bool publish, EspectaculosDbContext db) =>
-    {
-        if (count <= 0) return Results.BadRequest("count debe ser > 0");
-
-        var ahora = DateTime.UtcNow;
-        var rnd = new Random();
-        var nuevos = new List<Espectaculos.Domain.Entities.Evento>(count);
-
-        for (int i = 0; i < count; i++)
-        {
-            var ev = new Espectaculos.Domain.Entities.Evento
-            {
-                Id = Guid.NewGuid(),
-                Titulo = $"Festival Demo #{i + 1}",
-                Descripcion = "Evento generado rápido para pruebas de front.",
-                Fecha = ahora.AddDays(rnd.Next(3, 180)),
-                Lugar = rnd.Next(0, 2) == 0 ? "Antel Arena, Montevideo" : "Luna Park, Buenos Aires",
-                Publicado = publish,
-                Entradas = new List<Espectaculos.Domain.Entities.Entrada>
-                {
-                    new() { Id = Guid.NewGuid(), Tipo = "General", Precio = rnd.Next(40,120),  StockTotal = 5000, StockDisponible = 5000 },
-                    new() { Id = Guid.NewGuid(), Tipo = "Platea",  Precio = rnd.Next(120,240), StockTotal = 2000, StockDisponible = 2000 },
-                    new() { Id = Guid.NewGuid(), Tipo = "VIP",     Precio = rnd.Next(240,480), StockTotal =  500, StockDisponible =  500 },
-                }
-            };
-
-            foreach (var en in ev.Entradas) en.EventoId = ev.Id; // asegurar FK
-            nuevos.Add(ev);
-        }
-
-        await db.Eventos.AddRangeAsync(nuevos);
-        await db.SaveChangesAsync();
-
-        return Results.Ok(new { inserted = nuevos.Count });
-    });
-}
-
-// === ADMIN: publicar todos los eventos existentes ===
-// Uso: POST /admin/publish-all
-if (enableAdmin)
-{
-    app.MapPost("/admin/publish-all", async (EspectaculosDbContext db) =>
-    {
-        var todos = await db.Eventos.ToListAsync();
-        foreach (var e in todos) e.Publicado = true;
-        await db.SaveChangesAsync();
-        return Results.Ok(new { updated = todos.Count });
-    });
-}
 
 // ---------- 5) Migrar SIEMPRE + (opcional) SEED ----------
 static bool GetFlag(IConfiguration cfg, string key, bool def = false)
@@ -373,12 +315,5 @@ async Task ApplyMigrationsAndSeedAsync()
 
 await ApplyMigrationsAndSeedAsync();
 
-if (enableAdmin)
-{
-    app.MapGet("/admin/debug-event/{id:guid}", async (Guid id, IUnitOfWork uow) => {
-        var ev = await uow.Eventos.GetByIdAsync(id);
-        return Results.Ok(new { ev?.Id, ev?.Disponible, ev?.Fecha, Kind = ev?.Fecha.Kind.ToString() });
-    });
-}
 
 app.Run();

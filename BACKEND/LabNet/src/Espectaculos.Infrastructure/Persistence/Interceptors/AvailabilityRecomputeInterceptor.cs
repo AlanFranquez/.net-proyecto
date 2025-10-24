@@ -21,7 +21,7 @@ public class AvailabilityRecomputeInterceptor : SaveChangesInterceptor
         var ctx = eventData.Context;
         if (ctx != null)
         {
-            var affectedIds = ctx.ChangeTracker.Entries<Entrada>()
+            /*var affectedIds = ctx.ChangeTracker.Entries<Entrada>()
                 .Where(e => e.State == EntityState.Added ||
                             e.State == EntityState.Modified ||
                             e.State == EntityState.Deleted)
@@ -38,6 +38,7 @@ public class AvailabilityRecomputeInterceptor : SaveChangesInterceptor
                     set.Add(id);
                 }
             }
+            */
         }
 
         return base.SavingChanges(eventData, result);
@@ -66,6 +67,7 @@ public class AvailabilityRecomputeInterceptor : SaveChangesInterceptor
             var now = DateTime.UtcNow;
 
             // Cargar sumatoria de stock por evento afectado (AsNoTracking para eficiencia)
+            /*
             var stockPorEvento = await ctx.Entradas.AsNoTracking()
                 .Where(en => ids.Contains(en.EventoId))
                 .GroupBy(en => en.EventoId)
@@ -93,6 +95,7 @@ public class AvailabilityRecomputeInterceptor : SaveChangesInterceptor
             {
                 await ctx.SaveChangesAsync(cancellationToken);
             }
+            */
         }
         finally
         {

@@ -22,12 +22,8 @@ public static class DependencyInjection
         services.AddScoped<IBeneficioRepository, BeneficioRepository>();
         services.AddScoped<ICanjeRepository, CanjeRepository>();
         services.AddScoped<ICredencialRepository, CredencialRepository>();
-        services.AddScoped<IEntradaRepository, EntradaRepository>();
         services.AddScoped<IEspacioRepository, EspacioRepository>();
-        services.AddScoped<IEventoRepository, EventoRepository>();
-            services.AddScoped<INotificacionRepository, NotificacionRepository>();
-        services.AddScoped<IOrdenRepository, OrdenRepository>();
-        services.AddScoped<IOrdenItemRepository, OrdenItemRepository>();
+        services.AddScoped<INotificacionRepository, NotificacionRepository>();
         services.AddScoped<IReglaDeAccesoRepository, ReglaDeAccesoRepository>();
         services.AddScoped<IRolRepository, RolRepository>();
         services.AddScoped<ISincronizacionRepository, SincronizacionRepository>();
