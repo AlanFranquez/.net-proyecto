@@ -1,0 +1,10 @@
+@layer base {
+  /* container helper if you ever want it */
+  .container { width: min(1100px, 100%); margin-inline: auto; padding-inline: 16px; }
+
+  /* Tap targets (mobile) */
+  .tap { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; }
+
+  /* Hide horizontal overflow on known wrappers (belt & suspenders) */
+  .no-x { overflow-x: hidden; }
+}
