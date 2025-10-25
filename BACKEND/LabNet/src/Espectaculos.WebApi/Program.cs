@@ -39,6 +39,9 @@ using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
 using Espectaculos.Application.Roles.Commands.CreateRol;
 using Espectaculos.Application.Roles.Commands.DeleteRol;
 using Espectaculos.Application.Roles.Commands.UpdateRol;
+using Espectaculos.Application.Sincronizaciones.Commands.CreateSincronizacion;
+using Espectaculos.Application.Sincronizaciones.Commands.DeleteSincronizacion;
+using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 
@@ -211,6 +214,9 @@ builder.Services.AddScoped<IValidator<DeleteRolCommand>, DeleteRolValidator>();
 builder.Services.AddScoped<IValidator<CreateUsuarioCommand>, CreateUsuarioValidator>();
 builder.Services.AddScoped<IValidator<UpdateUsuarioCommand>, UpdateUsuarioValidator>();
 builder.Services.AddScoped<IValidator<DeleteUsuarioCommand>, DeleteUsuarioValidator>();
+builder.Services.AddScoped<IValidator<CreateSincronizacionCommand>, CreateSincronizacionValidator>();
+builder.Services.AddScoped<IValidator<UpdateSincronizacionCommand>, UpdateSincronizacionValidator>();
+builder.Services.AddScoped<IValidator<DeleteSincronizacionCommand>, DeleteSincronizacionValidator>();
 
 
 builder.Services.AddMediatR(cfg =>
@@ -242,6 +248,9 @@ builder.Services.AddScoped<IEventoAccesoRepository, EventoAccesoRepository>();
 builder.Services.AddScoped<ICredencialRepository, CredencialRepository>();
 builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 builder.Services.AddScoped<IRolRepository, RolRepository>();
+builder.Services.AddScoped<ISincronizacionRepository, SincronizacionRepository>();
+builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
+
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -284,6 +293,7 @@ api.MapNotificacionesEndpoints();
 api.MapCredencialesEndpoints();
 api.MapRolesEndpoints();
 api.MapUsuariosEndpoints();
+api.MapSincronizacionEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

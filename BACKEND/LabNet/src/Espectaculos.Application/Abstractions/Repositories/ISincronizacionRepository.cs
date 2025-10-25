@@ -10,5 +10,11 @@ namespace Espectaculos.Application.Abstractions.Repositories
     public interface ISincronizacionRepository : IRepository<Sincronizacion, Guid>
     {
         Task<IReadOnlyList<Sincronizacion>> ListRecientesByDispositivoAsync(Guid dispositivoId, int take = 50, CancellationToken ct = default);
+        
+        Task<IReadOnlyList<Sincronizacion>> ListAsync(CancellationToken ct = default);
+        Task<Sincronizacion?> GetByIdAsync(Guid id, CancellationToken ct = default);
+        Task UpdateAsync(Sincronizacion sincronizacion, CancellationToken ct = default);
+        Task DeleteAsync(Guid id, CancellationToken ct = default);
+        Task<IReadOnlyList<Sincronizacion>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
     }
 }
