@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AppNetCredenciales.Views.RegisterView"
             
-             BackgroundColor="#1E1E1E">
+             BackgroundColor="White">
 
     <ScrollView>
         <VerticalStackLayout Padding="30" Spacing="15">

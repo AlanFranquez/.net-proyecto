@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AppNetCredenciales.models;
 using Microsoft.Maui.Storage;
 
 namespace AppNetCredenciales.services
@@ -22,6 +23,7 @@ namespace AppNetCredenciales.services
 
             return int.Parse(id);
         }
+
 
         public static async Task<string> GetUserEmailAsync()
         {

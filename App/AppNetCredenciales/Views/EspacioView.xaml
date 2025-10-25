@@ -1,0 +1,88 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:AppNetCredenciales.Views"
+             x:Class="AppNetCredenciales.Views.EspacioView"
+             Title="Eventos Disponibles" BackgroundColor="White">
+
+    <Grid RowDefinitions="*,Auto">
+
+        <!-- Main scrolling content -->
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="20" Spacing="10">
+
+                <Label Text="Eventos disponibles"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       HorizontalOptions="Center"
+                       Margin="0,0,0,10" />
+
+                <CollectionView x:Name="EspaciosCollection"
+                                ItemsSource="{Binding Espacios}"
+                                SelectionMode="Single"
+                                SelectionChanged="OnEspacioSelected">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Vertical" ItemSpacing="12" />
+                    </CollectionView.ItemsLayout>
+
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Frame Padding="15"
+                                   Margin="1"
+                                   BorderColor="{AppThemeBinding Light='#ccc', Dark='#555'}"
+                                   BackgroundColor="{AppThemeBinding Light='White', Dark='#1e1e1e'}"
+                                   CornerRadius="12"
+                                   HasShadow="True">
+
+                                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
+                                    <!-- Título -->
+                                    <Label Text="{Binding Titulo}"
+                                           FontSize="20"
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light='Black', Dark='White'}"
+                                           Grid.Row="0" />
+
+                                    <!-- Fecha y Lugar -->
+                                    <HorizontalStackLayout Spacing="10" Grid.Row="1">
+                                        <Label Text="{Binding Fecha, StringFormat='📅 {0:dd/MM/yyyy HH:mm}'}"
+                                               FontSize="14"
+                                               TextColor="Gray" />
+                                        <Label Text="{Binding Lugar, StringFormat='📍 {0}'}"
+                                               FontSize="14"
+                                               TextColor="Gray" />
+                                    </HorizontalStackLayout>
+
+                                    <!-- Descripción -->
+                                    <Label Text="{Binding Descripcion}"
+                                           FontSize="14"
+                                           Grid.Row="2"
+                                           TextColor="{AppThemeBinding Light='#444', Dark='#ccc'}"
+                                           LineBreakMode="WordWrap" />
+
+                                    <!-- Stock -->
+                                    <HorizontalStackLayout Grid.Row="3" Spacing="10">
+                                        <Label Text="{Binding Stock, StringFormat='🎟️ Cupos: {0}'}"
+                                               FontSize="14"
+                                               TextColor="Gray" />
+                                    </HorizontalStackLayout>
+
+                                    <!-- Estado / Publicado -->
+                                    <HorizontalStackLayout Grid.Row="4" Spacing="15" Margin="0,5,0,0">
+                                        <Label Text="{Binding Disponible, Converter={StaticResource BoolToTextConverter}, ConverterParameter='disponible'}"
+                                               TextColor="{Binding Disponible, Converter={StaticResource BoolToColorConverter}}" />
+                                        <Label Text="{Binding Publicado, Converter={StaticResource BoolToTextConverter}, ConverterParameter='publicado'}"
+                                               TextColor="{Binding Publicado, Converter={StaticResource BoolToColorConverter}}" />
+                                    </HorizontalStackLayout>
+
+                                </Grid>
+                            </Frame>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Fixed navbar at bottom -->
+        <views:Navbar Grid.Row="1" />
+    </Grid>
+</ContentPage>

@@ -14,7 +14,6 @@ namespace AppNetCredenciales
             InitializeComponent();
             MainPage = new AppShell();
 
-            Shell.Current.GoToAsync("//login");
         }
 
 

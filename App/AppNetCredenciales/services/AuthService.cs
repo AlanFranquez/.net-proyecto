@@ -52,6 +52,12 @@ namespace AppNetCredenciales.services
             return u;
         }
 
+        public async Task<models.Usuario> GetUserLogged()
+        {
+            var u = await _db.GetLoggedUserAsync();
+
+            return u;
+        }
 
         public async Task<bool> loginUsuario(string email, string password)
         {

@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using AppNetCredenciales.Views;
@@ -17,6 +18,7 @@ namespace AppNetCredenciales.ViewModel
         private bool trabajando;
         private readonly AuthService authService;
         private readonly RegisterView view;
+        private readonly LocalDBService _db;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -59,10 +61,11 @@ namespace AppNetCredenciales.ViewModel
         public ICommand RegisterCommand { get; }
         public ICommand NavigateToLogin { get; }
 
-        public RegisterViewModel(RegisterView view, AuthService authService)
+        public RegisterViewModel(RegisterView view, AuthService authService, LocalDBService db)
         {
             this.view = view;
             this.authService = authService;
+            this._db = db;
             RegisterCommand = new Command(async () => await RegisterAsync(), () => !trabajando);
 
             NavigateToLogin = new Command(async () =>
@@ -106,6 +109,22 @@ namespace AppNetCredenciales.ViewModel
                 Password = Password
             };
 
+            var credencial = new Credencial
+            {
+                Tipo = CredencialTipo.Campus,
+                Estado = CredencialEstado.Emitida,
+                IdCriptografico = Guid.NewGuid().ToString("N"),
+                FechaEmision = DateTime.UtcNow
+            };
+
+            var credId = await _db.SaveCredencialAsync(credencial);
+            if (credId <= 0) return false;
+
+            usuario.CredencialId = credId;
+            usuario.Credencial = credencial;
+
+
+
             var registrado = await authService.registrarUsuario(usuario);
 
             if (!registrado)
@@ -117,7 +136,6 @@ namespace AppNetCredenciales.ViewModel
 
             await view.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
 
-            // Vuelve al login
             await view.Navigation.PopAsync();
 
             Trabajando = false;
