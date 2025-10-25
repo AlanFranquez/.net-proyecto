@@ -15,6 +15,8 @@ public interface IUnitOfWork
     ICredencialRepository Credenciales { get; }
     INotificacionRepository Notificaciones { get; }
     IRolRepository Roles { get; }
+    IDispositivoRepository Dispositivos { get; }
+    ISincronizacionRepository Sincronizaciones { get; }
 
 Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
