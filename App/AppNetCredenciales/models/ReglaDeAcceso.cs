@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace AppNetCredenciales.models
 {
-    
 
+    [SQLite.Table("ReglasDeAccesos")]
     public class ReglaDeAcceso
     {
         public int ReglaId { get; set; }

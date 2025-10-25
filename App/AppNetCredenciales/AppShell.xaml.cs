@@ -8,9 +8,9 @@ namespace AppNetCredenciales
         {
             InitializeComponent();
             Routing.RegisterRoute("register", typeof(AppNetCredenciales.Views.RegisterView));
-            Routing.RegisterRoute("login", typeof(AppNetCredenciales.Views.LoginView));
-            Routing.RegisterRoute("evento", typeof(AppNetCredenciales.Views.EventoView));
-
+            Routing.RegisterRoute("espacio", typeof(AppNetCredenciales.Views.EspacioView));
+            Routing.RegisterRoute("credencial", typeof(AppNetCredenciales.Views.CredencialView));
+            Routing.RegisterRoute("espacioPerfil", typeof(AppNetCredenciales.Views.EspacioPerfilView));
 
         }
 

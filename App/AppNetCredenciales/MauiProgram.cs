@@ -28,11 +28,14 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<LoginView>();
             builder.Services.AddSingleton<App>();
             builder.Services.AddSingleton<RegisterView>();
-            builder.Services.AddSingleton<EventoView>();
-            builder.Services.AddSingleton<EventoViewModel>();
+            builder.Services.AddSingleton<EspacioView>();
+            builder.Services.AddSingleton<EspacioViewModel>();
             builder.Services.AddSingleton<ConectivityService>();
             builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
-
+            builder.Services.AddSingleton<CredencialView>();
+            builder.Services.AddSingleton<CredencialViewModel>();
+            builder.Services.AddSingleton<EspacioPerfilView>();
+            builder.Services.AddSingleton<EspacioPerfilViewModel>();
 #if DEBUG
             builder.Logging.AddDebug();
 #endif

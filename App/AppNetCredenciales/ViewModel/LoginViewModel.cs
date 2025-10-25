@@ -107,7 +107,7 @@ namespace AppNetCredenciales.ViewModel
                 await SessionManager.SaveUserAsync(u.UsuarioId, Email);
 
 
-                await Shell.Current.GoToAsync("evento");
+                await Shell.Current.GoToAsync("espacio");
             }
             catch (Exception ex)
             {
