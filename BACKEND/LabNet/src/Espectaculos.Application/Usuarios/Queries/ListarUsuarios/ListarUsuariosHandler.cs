@@ -5,7 +5,6 @@ using MediatR;
 namespace Espectaculos.Application.Usuarios.Queries.ListarUsuarios
 {
 
-    // Handler (manejador)
     public class ListarUsuariosHandler : IRequestHandler<ListarUsuariosQuery, List<UsuarioDto>>
     {
         private readonly IUsuarioRepository _repo;
@@ -26,7 +25,12 @@ namespace Espectaculos.Application.Usuarios.Queries.ListarUsuarios
                 Apellido = u.Apellido,
                 Email = u.Email,
                 Documento = u.Documento,
-                Estado = u.Estado
+                Estado = u.Estado,
+                CredencialId = u.CredencialId,
+                RolesIDs = u.UsuarioRoles.Select(r => r.RolId).ToList(),
+                DispositivosIDs = u.Dispositivos.Select(r => r.DispositivoId).ToList(),
+                BeneficiosIDs = u.Beneficios.Select(r => r.BeneficioId).ToList(),
+                CanjesIDs = u.Canjes.Select(r => r.CanjeId).ToList(),
             }).ToList();
         }
     }

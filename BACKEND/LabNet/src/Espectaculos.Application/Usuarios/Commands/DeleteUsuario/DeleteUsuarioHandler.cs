@@ -1,24 +1,26 @@
-﻿using Espectaculos.Application.Abstractions.Repositories;
-using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
-
-
+﻿using Espectaculos.Application.Abstractions;
+using FluentValidation;
 using MediatR;
 
-namespace Espectaculos.Application.Usuarios.Commands.DeleteUsuario
+namespace Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
+
+public class DeleteUsuarioHandler : IRequestHandler<DeleteUsuarioCommand, Guid>
 {
-    public class DeleteUsuarioHandler : IRequestHandler<DeleteUsuarioCommand>
+    private readonly IUnitOfWork _uow;
+    private readonly IValidator<DeleteUsuarioCommand> _validator;
+
+    public DeleteUsuarioHandler(IUnitOfWork uow, IValidator<DeleteUsuarioCommand> validator)
     {
-        private readonly IUsuarioRepository _repo;
+        _uow = uow;
+        _validator = validator;
+    }
 
-        public DeleteUsuarioHandler(IUsuarioRepository repo)
-        {
-            _repo = repo;
-        }
+    public async Task<Guid> Handle(DeleteUsuarioCommand command, CancellationToken ct = default)
+    {
+        await _validator.ValidateAndThrowAsync(command, ct);
 
-        public async Task Handle(DeleteUsuarioCommand request, CancellationToken ct)
-        {
-            await _repo.DeleteAsync(request.UsuarioId, ct);
-            await _repo.SaveChangesAsync(ct);
-        }
+        await _uow.Usuarios.DeleteAsync(command.UsuarioId, ct);
+        await _uow.SaveChangesAsync(ct);
+        return command.UsuarioId;
     }
 }

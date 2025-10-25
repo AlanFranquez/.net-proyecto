@@ -22,4 +22,8 @@
     <ProjectReference Include="..\Espectaculos.Application\Espectaculos.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

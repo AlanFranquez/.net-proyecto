@@ -1,12 +1,8 @@
 ﻿using MediatR;
 
-namespace Espectaculos.Application.Usuarios.Commands.DeleteUsuario
+namespace Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
+
+public class DeleteUsuarioCommand : IRequest<Guid>
 {
-    public record DeleteUsuarioCommand(
-        Guid UsuarioId
-    ) : IRequest;     
-    
+    public Guid UsuarioId { get; set; }
 }
-
-
-    

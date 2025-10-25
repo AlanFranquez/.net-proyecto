@@ -36,6 +36,11 @@ using System.Reflection;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
 using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
+using Espectaculos.Application.Roles.Commands.CreateRol;
+using Espectaculos.Application.Roles.Commands.DeleteRol;
+using Espectaculos.Application.Roles.Commands.UpdateRol;
+using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
+using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -200,6 +205,12 @@ builder.Services.AddScoped<IValidator<DeleteEventoCommand>, DeleteEventoValidato
 builder.Services.AddScoped<IValidator<CreateCredencialCommand>, CreateCredencialValidator>();
 builder.Services.AddScoped<IValidator<UpdateCredencialCommand>, UpdateCredencialValidator>();
 builder.Services.AddScoped<IValidator<DeleteCredencialCommand>, DeleteCredencialValidator>();
+builder.Services.AddScoped<IValidator<CreateRolCommand>, CreateRolValidator>();
+builder.Services.AddScoped<IValidator<UpdateRolCommand>, UpdateRolValidator>();
+builder.Services.AddScoped<IValidator<DeleteRolCommand>, DeleteRolValidator>();
+builder.Services.AddScoped<IValidator<CreateUsuarioCommand>, CreateUsuarioValidator>();
+builder.Services.AddScoped<IValidator<UpdateUsuarioCommand>, UpdateUsuarioValidator>();
+builder.Services.AddScoped<IValidator<DeleteUsuarioCommand>, DeleteUsuarioValidator>();
 
 
 builder.Services.AddMediatR(cfg =>
@@ -215,6 +226,8 @@ builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateReglaCommand).Assembly));
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(CreateEventoCommand).Assembly));
+builder.Services.AddMediatR(cfg =>
+    cfg.RegisterServicesFromAssembly(typeof(CreateUsuarioCommand).Assembly));
 
 
 // Repos + UoW: registrar repositorios primero, luego IUnitOfWork
@@ -228,6 +241,7 @@ builder.Services.AddScoped<ICanjeRepository, CanjeRepository>();
 builder.Services.AddScoped<IEventoAccesoRepository, EventoAccesoRepository>();
 builder.Services.AddScoped<ICredencialRepository, CredencialRepository>();
 builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
+builder.Services.AddScoped<IRolRepository, RolRepository>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -268,6 +282,8 @@ api.MapCanjesEndpoints();
 api.MapEventosAccesosEndpoints();
 api.MapNotificacionesEndpoints();
 api.MapCredencialesEndpoints();
+api.MapRolesEndpoints();
+api.MapUsuariosEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

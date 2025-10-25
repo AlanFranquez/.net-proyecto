@@ -10,6 +10,8 @@ public class Credencial
     public string? IdCriptografico { get; set; }
     public DateTime FechaEmision { get; set; }
     public DateTime? FechaExpiracion { get; set; }
+    public Usuario Usuario { get; set; }
+    public Guid UsuarioId { get; set; }
 
     public ICollection<EventoAcceso> EventosAcceso { get; set; } = new List<EventoAcceso>();
 }

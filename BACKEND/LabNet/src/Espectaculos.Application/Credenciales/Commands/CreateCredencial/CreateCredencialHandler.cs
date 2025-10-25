@@ -19,6 +19,9 @@ namespace Espectaculos.Application.Credenciales.Commands.CreateCredencial
         public async Task<Guid> Handle(CreateCredencialCommand command, CancellationToken ct)
         {
             await _validator.ValidateAndThrowAsync(command, ct);
+            
+            var usuario = await _uow.Usuarios.GetByIdAsync(command.UsuarioId, ct)
+                          ?? throw new KeyNotFoundException("El usuario indicado no existe.");
 
             var e = new Credencial
             {
@@ -28,6 +31,8 @@ namespace Espectaculos.Application.Credenciales.Commands.CreateCredencial
                 IdCriptografico = command.IdCriptografico.Trim(),
                 FechaEmision = command.FechaEmision,
                 FechaExpiracion = command.FechaExpiracion,
+                UsuarioId = command.UsuarioId,
+                Usuario = usuario,
                 EventosAcceso = new List<Domain.Entities.EventoAcceso>()
             };
 

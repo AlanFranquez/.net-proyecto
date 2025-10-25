@@ -9,5 +9,6 @@ public class CredencialDTO
     public string? IdCriptografico { get; set; } = null;
     public DateTime? FechaEmision { get; set; } = null;
     public DateTime? FechaExpiracion { get; set; } = null;
+    public Guid UsuarioId { get; set; }
     public IEnumerable<Guid>? EventoAccesoIds { get; set; } = null;
 }

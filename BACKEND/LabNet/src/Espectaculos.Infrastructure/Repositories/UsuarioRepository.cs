@@ -55,14 +55,20 @@ namespace Espectaculos.Infrastructure.Repositories
 
             return (items, total);
         }
+        
+        public async Task SaveChangesAsync(CancellationToken ct = default)
+        {
+            await _db.SaveChangesAsync(ct);
+        }
 
-   
+        public virtual async Task<IReadOnlyList<Usuario>> ListAsync(CancellationToken ct = default)
+            => await _set.AsNoTracking().Include(r => r.UsuarioRoles).Include(r => r.Beneficios).Include(r => r.Canjes).Include(r => r.Credencial).Include(r => r.Dispositivos).ToListAsync(ct);
         public async Task AddAsync(Usuario usuario, CancellationToken ct = default)
             => await _db.Set<Usuario>().AddAsync(usuario, ct);
 
     
         public async Task<Usuario?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => await _db.Set<Usuario>().FirstOrDefaultAsync(u => u.UsuarioId == id, ct);
+            => await _db.Set<Usuario>().FirstOrDefaultAsync(e => e.UsuarioId == id, ct);
 
         
         public async Task UpdateAsync(Usuario usuario, CancellationToken ct = default)
@@ -78,10 +84,34 @@ namespace Espectaculos.Infrastructure.Repositories
                 _db.Set<Usuario>().Remove(entity);
         }
         
-        public async Task SaveChangesAsync(CancellationToken ct = default)
+        public async Task<IReadOnlyList<Usuario>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
         {
-            await _db.SaveChangesAsync(ct);
+            var idArray = ids.Distinct().ToArray();
+            return await _db.Set<Usuario>().Where(r => idArray.Contains(r.UsuarioId)).ToListAsync(ct);
         }
+        
+        public async Task RemoveRolesRelacionados(Guid id, CancellationToken ct = default)
+        {
+            var relaciones = await _db.Set<UsuarioRol>()
+                .Where(era => era.UsuarioId == id)
+                .ToListAsync(ct);
 
+            if (relaciones.Any())
+            {
+                _db.Set<UsuarioRol>().RemoveRange(relaciones);
+            }
+        }
+        
+        public async Task RemoveBeneficiosRelacionados(Guid id, CancellationToken ct = default)
+        {
+            var relaciones = await _db.Set<BeneficioUsuario>()
+                .Where(era => era.UsuarioId == id)
+                .ToListAsync(ct);
+
+            if (relaciones.Any())
+            {
+                _db.Set<BeneficioUsuario>().RemoveRange(relaciones);
+            }
+        }
     }
 }

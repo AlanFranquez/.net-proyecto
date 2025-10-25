@@ -10,5 +10,6 @@ namespace Espectaculos.Application.Credenciales.Commands.CreateCredencial
         public string? IdCriptografico { get; set; }
         public DateTime FechaEmision { get; set; }
         public DateTime? FechaExpiracion { get; set; }
+        public Guid UsuarioId { get; set; }
     }
 }

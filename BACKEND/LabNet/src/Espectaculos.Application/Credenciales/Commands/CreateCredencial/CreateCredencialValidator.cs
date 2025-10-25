@@ -17,6 +17,9 @@ namespace Espectaculos.Application.Credenciales.Commands.CreateCredencial
             RuleFor(x => x.FechaEmision)
                 .NotEmpty()
                 .WithMessage("Fecha inválida.");
+            RuleFor(x => x.UsuarioId)
+                .NotEmpty()
+                .WithMessage("El UsuarioID es obligatorio.");
         }
     }
 }

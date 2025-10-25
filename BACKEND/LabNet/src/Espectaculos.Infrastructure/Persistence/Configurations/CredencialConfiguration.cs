@@ -15,6 +15,10 @@ public class CredencialConfiguration : IEntityTypeConfiguration<Credencial>
         builder.Property(e => e.IdCriptografico).IsRequired();
         builder.Property(e => e.FechaEmision).HasConversion<string>().IsRequired();
         builder.Property(e => e.FechaExpiracion).HasMaxLength(1000).IsRequired(false);
+            
+        builder.HasOne(e => e.Usuario)
+            .WithOne(c => c.Credencial)
+            .HasForeignKey<Credencial>(e => e.UsuarioId);
 
         builder.HasMany(e => e.EventosAcceso)
             .WithOne(c => c.Credencial)

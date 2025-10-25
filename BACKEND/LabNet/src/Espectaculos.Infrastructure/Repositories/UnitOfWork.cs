@@ -18,7 +18,8 @@ public class UnitOfWork : IUnitOfWork
                       ICanjeRepository canjes,
                       IEventoAccesoRepository eventosAccesos,
                       ICredencialRepository credenciales,
-                      INotificacionRepository notificaciones
+                      INotificacionRepository notificaciones,
+                      IRolRepository roles
     )
     {
         _db = db;
@@ -32,6 +33,7 @@ public class UnitOfWork : IUnitOfWork
         EventosAccesos = eventosAccesos;
         Credenciales = credenciales;
         Notificaciones = notificaciones;
+        Roles = roles;
     }
     public IUsuarioRepository Usuarios { get; }
     public IEspacioRepository Espacios { get; }
@@ -43,6 +45,7 @@ public class UnitOfWork : IUnitOfWork
     public IEventoAccesoRepository EventosAccesos { get; }
     public ICredencialRepository Credenciales { get; }
     public INotificacionRepository Notificaciones { get; }
+    public IRolRepository Roles { get; }
 
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {

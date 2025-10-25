@@ -16,6 +16,11 @@ namespace Espectaculos.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Email).IsRequired().HasMaxLength(150);
             builder.Property(u => u.PasswordHash).IsRequired().HasMaxLength(150);
             builder.Property(u => u.Estado).HasConversion<string>();
+
+            builder.HasOne(e => e.Credencial)
+                .WithOne(c => c.Usuario)
+                .HasForeignKey<Usuario>(e => e.CredencialId)
+                .IsRequired(false);
             
             builder.HasMany(e => e.Canjes)
                 .WithOne(c => c.Usuario)

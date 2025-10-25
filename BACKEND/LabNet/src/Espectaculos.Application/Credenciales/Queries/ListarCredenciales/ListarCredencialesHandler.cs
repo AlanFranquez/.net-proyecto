@@ -26,6 +26,7 @@ namespace Espectaculos.Application.Credenciales.Queries.ListarCredenciales
                 IdCriptografico = e.IdCriptografico.Trim(),
                 FechaEmision = e.FechaEmision,
                 FechaExpiracion = e.FechaExpiracion,
+                UsuarioId = e.UsuarioId,
                 EventoAccesoIds = e.EventosAcceso.Select(a => a.EventoId).ToList()
             }).ToList();
         }
