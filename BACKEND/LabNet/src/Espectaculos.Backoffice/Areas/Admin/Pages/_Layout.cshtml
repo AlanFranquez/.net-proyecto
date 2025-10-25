@@ -1,0 +1,32 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <title>Backoffice - @ViewData["Title"]</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
+</head>
+<body>
+<div class="shell">
+    <aside class="sidebar">
+        <div class="brand">Backoffice</div>
+        <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/Admin/Usuarios">Gestión de usuarios</a>
+            <a href="/Admin/Roles">Roles y permisos</a>
+            <a href="/Admin/Espacios">Espacios</a>
+            <a href="/Admin/Reglas">Reglas de acceso</a>
+            <a href="/Admin/Beneficios">Beneficios</a>
+            <a href="/Admin/Novedades">Novedades</a>
+            <a href="/Admin/Reportes">Reportes / Auditoría</a>
+        </nav>
+    </aside>
+    <main class="content">
+        @RenderBody()
+    </main>
+</div>
+</body>
+</html>

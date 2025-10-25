@@ -1,0 +1,24 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<div class="hdr">
+    <h1>Dashboard</h1>
+</div>
+
+<div class="grid kpi">
+    <div class="card"><h3>Usuarios activos</h3><p><strong>—</strong></p></div>
+    <div class="card"><h3>Reservas hoy</h3><p><strong>—</strong></p></div>
+    <div class="card"><h3>Beneficios usados</h3><p><strong>—</strong></p></div>
+    <div class="card"><h3>Eventos del mes</h3><p><strong>—</strong></p></div>
+</div>
+
+<br />
+
+<div class="card">
+    <h3>Gráfica de actividad (placeholder)</h3>
+    <div id="chart-placeholder" style="height:300px; border:1px dashed #cbd5e1; display:flex; align-items:center; justify-content:center;">
+        <em>Aquí irá la gráfica</em>
+    </div>
+</div>
