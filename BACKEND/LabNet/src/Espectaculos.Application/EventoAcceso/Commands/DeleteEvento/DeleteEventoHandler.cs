@@ -19,7 +19,7 @@ public class DeleteEventoHandler : IRequestHandler<DeleteEventoCommand, Guid>
     {
         await _validator.ValidateAndThrowAsync(command, ct);
 
-        await _uow.Espacios.DeleteAsync(command.EventoId, ct);
+        await _uow.EventosAccesos.DeleteAsync(command.EventoId, ct);
         await _uow.SaveChangesAsync(ct);
         return command.EventoId;
     }

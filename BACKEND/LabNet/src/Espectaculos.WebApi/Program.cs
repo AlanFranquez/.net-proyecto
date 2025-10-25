@@ -33,6 +33,9 @@ using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
 using FluentValidation;
 using MediatR;
 using System.Reflection;
+using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
+using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
+using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -194,6 +197,9 @@ builder.Services.AddScoped<IValidator<DeleteReglaCommand>, DeleteReglaValidator>
 builder.Services.AddScoped<IValidator<CreateEventoCommand>, CreateEventoValidator>();
 builder.Services.AddScoped<IValidator<UpdateEventoCommand>, UpdateEventoValidator>();
 builder.Services.AddScoped<IValidator<DeleteEventoCommand>, DeleteEventoValidator>();
+builder.Services.AddScoped<IValidator<CreateCredencialCommand>, CreateCredencialValidator>();
+builder.Services.AddScoped<IValidator<UpdateCredencialCommand>, UpdateCredencialValidator>();
+builder.Services.AddScoped<IValidator<DeleteCredencialCommand>, DeleteCredencialValidator>();
 
 
 builder.Services.AddMediatR(cfg =>
@@ -261,6 +267,7 @@ api.MapBeneficiosEndpoints();
 api.MapCanjesEndpoints();
 api.MapEventosAccesosEndpoints();
 api.MapNotificacionesEndpoints();
+api.MapCredencialesEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

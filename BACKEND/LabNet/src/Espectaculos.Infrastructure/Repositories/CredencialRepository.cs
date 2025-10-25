@@ -20,5 +20,35 @@ namespace Espectaculos.Infrastructure.Repositories
                          .Where(c => (!c.FechaExpiracion.HasValue || c.FechaExpiracion >= onDateUtc)
                                   &&  c.FechaEmision <= onDateUtc)
                          .ToListAsync(ct);
+        
+        public virtual async Task<IReadOnlyList<Credencial>> ListAsync(CancellationToken ct = default)
+            => await _set.AsNoTracking().Include(r => r.EventosAcceso).ToListAsync(ct);
+        public async Task AddAsync(Credencial credencial, CancellationToken ct = default)
+            => await _db.Set<Credencial>().AddAsync(credencial, ct);
+
+    
+        public async Task<Credencial?> GetByIdAsync(Guid id, CancellationToken ct = default)
+            => await _db.Set<Credencial>().FirstOrDefaultAsync(e => e.CredencialId == id, ct);
+
+        
+        public async Task UpdateAsync(Credencial credencial, CancellationToken ct = default)
+        {
+            _db.Set<Credencial>().Update(credencial);
+            await Task.CompletedTask;
+        }
+
+        public async Task DeleteAsync(Guid id, CancellationToken ct = default)
+        {
+            var entity = await _db.Set<Credencial>().FindAsync(new object?[] { id }, ct);
+            if (entity != null)
+                _db.Set<Credencial>().Remove(entity);
+        }
+        
+        public async Task<IReadOnlyList<Credencial>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
+        {
+            var idArray = ids.Distinct().ToArray();
+            return await _db.Set<Credencial>().Where(r => idArray.Contains(r.CredencialId)).ToListAsync(ct);
+        }
+       
     }
 }

@@ -18,7 +18,7 @@ namespace Espectaculos.Infrastructure.Repositories
         public async Task<IReadOnlyList<Espacio>> ListActivosAsync(CancellationToken ct = default)
             => await _set.AsNoTracking().Where(e => e.Activo).Include(r => r.Reglas).Include(r => r.Beneficios).ToListAsync(ct);
         public virtual async Task<IReadOnlyList<Espectaculos.Domain.Entities.Espacio>> ListAsync(CancellationToken ct = default)
-            => await _set.AsNoTracking().Include(r => r.Reglas).Include(r => r.Beneficios).ToListAsync(ct);
+            => await _set.AsNoTracking().Include(r => r.Reglas).Include(r => r.Beneficios).Include(r => r.EventoAccesos).ToListAsync(ct);
         public async Task AddAsync(Espacio espacio, CancellationToken ct = default)
             => await _db.Set<Espacio>().AddAsync(espacio, ct);
 
