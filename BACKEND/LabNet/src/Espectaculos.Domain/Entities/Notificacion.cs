@@ -13,11 +13,15 @@ public class Notificacion
     public string[] Canales { get; set; } = Array.Empty<string>();
     public Dictionary<string, string>? Metadatos { get; set; }
     public DateTime CreadoEnUtc { get; set; }
+    public Espectaculos.Domain.Enums.NotificacionAudiencia Audiencia { get; set; } = Espectaculos.Domain.Enums.NotificacionAudiencia.Todos;
     // Relación opcional con Dispositivo
     public Guid? DispositivoId { get; set; }
     public Dispositivo? Dispositivo { get; set; }
+    // Relación opcional con Usuario: si la notificación fue dirigida a un usuario específico
+    public Guid? UsuarioId { get; set; }
+    public Usuario? Usuario { get; set; }
 
-    public static Notificacion Create(NotificacionTipo tipo, string titulo, string? cuerpo = null, DateTime? programadaParaUtc = null)
+    public static Notificacion Create(NotificacionTipo tipo, string titulo, string? cuerpo = null, DateTime? programadaParaUtc = null, Espectaculos.Domain.Enums.NotificacionAudiencia audiencia = Espectaculos.Domain.Enums.NotificacionAudiencia.Todos)
     {
         if (string.IsNullOrWhiteSpace(titulo)) throw new ArgumentException("Titulo es obligatorio", nameof(titulo));
 
@@ -31,7 +35,8 @@ public class Notificacion
             Estado = programadaParaUtc.HasValue ? NotificacionEstado.Programada : NotificacionEstado.Borrador,
             Canales = Array.Empty<string>(),
             Metadatos = null,
-            CreadoEnUtc = DateTime.UtcNow
+            CreadoEnUtc = DateTime.UtcNow,
+            Audiencia = audiencia
         };
     }
 

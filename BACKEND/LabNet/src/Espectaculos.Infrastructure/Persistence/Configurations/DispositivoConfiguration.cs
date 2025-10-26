@@ -16,8 +16,7 @@ namespace Espectaculos.Infrastructure.Persistence.Configurations
                 .HasMaxLength(20);
 
             builder.Property(d => d.Plataforma)
-                .IsRequired()
-                .HasMaxLength(50);
+                .IsRequired(); // Enum/int, no corresponde MaxLength
 
             builder.Property(d => d.HuellaDispositivo)
                 .IsRequired();
@@ -35,12 +34,12 @@ namespace Espectaculos.Infrastructure.Persistence.Configurations
             
             builder.HasMany(e => e.Sincronizaciones)
                 .WithOne(c => c.Dispositivo)
-                .HasForeignKey(e => e.SincronizacionId)
+                .HasForeignKey(e => e.DispositivoId)
                 .OnDelete(DeleteBehavior.Cascade);
             
             builder.HasMany(e => e.Notificaciones)
                 .WithOne(c => c.Dispositivo)
-                .HasForeignKey(e => e.NotificacionId)
+                .HasForeignKey(e => e.DispositivoId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

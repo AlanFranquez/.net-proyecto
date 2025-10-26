@@ -16,31 +16,29 @@ namespace Espectaculos.Infrastructure.Persistence.Configurations
             builder.Property(u => u.Email).IsRequired().HasMaxLength(150);
             builder.Property(u => u.PasswordHash).IsRequired().HasMaxLength(150);
             builder.Property(u => u.Estado).HasConversion<string>();
-
-            builder.HasOne(e => e.Credencial)
-                .WithOne(c => c.Usuario)
-                .HasForeignKey<Usuario>(e => e.CredencialId)
-                .IsRequired(false);
             
             builder.HasMany(e => e.Canjes)
                 .WithOne(c => c.Usuario)
-                .HasForeignKey(e => e.CanjeId)
+                .HasForeignKey(e => e.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
             
             builder.HasMany(e => e.Dispositivos)
                 .WithOne(c => c.Usuario)
-                .HasForeignKey(e => e.DispositivoId)
+                .HasForeignKey(e => e.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
             
             builder.HasMany(e => e.Beneficios)
                 .WithOne(b => b.Usuario)
-                .HasForeignKey(b => b.BeneficioId)
+                .HasForeignKey(b => b.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
             
             builder.HasMany(e => e.UsuarioRoles)
                 .WithOne(b => b.Usuario)
-                .HasForeignKey(b => b.RolId)
+                .HasForeignKey(b => b.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Relación con Notificaciones (opcional), la FK está en Notificacion.UsuarioId
+            // Se configura principalmente en NotificacionConfiguration.
         }
     }
 }

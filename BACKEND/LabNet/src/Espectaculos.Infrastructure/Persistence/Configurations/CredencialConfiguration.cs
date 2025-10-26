@@ -16,13 +16,16 @@ public class CredencialConfiguration : IEntityTypeConfiguration<Credencial>
         builder.Property(e => e.FechaEmision).HasConversion<string>().IsRequired();
         builder.Property(e => e.FechaExpiracion).HasMaxLength(1000).IsRequired(false);
             
+        // Relación 1:1 con Usuario: FK vive en Credencial (Credencial.UsuarioId)
         builder.HasOne(e => e.Usuario)
             .WithOne(c => c.Credencial)
-            .HasForeignKey<Credencial>(e => e.UsuarioId);
+            .HasForeignKey<Credencial>(e => e.UsuarioId)
+            .IsRequired();
 
+        // Eventos de acceso: la FK es EventoAcceso.CredencialId
         builder.HasMany(e => e.EventosAcceso)
             .WithOne(c => c.Credencial)
-            .HasForeignKey(e => e.EventoId)
+            .HasForeignKey(e => e.CredencialId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

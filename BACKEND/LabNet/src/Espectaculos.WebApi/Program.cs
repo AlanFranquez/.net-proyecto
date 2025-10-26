@@ -44,6 +44,7 @@ using Espectaculos.Application.Sincronizaciones.Commands.DeleteSincronizacion;
 using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -154,9 +155,14 @@ builder.Services.AddSingleton<IValidationTokenService, HmacValidationTokenServic
 
 // EF Core + Npgsql (simple y robusto)
 builder.Services.AddSingleton<AuditableEntitySaveChangesInterceptor>();
+// Npgsql 8+: habilitar serialización JSON dinámica para columnas json/jsonb
+var npgsqlDataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+npgsqlDataSourceBuilder.EnableDynamicJson();
+var npgsqlDataSource = npgsqlDataSourceBuilder.Build();
+
 builder.Services.AddDbContext<EspectaculosDbContext>(options =>
 {
-    options.UseNpgsql(connectionString);
+    options.UseNpgsql(npgsqlDataSource);
 });
 
 // Health checks
@@ -250,7 +256,7 @@ builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 builder.Services.AddScoped<IRolRepository, RolRepository>();
 builder.Services.AddScoped<ISincronizacionRepository, SincronizacionRepository>();
 builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
-
+builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.Notifications.LoggingNotificationSender>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

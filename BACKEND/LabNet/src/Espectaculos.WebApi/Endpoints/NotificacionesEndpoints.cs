@@ -3,6 +3,7 @@ using Espectaculos.Application.Notificaciones.Commands.PublishNotificacion;
 using Espectaculos.Application.Notificaciones.Queries.ListNotificaciones;
 using Espectaculos.Application.Notificaciones.Queries.GetNotificacionById;
 using Espectaculos.Application.Notificaciones.Dtos;
+using Espectaculos.Application.Abstractions;
 using MediatR;
 
 namespace Espectaculos.WebApi.Endpoints;
@@ -25,7 +26,7 @@ public static class NotificacionesEndpoints
 
         api.MapPost("/notificaciones", async (CreateNotificacionDto dto, IMediator mediator) =>
         {
-            var cmd = new CreateNotificacionCommand(dto.Tipo, dto.Titulo, dto.Cuerpo, dto.ProgramadaParaUtc);
+            var cmd = new CreateNotificacionCommand(dto.Tipo, dto.Titulo, dto.Cuerpo, dto.ProgramadaParaUtc, dto.Audiencia);
             var id = await mediator.Send(cmd);
             return Results.Created($"/notificaciones/{id}", new { id });
         });
@@ -35,5 +36,7 @@ public static class NotificacionesEndpoints
             var ok = await mediator.Send(new PublishNotificacionCommand(id, programadaParaUtc));
             return ok ? Results.Ok(new { id, published = true }) : Results.NotFound();
         });
+
+        
     }
 }
