@@ -11,7 +11,7 @@ namespace Espectaculos.Application.Sincronizaciones.Commands.CreateSincronizacio
                 .WithMessage("El atributo CreadoEn es obligatorio.");
 
             RuleFor(x => x.CantidadItems)
-                .NotEmpty()
+                .NotNull()
                 .WithMessage("El atributo CantidadItems es obligatorio.");
             
             RuleFor(x => x.DispositivoId)

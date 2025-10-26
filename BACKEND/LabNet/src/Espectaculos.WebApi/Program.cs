@@ -36,6 +36,9 @@ using System.Reflection;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
 using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
+using Espectaculos.Application.Dispositivos.Commands.CreateDispositivo;
+using Espectaculos.Application.Dispositivos.Commands.DeleteDispositivo;
+using Espectaculos.Application.Dispositivos.Commands.UpdateDispositivo;
 using Espectaculos.Application.Roles.Commands.CreateRol;
 using Espectaculos.Application.Roles.Commands.DeleteRol;
 using Espectaculos.Application.Roles.Commands.UpdateRol;
@@ -223,6 +226,9 @@ builder.Services.AddScoped<IValidator<DeleteUsuarioCommand>, DeleteUsuarioValida
 builder.Services.AddScoped<IValidator<CreateSincronizacionCommand>, CreateSincronizacionValidator>();
 builder.Services.AddScoped<IValidator<UpdateSincronizacionCommand>, UpdateSincronizacionValidator>();
 builder.Services.AddScoped<IValidator<DeleteSincronizacionCommand>, DeleteSincronizacionValidator>();
+builder.Services.AddScoped<IValidator<CreateDispositivoCommand>, CreateDispositivoValidator>();
+builder.Services.AddScoped<IValidator<UpdateDispositivoCommand>, UpdateDispositivoValidator>();
+builder.Services.AddScoped<IValidator<DeleteDispositivoCommand>, DeleteDispositivoValidator>();
 
 
 builder.Services.AddMediatR(cfg =>
@@ -300,6 +306,7 @@ api.MapCredencialesEndpoints();
 api.MapRolesEndpoints();
 api.MapUsuariosEndpoints();
 api.MapSincronizacionEndpoints();
+api.MapDispositivosEndpoints();
 
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");

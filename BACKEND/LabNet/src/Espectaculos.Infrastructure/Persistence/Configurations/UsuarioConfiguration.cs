@@ -36,9 +36,6 @@ namespace Espectaculos.Infrastructure.Persistence.Configurations
                 .WithOne(b => b.Usuario)
                 .HasForeignKey(b => b.UsuarioId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            // Relación con Notificaciones (opcional), la FK está en Notificacion.UsuarioId
-            // Se configura principalmente en NotificacionConfiguration.
         }
     }
 }
