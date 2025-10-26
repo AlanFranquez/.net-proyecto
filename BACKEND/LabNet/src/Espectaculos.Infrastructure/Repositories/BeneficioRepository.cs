@@ -16,7 +16,11 @@ namespace Espectaculos.Infrastructure.Repositories
         public BeneficioRepository(EspectaculosDbContext db) : base(db) { }
         
         public virtual async Task<IReadOnlyList<Espectaculos.Domain.Entities.Beneficio>> ListAsync(CancellationToken ct = default)
-            => await _set.AsNoTracking().Include(r => r.Espacios).ToListAsync(ct);
+            => await _set
+                .AsNoTracking()
+                .Include(r => r.Espacios)
+                .Include(r => r.Usuarios) // Necesario para poblar UsuariosIDs en el DTO
+                .ToListAsync(ct);
 
         public async Task<IReadOnlyList<Beneficio>> ListVigentesAsync(DateTime onDateUtc, CancellationToken ct = default)
             => await _set.AsNoTracking()

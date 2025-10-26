@@ -26,6 +26,19 @@ public class CanjearBeneficioHandler : IRequestHandler<CanjearBeneficioCommand, 
     var canje = Espectaculos.Domain.Entities.Canje.CreatePending(beneficioId: beneficio.BeneficioId, usuarioId: request.UsuarioId, fechaUtc: now);
         canje.Confirm(); // confirmar inmediatamente para este MVP
 
+        // asociar el usuario al beneficio si aún no existe el vínculo
+        var yaAsociado = await _uow.BeneficioUsuarios.ExistsAsync(
+            x => x.BeneficioId == beneficio.BeneficioId && x.UsuarioId == request.UsuarioId,
+            cancellationToken);
+        if (!yaAsociado)
+        {
+            await _uow.BeneficioUsuarios.AddAsync(new BeneficioUsuario
+            {
+                BeneficioId = beneficio.BeneficioId,
+                UsuarioId = request.UsuarioId
+            }, cancellationToken);
+        }
+
         await _uow.Canjes.AddAsync(canje, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
         return canje.CanjeId;
