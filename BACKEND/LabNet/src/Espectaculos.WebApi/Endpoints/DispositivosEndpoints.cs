@@ -2,6 +2,8 @@
 using Espectaculos.Application.Dispositivos.Commands.DeleteDispositivo;
 using Espectaculos.Application.Dispositivos.Commands.UpdateDispositivo;
 using Espectaculos.Application.Dispositivos.Queries.ListarDispositivos;
+using Espectaculos.Application.Notificaciones.Queries.ListarNotificacionesPorDispositivo;
+using Espectaculos.Application.Notificaciones.Commands.MarcarNotificacionVisto;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,6 +44,20 @@ public static class DispositivosEndpoints
         })
         .WithName("EditarDispositivo")
         .WithTags("Dispositivos");
+
+        // Notificaciones del dispositivo
+        group.MapGet("/{id:guid}/notificaciones", async (Guid id, [FromQuery] Espectaculos.Domain.Enums.NotificacionLecturaEstado? lectura, [FromQuery] int? take, [FromQuery] int? skip, IMediator mediator) =>
+        {
+            var query = new ListarNotificacionesPorDispositivoQuery(id, lectura, take, skip);
+            var items = await mediator.Send(query);
+            return Results.Ok(items);
+        }).WithName("ListarNotificacionesPorDispositivo").WithTags("Dispositivos");
+
+        group.MapPost("/{id:guid}/notificaciones/{notificacionId:guid}/visto", async (Guid id, Guid notificacionId, IMediator mediator) =>
+        {
+            var ok = await mediator.Send(new MarcarNotificacionVistoCommand(id, notificacionId));
+            return ok ? Results.NoContent() : Results.NotFound();
+        }).WithName("MarcarNotificacionComoVisto").WithTags("Dispositivos");
         
 
 #if DEMO_ENABLE_ADMIN

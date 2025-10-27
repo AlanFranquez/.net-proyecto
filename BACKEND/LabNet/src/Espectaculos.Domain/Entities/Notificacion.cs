@@ -10,6 +10,7 @@ public class Notificacion
     public string? Cuerpo { get; set; }
     public DateTime? ProgramadaParaUtc { get; set; }
     public NotificacionEstado Estado { get; set; }
+    public NotificacionLecturaEstado LecturaEstado { get; set; } = NotificacionLecturaEstado.SinVer;
     public string[] Canales { get; set; } = Array.Empty<string>();
     public Dictionary<string, string>? Metadatos { get; set; }
     public DateTime CreadoEnUtc { get; set; }

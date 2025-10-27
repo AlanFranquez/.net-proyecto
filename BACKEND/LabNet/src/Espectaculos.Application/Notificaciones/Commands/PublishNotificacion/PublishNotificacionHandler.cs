@@ -61,13 +61,25 @@ public class PublishNotificacionHandler : IRequestHandler<PublishNotificacionCom
             }
         }
 
-        // Enviar a dispositivos activos de cada usuario objetivo
+        // Enviar y persistir copia por dispositivo (bandeja del dispositivo)
         foreach (var uid in targetUsuarioIds)
         {
             var dispositivos = await _dispositivoRepo.ListActivosByUsuarioAsync(uid, cancellationToken);
             if (dispositivos.Count > 0)
             {
+                // Enviar (push/log)
                 await _sender.SendToDevicesAsync(dispositivos, notificacion, cancellationToken);
+
+                // Persistir una notificación por dispositivo como "SinVer"
+                foreach (var d in dispositivos)
+                {
+                    var copia = Espectaculos.Domain.Entities.Notificacion.Create(notificacion.Tipo, notificacion.Titulo, notificacion.Cuerpo, null, notificacion.Audiencia);
+                    copia.Estado = Espectaculos.Domain.Enums.NotificacionEstado.Publicada;
+                    copia.DispositivoId = d.DispositivoId;
+                    copia.UsuarioId = d.UsuarioId;
+                    copia.LecturaEstado = Espectaculos.Domain.Enums.NotificacionLecturaEstado.SinVer;
+                    await _uow.Notificaciones.AddAsync(copia, cancellationToken);
+                }
             }
         }
 

@@ -15,7 +15,8 @@ public class NotificacionConfiguration : IEntityTypeConfiguration<Notificacion>
         builder.Property(n => n.Titulo).HasColumnName("titulo").IsRequired();
         builder.Property(n => n.Cuerpo).HasColumnName("cuerpo");
         builder.Property(n => n.ProgramadaParaUtc).HasColumnName("programada_para_utc");
-        builder.Property(n => n.Estado).HasColumnName("estado").IsRequired();
+    builder.Property(n => n.Estado).HasColumnName("estado").IsRequired();
+    builder.Property(n => n.LecturaEstado).HasColumnName("lectura_estado").IsRequired();
     builder.Property(n => n.Audiencia).HasColumnName("audiencia").IsRequired();
         // Canales and Metadatos stored as JSON
         builder.Property(n => n.Canales)
@@ -27,7 +28,8 @@ public class NotificacionConfiguration : IEntityTypeConfiguration<Notificacion>
                .HasColumnType("jsonb");
 
         builder.Property(n => n.CreadoEnUtc).HasColumnName("creado_en_utc").IsRequired();
-        builder.HasIndex(n => n.Estado).HasDatabaseName("ix_notificacion_estado");
+    builder.HasIndex(n => n.Estado).HasDatabaseName("ix_notificacion_estado");
+    builder.HasIndex(n => new { n.DispositivoId, n.LecturaEstado }).HasDatabaseName("ix_notificacion_dispositivo_lectura");
         // Relación con Dispositivo (opcional)
         builder.Property(n => n.DispositivoId).HasColumnName("dispositivo_id").IsRequired(false);
         builder.HasOne(n => n.Dispositivo)
