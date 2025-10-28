@@ -8,6 +8,9 @@ using MediatR;
 using Espectaculos.Infrastructure;
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Application.Abstractions.Repositories;
+using FluentValidation;
+using Espectaculos.Application.Abstractions;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorPages()
     .AddRazorPagesOptions(o =>
