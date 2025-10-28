@@ -2,8 +2,7 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AppNetCredenciales.Views.RegisterView"
-            
-             BackgroundColor="White">
+             BackgroundColor="white">
 
     <ScrollView>
         <VerticalStackLayout Padding="30" Spacing="15">
@@ -11,34 +10,47 @@
             <Label Text="Registro de Usuario"
                    FontSize="24"
                    HorizontalOptions="Center"
-                   TextColor="White"/>
+                   TextColor="black"/>
 
             <Entry Placeholder="Nombre"
                    Text="{Binding Nombre}"
-                   TextColor="White"
+                   TextColor="black"
                    PlaceholderColor="Gray"/>
 
             <Entry Placeholder="Apellido"
                    Text="{Binding Apellido}"
-                   TextColor="White"
+                   TextColor="Black"
                    PlaceholderColor="Gray"/>
 
             <Entry Placeholder="Documento"
                    Text="{Binding Documento}"
-                   TextColor="White"
+                   TextColor="Black"
                    PlaceholderColor="Gray"/>
 
             <Entry Placeholder="Correo electrónico"
                    Text="{Binding Email}"
                    Keyboard="Email"
-                   TextColor="White"
+                   TextColor="Black"
                    PlaceholderColor="Gray"/>
 
             <Entry Placeholder="Contraseña"
                    Text="{Binding Password}"
                    IsPassword="True"
-                   TextColor="White"
+                   TextColor="Black"
                    PlaceholderColor="Gray"/>
+
+            <!-- Lista de roles con selección múltiple -->
+            <Label Text="Roles disponibles" TextColor="Black" FontAttributes="Bold" />
+            <CollectionView ItemsSource="{Binding Roles}" SelectionMode="None">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <HorizontalStackLayout Padding="5">
+                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalOptions="Center"/>
+                            <Label Text="{Binding Role.Tipo}" TextColor="Black" VerticalOptions="Center" Margin="10,0,0,0"/>
+                        </HorizontalStackLayout>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
             <ActivityIndicator IsRunning="{Binding Trabajando}"
                                IsVisible="{Binding Trabajando}" />

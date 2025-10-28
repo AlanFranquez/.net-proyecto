@@ -5,6 +5,7 @@ using SQLite;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -28,6 +29,7 @@ namespace AppNetCredenciales.Data
             _connection.CreateTableAsync<EventoAcceso>().GetAwaiter().GetResult();
             _connection.CreateTableAsync<EspacioReglaDeAcceso>().GetAwaiter().GetResult();
             _connection.CreateTableAsync<ReglaDeAcceso>().GetAwaiter().GetResult();
+
         }
 
 
@@ -95,6 +97,49 @@ namespace AppNetCredenciales.Data
 
 
         // Rol
+
+        public async Task<bool> UsuarioRolExistsAsync(int usuarioId, int rolId)
+        {
+            var ur = await _connection.Table<UsuarioRol>()
+                .Where(x => x.UsuarioId == usuarioId && x.RolId == rolId)
+                .FirstOrDefaultAsync();
+            return ur != null;
+        }
+
+        public async Task ChangeUserSelectedRole(string email, int idRole)
+        {
+            var user = await GetUsuarioByEmailAsync(email);
+            if (user == null) return;
+
+            // if the UsuarioRol relation does not exist, create it
+            if (!await UsuarioRolExistsAsync(user.UsuarioId, idRole))
+            {
+                return;
+            }
+
+            user.RolId = idRole;
+            await SaveUsuarioAsync(user);
+
+            if (await SessionManager.IsLoggedAsync())
+            {
+                var emailLogged = await SessionManager.GetUserEmailAsync();
+                if (emailLogged == email)
+                {
+                    await SessionManager.SaveUserRoleAsync(idRole);
+                }
+            }
+        }
+
+        public async Task<models.Rol> GetLoggedUserRoleAsync()
+        {
+            var user = await GetLoggedUserAsync();
+            if (user != null && user.RolId != null)
+            {
+                return await GetRolByIdAsync(user.RolId.Value);
+            }
+            return null;
+        }
+
 
         public async Task<List<models.Rol>> GetRolesAsync()
         {
@@ -261,6 +306,9 @@ namespace AppNetCredenciales.Data
             return await _connection.DeleteAsync(usuario);
         }
 
+
+      
+
         public async Task InitializeAsync()
         {
             var usuarios = await GetUsuariosAsync();
@@ -283,6 +331,65 @@ namespace AppNetCredenciales.Data
                 await SaveUsuarioAsync(admin);
                 await SaveUsuarioAsync(user);
             }
+
+            var roles = await GetRolesAsync();
+            if(roles.Count == 0)
+            {
+                var rolAdmin = new models.Rol
+                {
+                    Tipo = "Administrador",
+                    Prioridad = 1,
+                    FechaAsignado = DateTime.Now
+                };
+                var rolUser = new models.Rol
+                {
+                    Tipo = "Usuario",
+                    Prioridad = 1,
+                    FechaAsignado = DateTime.Now
+                };
+                var rolFuncionario = new models.Rol
+                {
+                    Tipo = "Funcionario",
+                    Prioridad = 1,
+                    FechaAsignado = DateTime.Now
+                };
+                await SaveRolAsync(rolAdmin);
+                await SaveRolAsync(rolUser);
+                await SaveRolAsync(rolFuncionario);
+            }
+        }
+
+       
+        
+
+       
+
+        // Nuevo: guardar relacion UsuarioRol
+        public async Task<int> SaveUsuarioRolAsync(models.UsuarioRol usuarioRol)
+        {
+            if (usuarioRol == null) return 0;
+            if (usuarioRol.Id == 0)
+            {
+                return await _connection.InsertAsync(usuarioRol);
+            }
+            else
+            {
+                return await _connection.UpdateAsync(usuarioRol);
+            }
+        }
+
+        public async Task<int> DeleteUsuarioRolesForUserAsync(int usuarioId)
+        {
+            var lista = await _connection.Table<UsuarioRol>()
+                .Where(ur => ur.UsuarioId == usuarioId)
+                .ToListAsync();
+
+            var removed = 0;
+            foreach (var ur in lista)
+            {
+                removed += await _connection.DeleteAsync(ur);
+            }
+            return removed;
         }
 
         public async Task<models.Usuario> GetUsuarioByIdAsync(int id)

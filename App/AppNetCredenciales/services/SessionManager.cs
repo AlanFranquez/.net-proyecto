@@ -13,9 +13,24 @@ namespace AppNetCredenciales.services
 
         public static async Task SaveUserAsync(int id, string email)
         {
+
+
             await SecureStorage.SetAsync("id", id.ToString());
             await SecureStorage.SetAsync("email", email);
         }
+
+        public static async Task<int> GetUserRoleIdAsync()
+        {
+            var rolId = await SecureStorage.GetAsync("rol_id");
+            return int.Parse(rolId);
+        }
+
+        public static async Task SaveUserRoleAsync(int idRole)
+        {
+            await SecureStorage.SetAsync("rol_id", idRole.ToString());
+        }
+
+
 
         public static async Task<int> GetUserIdAsync()
         {

@@ -41,7 +41,13 @@ namespace AppNetCredenciales.models
         [Ignore]
         public Credencial Credencial { get; set; }
 
-        
+        [SQLite.Column("rol_id")]
+        public int? RolId { get; set; }
+
+        [Ignore]
+        public Rol Rol { get; set; }
+
+
 
     }
 }
