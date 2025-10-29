@@ -48,6 +48,11 @@ using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 using Npgsql;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
+using Espectaculos.WebApi.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -82,6 +87,38 @@ string connectionString =
 
 // ---- Servicios
 builder.Services.AddEndpointsApiExplorer();
+
+// ==== OpenTelemetry: recursos, trazas y métricas ====
+var serviceName = "Espectaculos.WebApi";
+var serviceVersion = "1.0.0";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(r => r.AddService(serviceName: serviceName, serviceVersion: serviceVersion))
+    .WithTracing(t => t
+        .AddAspNetCoreInstrumentation(o =>
+        {
+            o.RecordException = true;
+            o.EnrichWithHttpRequest = (activity, httpReq) =>
+            {
+                if (httpReq.HttpContext.Items.TryGetValue("CorrelationId", out var cid) && cid is not null)
+                {
+                    activity.SetTag("correlation.id", cid.ToString());
+                }
+                else if (httpReq.Headers.TryGetValue(CorrelationIdMiddleware.HeaderName, out var v))
+                {
+                    activity.SetTag("correlation.id", v.ToString());
+                }
+            };
+            o.Filter = httpContext => !httpContext.Request.Path.StartsWithSegments("/health")
+                                       && !httpContext.Request.Path.StartsWithSegments("/swagger");
+        })
+        .AddHttpClientInstrumentation()
+        .AddOtlpExporter()) // Usa OTEL_EXPORTER_OTLP_ENDPOINT si está definido
+    .WithMetrics(m => m
+        .AddAspNetCoreInstrumentation()
+        .AddHttpClientInstrumentation()
+        .AddRuntimeInstrumentation()
+        .AddOtlpExporter());
 
 // ===== CONFIGURACIÓN CONSOLIDADA DE SWAGGER =====
 builder.Services.AddSwaggerGen(o =>
@@ -270,6 +307,9 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddRouting();
 
+// Métrica custom: backlog de sincronizaciones
+builder.Services.AddHostedService<SincronizacionesMetrics>();
+
 var app = builder.Build();
 
 // ---------- 1) Archivos estáticos (sirven la SPA publicada) ----------
@@ -282,6 +322,8 @@ app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = provider });
 
 // ---------- 2) Logging, CORS, Swagger ----------
+// CorrelationId antes del logging para que aparezca en los logs de request
+app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 if (isDev) app.UseCors("DevCors");
 
@@ -311,6 +353,8 @@ api.MapDispositivosEndpoints();
 // Health root para readiness checks fuera de /api
 app.MapHealthChecks("/health");
 api.MapHealthChecks("/health");
+
+// Endpoint de métricas: si se utiliza Prometheus vía OTel Collector, configurar allí el scraping.
 
 // === ADMIN: quick seed para poblar datos desde curl ===
 // Uso: POST /admin/quick-seed?count=70&publish=true

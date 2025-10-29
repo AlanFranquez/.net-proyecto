@@ -32,6 +32,11 @@ services:
       SEED_RESET: ${SEED_RESET:-true}
       VALIDATION_TOKENS__SECRET: ${VALIDATION_TOKENS__SECRET:-local-dev-super-secret}
       VALIDATION_TOKENS__DEFAULT_EXPIRY_MINUTES: ${VALIDATION_TOKENS__DEFAULT_EXPIRY_MINUTES:-120}
+      # OpenTelemetry: exportar a Collector corriendo en host (observability compose)
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4317}
+      # Serilog -> Seq del host
+      Serilog__WriteTo__1__Args__serverUrl: ${SEQ_URL:-http://host.docker.internal:5341}
+      Serilog__WriteTo__1__Args__apiKey: ${SEQ_API_KEY:-}
     ports:
       - "${WEB_PORT:-8080}:8080"
     depends_on:

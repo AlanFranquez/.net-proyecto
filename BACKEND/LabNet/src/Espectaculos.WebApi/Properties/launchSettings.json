@@ -4,10 +4,11 @@
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
-      "applicationUrl": "http://localhost:8080",
+  "applicationUrl": "http://localhost:8080",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "ConnectionStrings__Default": "Host=localhost;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
         "AUTO_MIGRATE": "true",
         "AUTO_SEED": "false"
       }

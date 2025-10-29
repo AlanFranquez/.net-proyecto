@@ -50,5 +50,12 @@ namespace Espectaculos.Infrastructure.Repositories
             var idArray = ids.Distinct().ToArray();
             return await _db.Set<Sincronizacion>().Where(r => idArray.Contains(r.SincronizacionId)).ToListAsync(ct);
         }
+
+        public async Task<int> CountPendientesAsync(CancellationToken ct = default)
+        {
+            return await _db.Set<Sincronizacion>()
+                .AsNoTracking()
+                .CountAsync(s => s.Estado != "OK", ct);
+        }
     }
 }
