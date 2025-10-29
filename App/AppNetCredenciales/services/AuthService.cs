@@ -54,13 +54,10 @@ namespace AppNetCredenciales.services
         public async Task<List<Rol>> GetRolesForLoggedUser()
         {
             var user = await GetUserLogged();
-            if (user == null) return new List<Rol>();
 
-            // _db.GetLoggedUserRoleAsync returns a single Rol (or null).
-            var rol = await _db.GetLoggedUserRoleAsync();
-            if (rol == null) return new List<Rol>();
+            List<Rol> roles = await _db.GetRolsByUserAsync(user.UsuarioId);
 
-            return new List<Rol> { rol };
+            return roles;
         }
 
         public async Task<bool> isUserLogged()

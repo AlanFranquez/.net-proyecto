@@ -3,11 +3,14 @@ using AppNetCredenciales.services;
 using AppNetCredenciales.ViewModel;
 using AppNetCredenciales.Views;
 using Microsoft.Extensions.Logging;
+using System;
 
 namespace AppNetCredenciales
 {
     public static class MauiProgram
     {
+        public static IServiceProvider ServiceProvider { get; private set; }
+
         public static MauiApp CreateMauiApp()
         {
             var builder = MauiApp.CreateBuilder();
@@ -40,7 +43,11 @@ namespace AppNetCredenciales
             builder.Logging.AddDebug();
 #endif
 
-            return builder.Build();
+            var app = builder.Build();
+
+            ServiceProvider = app.Services;
+
+            return app;
         }
     }
 }
