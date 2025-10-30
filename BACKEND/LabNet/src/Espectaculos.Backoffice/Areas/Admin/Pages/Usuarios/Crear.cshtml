@@ -7,11 +7,15 @@
   <h1 class="h3 mb-0">Crear usuario</h1>
   <a asp-area="Admin" asp-page="/Usuarios/Index" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
 </div>
-
+@if (!ViewData.ModelState.IsValid)
+{
+  <div class="alert alert-danger py-2">No se pudo crear el usuario. Corrige los errores y vuelve a intentar.</div>
+}
 <div class="card shadow-sm border-0">
   <div class="card-body">
     <form method="post">
       @Html.AntiForgeryToken()
+      <div asp-validation-summary="All" class="text-danger small mb-3"></div>
       <div class="row g-3">
         <div class="col-md-6">
           <label class="form-label">Nombre</label>

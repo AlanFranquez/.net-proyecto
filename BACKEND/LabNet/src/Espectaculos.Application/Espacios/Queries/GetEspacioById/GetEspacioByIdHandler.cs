@@ -2,18 +2,19 @@
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.DTOs;
 
-namespace Espectaculos.Application.Espacios.Queries.ListarEspacios;
+namespace Espectaculos.Application.Espacios.Queries.GetEspacioById;
 
-public class ListarEspaciosHandler : IRequestHandler<ListarEspaciosQuery, List<EspacioDTO>>
+public class GetEspacioByIdHandler : IRequestHandler<GetEspacioByIdQuery, EspacioDTO?>
 {
     private readonly IUnitOfWork _uow;
-    public ListarEspaciosHandler(IUnitOfWork uow) => _uow = uow;
+    public GetEspacioByIdHandler(IUnitOfWork uow) => _uow = uow;
 
-    public async Task<List<EspacioDTO>> Handle(ListarEspaciosQuery q, CancellationToken ct)
+    public async Task<EspacioDTO?> Handle(GetEspacioByIdQuery q, CancellationToken ct)
     {
-        var espacios = await _uow.Espacios.ListAsync(ct);
+        var e = await _uow.Espacios.GetByIdAsync(q.Id, ct);
+        if (e is null) return null;
 
-        return espacios.Select(e => new EspacioDTO
+        return new EspacioDTO
         {
             Id = e.Id,
             Nombre = e.Nombre,
@@ -26,6 +27,6 @@ public class ListarEspaciosHandler : IRequestHandler<ListarEspaciosQuery, List<E
             ReglaIds = e.Reglas.Select(r => r.ReglaId).ToList(),
             BeneficioIds = e.Beneficios.Select(b => b.BeneficioId).ToList(),
             EventoIds = e.EventoAccesos.Select(ev => ev.EventoId).ToList(),
-        }).ToList();
+        };
     }
 }

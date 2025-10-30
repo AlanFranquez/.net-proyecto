@@ -1,0 +1,72 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Reglas.CrearModel
+@{
+    ViewData["Title"] = "Crear regla de acceso";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Crear regla</h1>
+  <a asp-area="Admin" asp-page="/Reglas/Index" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Volver
+  </a>
+</div>
+
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <form method="post" class="admin-form">
+      @Html.AntiForgeryToken()
+      <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Ventana horaria</label>
+          <input asp-for="Vm.VentanaHoraria" class="form-control" placeholder="Ej: 08:00-18:00" />
+          <span asp-validation-for="Vm.VentanaHoraria" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Vigencia inicio (opcional)</label>
+          <input asp-for="Vm.VigenciaInicio" type="date" class="form-control" />
+          <span asp-validation-for="Vm.VigenciaInicio" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Vigencia fin</label>
+          <input asp-for="Vm.VigenciaFin" type="date" class="form-control" />
+          <span asp-validation-for="Vm.VigenciaFin" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Prioridad</label>
+          <input asp-for="Vm.Prioridad" type="number" class="form-control" />
+          <span asp-validation-for="Vm.Prioridad" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-3">
+          <label class="form-label">Política</label>
+          <select asp-for="Vm.Politica" class="form-select" asp-items="Model.Politicas"></select>
+          <span asp-validation-for="Vm.Politica" class="text-danger small"></span>
+        </div>
+
+        <div class="col-md-3 d-flex align-items-end">
+          <div class="form-check">
+            <input asp-for="Vm.RequiereBiometriaConfirmacion" class="form-check-input" type="checkbox" />
+            <label class="form-check-label" asp-for="Vm.RequiereBiometriaConfirmacion">Requiere biometría</label>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label">Espacios (opcional, IDs separados por coma)</label>
+          <input asp-for="Vm.EspaciosIDsComma" class="form-control" placeholder="GUID1, GUID2, ..." />
+          <span asp-validation-for="Vm.EspaciosIDsComma" class="text-danger small"></span>
+        </div>
+      </div>
+
+      <div class="mt-3 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-plus-circle"></i> Crear</button>
+        <a asp-area="Admin" asp-page="/Reglas/Index" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

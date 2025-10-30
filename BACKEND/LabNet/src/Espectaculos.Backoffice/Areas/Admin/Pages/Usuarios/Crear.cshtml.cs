@@ -23,24 +23,32 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios
             {
                 await _mediator.Send(new CreateUsuarioCommand
                 {
-                    Nombre   = ModelVm.Nombre!.Trim(),
-                    Apellido = ModelVm.Apellido!.Trim(),
-                    Email    = ModelVm.Email!.Trim(),
-                    Documento= ModelVm.Documento!.Trim(),
-                    Password = ModelVm.Password!.Trim(),
-                    RolesIDs = ParseGuids(ModelVm.RolesComma)
+                    Nombre    = ModelVm.Nombre!.Trim(),
+                    Apellido  = ModelVm.Apellido!.Trim(),
+                    Email     = ModelVm.Email!.Trim(),
+                    Documento = ModelVm.Documento!.Trim(),
+                    Password  = ModelVm.Password!.Trim(),
+                    RolesIDs  = ParseGuids(ModelVm.RolesComma)
                 });
 
                 TempData["Ok"] = "Usuario creado.";
                 return RedirectToPage("/Usuarios/Index");
             }
+            catch (FluentValidation.ValidationException vex)
+            {
+                foreach (var failure in vex.Errors)
+                    ModelState.AddModelError(failure.PropertyName ?? string.Empty, failure.ErrorMessage);
+
+                return Page();
+            }
             catch (Exception ex)
             {
+                // opcional: loguea completo para ver stack y constraint exacta
+                // _logger.LogError(ex, "Error creando usuario");
                 ModelState.AddModelError(string.Empty, ex.Message);
                 return Page();
             }
         }
-
         private static IEnumerable<Guid>? ParseGuids(string? raw)
         {
             if (string.IsNullOrWhiteSpace(raw)) return null;
