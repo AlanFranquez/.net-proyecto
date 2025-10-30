@@ -1,69 +1,94 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AppNetCredenciales.Views.Navbar">
-    <Grid Padding="12"
-          BackgroundColor="White"
-          ColumnDefinitions="*,*,*,*"
-          VerticalOptions="End"
-          HeightRequest="60">
+    <ContentView.Resources>
+        <ResourceDictionary>
+            <x:Double x:Key="NavIconSize">36</x:Double>
+            <Color x:Key="NavBackground">#FFFFFF</Color>
+            <Style x:Key="NavIconButton" TargetType="ImageButton">
+                <Setter Property="WidthRequest" Value="{StaticResource NavIconSize}" />
+                <Setter Property="HeightRequest" Value="{StaticResource NavIconSize}" />
+                <Setter Property="BackgroundColor" Value="Transparent" />
+                <Setter Property="Aspect" Value="AspectFit" />
+                <Setter Property="Margin" Value="6,0" />
+                <Setter Property="Opacity" Value="0.95" />
+            </Style>
+        </ResourceDictionary>
+    </ContentView.Resources>
 
-        <!-- Role picker -->
-        <Picker x:Name="RolePicker"
-                Title="Rol"
-                ItemsSource="{Binding Roles}"
-                ItemDisplayBinding="{Binding Tipo}"
-                SelectedItem="{Binding RolSeleccionado, Mode=TwoWay}"
-                Grid.Column="0"
-                HorizontalOptions="Center"
-                VerticalOptions="Center"
-                WidthRequest="120"
-                HeightRequest="40" />
+     <Frame Padding="8"
+           CornerRadius="12"
+           HasShadow="True"
+           BackgroundColor="{StaticResource NavBackground}"
+           HorizontalOptions="Fill"
+           VerticalOptions="End"
+           Margin="12"
+           HeightRequest="72">
+        <Grid ColumnDefinitions="Auto,*,Auto"
+              VerticalOptions="Center"
+              HorizontalOptions="Fill">
+            <Grid Grid.Column="0" WidthRequest="120" HeightRequest="48" HorizontalOptions="Start" VerticalOptions="Center">
+                <ImageButton x:Name="RoleImageButton"
+                             Source="{Binding RolSeleccionado.Image, FallbackValue='user.png'}"
+                             Style="{StaticResource NavIconButton}"
+                             Clicked="OnRoleImageClicked"
+                             BackgroundColor="Transparent" />
+                <Picker x:Name="RolePicker"
+                        ItemsSource="{Binding Roles}"
+                        ItemDisplayBinding="{Binding Tipo}"
+                        SelectedItem="{Binding RolSeleccionado, Mode=TwoWay}"
+                        BackgroundColor="Transparent"
+                        Title=""
+                        Margin="42,0,0,0"
+                        VerticalOptions="Center"
+                        HorizontalOptions="Start" />
+            </Grid>
 
-        <StackLayout x:Name="DefaultNav"
-                     Orientation="Horizontal"
-                     Grid.Column="1"
-                     HorizontalOptions="Center"
-                     VerticalOptions="Center"
-                     Spacing="12" Padding="0">
-            <ImageButton Source="credencial.png"
-                         BackgroundColor="Transparent"
-                         WidthRequest="32"
-                         HeightRequest="32"
-                         Margin="6,0"
-                         Command="{Binding NavigateCommand}"
-                         CommandParameter="credencial" />
-            <ImageButton Source="widget.png"
-                         BackgroundColor="Transparent"
-                         WidthRequest="32"
-                         HeightRequest="32"
-                         Margin="6,0"
-                         Command="{Binding NavigateCommand}"
-                         CommandParameter="espacio" />
-            <ImageButton Source="historial.png"
-                         BackgroundColor="Transparent"
-                         WidthRequest="32"
-                         HeightRequest="32"
-                         Margin="6,0"
-                         Command="{Binding NavigateCommand}"
-                         CommandParameter="historial" />
-        </StackLayout>
+            <StackLayout x:Name="DefaultNav"
+                         Orientation="Horizontal"
+                         Grid.Column="2"
+                         HorizontalOptions="Center"
+                         VerticalOptions="Center"
+                         Spacing="8" Padding="0">
+                <ImageButton Source="idcard.png"
+                             Style="{StaticResource NavIconButton}"
+                             Command="{Binding NavigateCommand}"
+                             CommandParameter="credencial" />
+                <ImageButton Source="calendarevents.png"
+                             Style="{StaticResource NavIconButton}"
+                             Command="{Binding NavigateCommand}"
+                             CommandParameter="espacio" />
+                <ImageButton Source="clock.png"
+                             Style="{StaticResource NavIconButton}"
+                             Command="{Binding NavigateCommand}"
+                             CommandParameter="historial" />
 
-        <StackLayout x:Name="FuncionarioNav"
-                     Orientation="Horizontal"
-                     Grid.Column="1"
-                     HorizontalOptions="Center"
-                     VerticalOptions="Center"
-                     Spacing="12"
-                     Padding="0"
-                     IsVisible="False">
-            <ImageButton Source="scanner.png"
-                         BackgroundColor="Transparent"
-                         WidthRequest="32"
-                         HeightRequest="32"
-                         Margin="6,0"
-                         Command="{Binding NavigateCommand}"
-                         CommandParameter="scan" />
-        </StackLayout>
+                <ImageButton Source="logout.png"
+             Style="{StaticResource NavIconButton}"
+             Command="{Binding LogoutCommand}"
+             CommandParameter="logout" />
+            </StackLayout>
 
-    </Grid>
+            <StackLayout x:Name="FuncionarioNav"
+                         Orientation="Horizontal"
+                         Grid.Column="2"
+                         HorizontalOptions="End"
+                         VerticalOptions="Center"
+                         Spacing="8"
+                         Padding="0"
+                         IsVisible="False">
+                <ImageButton Source="qrcode.png"
+             Style="{StaticResource NavIconButton}"
+             Command="{Binding NavigateCommand}"
+             CommandParameter="scan"
+             BackgroundColor="Transparent"
+             AutomationId="scanButton" />
+
+                <ImageButton Source="logout.png"
+             Style="{StaticResource NavIconButton}"
+             Command="{Binding LogoutCommand}"
+             CommandParameter="logout" />
+            </StackLayout>
+        </Grid>
+    </Frame>
 </ContentView>

@@ -35,24 +35,20 @@ public partial class EspacioPerfilView : ContentPage
     private async void OnShowQRClicked(object sender, EventArgs e)
     {
         var usuario = await _db.GetLoggedUserAsync();
-        // Ensure usuario.Credencial is loaded (Credencial is [Ignore] in the model)
         if (usuario != null && usuario.Credencial == null)
         {
-            // Prefer loading by id; fallback to any helper your service provides
-            if (usuario.CredencialId != 0)
+           if (usuario.CredencialId != 0)
             {
                 usuario.Credencial = await _db.GetCredencialByIdAsync(usuario.CredencialId);
             }
             else
             {
-                // If your service exposes a helper to get the logged user's credential:
                 try
                 {
                     usuario.Credencial = await _db.GetLoggedUserCredential();
                 }
                 catch
                 {
-                    // leave null, next check will guard
                 }
             }
         }

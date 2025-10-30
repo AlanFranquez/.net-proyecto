@@ -11,6 +11,8 @@ using AppNetCredenciales.services;
 using AppNetCredenciales.models;
 using AppNetCredenciales.Data;
 
+using System.Diagnostics;
+
 namespace AppNetCredenciales.Views
 {
     public partial class Navbar : ContentView
@@ -35,6 +37,7 @@ namespace AppNetCredenciales.Views
                 }
             }
         }
+        public ICommand LogoutCommand { get; private set; }
 
         private readonly AuthService _authService;
         private readonly LocalDBService _dbService;
@@ -45,6 +48,19 @@ namespace AppNetCredenciales.Views
 
             _authService = MauiProgram.ServiceProvider?.GetService<AuthService>();
             _dbService = MauiProgram.ServiceProvider?.GetService<LocalDBService>() ?? new LocalDBService();
+
+            LogoutCommand = new Command(async () =>
+            {
+                try
+                {
+                    SessionManager.Logout();
+                    await Shell.Current.GoToAsync("//login");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Logout error: {ex}");
+                }
+            });
 
             // Comandos
             NavigateCommand = new Command<string>(async destino =>
@@ -138,7 +154,6 @@ namespace AppNetCredenciales.Views
 
         private void ActualizarPermisosSegunRol(string rol)
         {
-            // Asegurarse de que los elementos existen
             var defaultNav = this.FindByName<StackLayout>("DefaultNav");
             var funcionarioNav = this.FindByName<StackLayout>("FuncionarioNav");
 
@@ -151,7 +166,29 @@ namespace AppNetCredenciales.Views
                 funcionarioNav.IsVisible = isFuncionario;
 
             if (isFuncionario)
-                _ = Shell.Current.GoToAsync("func_eventos");
+                _ = Shell.Current.GoToAsync("scan");
+            else
+                _ = Shell.Current.GoToAsync("espacio");
+        }
+
+        private async void OnLogoutClicked(object sender, EventArgs e)
+        {
+            
+                SessionManager.Logout();
+                await Shell.Current.GoToAsync("login");
+           
+        }
+
+        private void OnRoleImageClicked(object sender, EventArgs e)
+        {
+            try
+            {
+                RolePicker?.Focus();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Error opening role picker: {ex}");
+            }
         }
     }
 }
