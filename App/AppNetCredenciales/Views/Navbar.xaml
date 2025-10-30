@@ -1,47 +1,69 @@
 <ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              x:Class="AppNetCredenciales.Views.Navbar">
-    <Grid Padding="10"
+    <Grid Padding="12"
           BackgroundColor="White"
           ColumnDefinitions="*,*,*,*"
           VerticalOptions="End"
           HeightRequest="60">
 
-        <Picker Title="Rol"
-        ItemsSource="{Binding Roles}"
-        ItemDisplayBinding="{Binding Tipo}"
-        SelectedItem="{Binding RolSeleccionado, Mode=TwoWay}"
-        Grid.Column="0"
-        HorizontalOptions="Center"
-        VerticalOptions="Center"
-        WidthRequest="120"
-        HeightRequest="40" />
+        <!-- Role picker -->
+        <Picker x:Name="RolePicker"
+                Title="Rol"
+                ItemsSource="{Binding Roles}"
+                ItemDisplayBinding="{Binding Tipo}"
+                SelectedItem="{Binding RolSeleccionado, Mode=TwoWay}"
+                Grid.Column="0"
+                HorizontalOptions="Center"
+                VerticalOptions="Center"
+                WidthRequest="120"
+                HeightRequest="40" />
 
-        <ImageButton Source="credencial.png"
-                     BackgroundColor="Transparent"
-                     WidthRequest="32"
-                     HeightRequest="32"
-                     Command="{Binding NavigateCommand}"
-                     CommandParameter="credencial"
+        <StackLayout x:Name="DefaultNav"
+                     Orientation="Horizontal"
                      Grid.Column="1"
-                     HorizontalOptions="Center" />
+                     HorizontalOptions="Center"
+                     VerticalOptions="Center"
+                     Spacing="12" Padding="0">
+            <ImageButton Source="credencial.png"
+                         BackgroundColor="Transparent"
+                         WidthRequest="32"
+                         HeightRequest="32"
+                         Margin="6,0"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="credencial" />
+            <ImageButton Source="widget.png"
+                         BackgroundColor="Transparent"
+                         WidthRequest="32"
+                         HeightRequest="32"
+                         Margin="6,0"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="espacio" />
+            <ImageButton Source="historial.png"
+                         BackgroundColor="Transparent"
+                         WidthRequest="32"
+                         HeightRequest="32"
+                         Margin="6,0"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="historial" />
+        </StackLayout>
 
-        <ImageButton Source="widget.png"
-                     BackgroundColor="Transparent"
-                     WidthRequest="32"
-                     HeightRequest="32"
-                     Command="{Binding NavigateCommand}"
-                     CommandParameter="eventos"
-                     Grid.Column="2"
-                     HorizontalOptions="Center" />
+        <StackLayout x:Name="FuncionarioNav"
+                     Orientation="Horizontal"
+                     Grid.Column="1"
+                     HorizontalOptions="Center"
+                     VerticalOptions="Center"
+                     Spacing="12"
+                     Padding="0"
+                     IsVisible="False">
+            <ImageButton Source="scanner.png"
+                         BackgroundColor="Transparent"
+                         WidthRequest="32"
+                         HeightRequest="32"
+                         Margin="6,0"
+                         Command="{Binding NavigateCommand}"
+                         CommandParameter="scan" />
+        </StackLayout>
 
-        <ImageButton Source="historial.png"
-                     BackgroundColor="Transparent"
-                     WidthRequest="32"
-                     HeightRequest="32"
-                     Command="{Binding NavigateCommand}"
-                     CommandParameter="historial"
-                     Grid.Column="3"
-                     HorizontalOptions="Center" />
     </Grid>
 </ContentView>
