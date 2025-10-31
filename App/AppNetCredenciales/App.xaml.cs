@@ -20,6 +20,23 @@ namespace AppNetCredenciales
 
             // Fire-and-forget an async initializer (avoid blocking the UI thread)
             _ = InitializeAppAsync();
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+#if DEBUG
+                    var db = MauiProgram.ServiceProvider?.GetService<LocalDBService>();
+                    if (db != null)
+                    {
+                        await db.EnsureSchemaAndDataAsync();
+                    }
+#endif
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine("[App] DB migration error: " + ex);
+                }
+            });
         }
 
         private async Task InitializeAppAsync()

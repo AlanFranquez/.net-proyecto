@@ -1,4 +1,5 @@
-﻿using AppNetCredenciales.models;
+﻿using AppNetCredenciales.Data;
+using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using AppNetCredenciales.Views;
 using System.ComponentModel;
@@ -16,6 +17,7 @@ namespace AppNetCredenciales.ViewModel
         private bool trabajando;
         private readonly AuthService authService;
         private readonly LoginView view;
+        private readonly LocalDBService dbService;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -45,9 +47,10 @@ namespace AppNetCredenciales.ViewModel
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        public LoginViewModel(LoginView view, AuthService AuthService)
+        public LoginViewModel(LoginView view, AuthService AuthService, LocalDBService db)
         {
             this.view = view;
+            this.dbService = db;
             this.authService = AuthService;
             LoginCommand = new Command(async () => await LoginAsync(), () => !trabajando);
 
@@ -106,8 +109,18 @@ namespace AppNetCredenciales.ViewModel
             {
                 await SessionManager.SaveUserAsync(u.UsuarioId, Email);
 
+                int idRol = u.RolId ?? 0;
 
-                await Shell.Current.GoToAsync("espacio");
+                Rol r = await dbService.GetRolByIdAsync(idRol);
+
+                if(r != null && r.Tipo == "Funcionario")
+                {
+
+                await Shell.Current.GoToAsync("scan");
+                } else
+                {
+                    await Shell.Current.GoToAsync("espacio");
+                }
             }
             catch (Exception ex)
             {

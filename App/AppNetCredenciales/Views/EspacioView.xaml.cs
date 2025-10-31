@@ -56,13 +56,5 @@ public partial class EspacioView : ContentPage
             cv.SelectedItem = null;
     }
 
-    private async void OnLogoutClicked(object sender, EventArgs e)
-    {
-        bool confirmar = await DisplayAlert("Cerrar sesión", "¿Deseas cerrar sesión?", "Sí", "No");
-        if (confirmar)
-        {
-            SessionManager.Logout();
-            await Navigation.PushAsync(new LoginView(_auth));
-        }
-    }
+    
 }

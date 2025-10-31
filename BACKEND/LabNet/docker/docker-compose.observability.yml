@@ -1,0 +1,44 @@
+services:
+  seq:
+    image: datalust/seq:2024.3
+    ports:
+      - "5341:80"
+    environment:
+      - ACCEPT_EULA=Y
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules:/etc/prometheus/rules:ro
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.expand-env=true"]
+    environment:
+      - JAEGER_DISABLED=true
+    # No exponemos puertos en host; el collector se conecta internamente
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.1
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "9464:9464" # Prometheus scrape endpoint expuesto por el collector
+      - "4317:4317" # OTLP gRPC (coincide con mapeo local)
+      - "4318:4318" # OTLP HTTP (coincide con mapeo local)
+    depends_on:
+      - tempo

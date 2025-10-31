@@ -63,16 +63,35 @@ dotnet run
 ```
 
 **2) Entorno completo con Docker (recomendado)**
-```bash
+```powershell
+# API + DB + Observabilidad (Grafana, Prometheus, Tempo, Seq)
+pwsh ./scripts/dev-up.ps1 -Seed
 
+# Solo API + DB
 pwsh ./scripts/up.ps1 -Seed
+
+# Solo Observabilidad
+pwsh ./scripts/observability.ps1
 ```
-Esto levanta **API + PostgreSQL** y ejecuta el seed inicial de datos.
+Esto levanta **API + PostgreSQL** (y opcionalmente Observabilidad) y ejecuta el seed inicial de datos.
 
 **3) Verificación de salud**
 ```bash
 
 curl http://localhost:8080/health
+```
+
+### 📈 Observabilidad
+
+- Seq:       http://localhost:5341  (logs Serilog)
+- Grafana:   http://localhost:3000  (admin/admin)
+- Prometheus: http://localhost:9090
+- OTel Metrics (Collector): http://localhost:9464/metrics
+
+Para bajar todo:
+
+```powershell
+pwsh ./scripts/dev-down.ps1   # baja observabilidad y API; usa -KeepDbVolume para conservar datos
 ```
 
 ---

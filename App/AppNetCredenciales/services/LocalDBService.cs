@@ -32,9 +32,51 @@ namespace AppNetCredenciales.Data
 
         }
 
+        public async Task EnsureSchemaAndDataAsync()
+        {
+            try
+            {
+                var roles = await GetRolesAsync();
+                // If any Rol rows have RolId == 0 we assume old/broken schema/data and recreate tables
+                if (roles.Any(r => r.RolId == 0))
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Detected roles with RolId==0 -> recreating tables");
 
-       // usuario logueado
-       public async Task<models.Usuario> GetLoggedUserAsync()
+                    // Drop tables in safe order and recreate with current model attributes
+                    await _connection.DropTableAsync<UsuarioRol>();
+                    await _connection.DropTableAsync<Rol>();
+                    await _connection.DropTableAsync<Usuario>();
+                    await _connection.DropTableAsync<Credencial>();
+                    await _connection.DropTableAsync<EspacioReglaDeAcceso>();
+                    await _connection.DropTableAsync<ReglaDeAcceso>();
+                    await _connection.DropTableAsync<Espacio>();
+                    await _connection.DropTableAsync<EventoAcceso>();
+
+                    // Recreate tables
+                    await _connection.CreateTableAsync<Usuario>();
+                    await _connection.CreateTableAsync<Rol>();
+                    await _connection.CreateTableAsync<UsuarioRol>();
+                    await _connection.CreateTableAsync<Credencial>();
+                    await _connection.CreateTableAsync<Espacio>();
+                    await _connection.CreateTableAsync<EventoAcceso>();
+                    await _connection.CreateTableAsync<EspacioReglaDeAcceso>();
+                    await _connection.CreateTableAsync<ReglaDeAcceso>();
+
+                    // Seed default data again
+                    await InitializeAsync();
+
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Schema recreated and data seeded.");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] EnsureSchemaAndDataAsync error: " + ex);
+            }
+        }
+
+
+        // usuario logueado
+        public async Task<models.Usuario> GetLoggedUserAsync()
         {
             if (await SessionManager.IsLoggedAsync())
             {
@@ -138,6 +180,38 @@ namespace AppNetCredenciales.Data
                 return await GetRolByIdAsync(user.RolId.Value);
             }
             return null;
+        }
+
+        public async Task<List<Rol>> GetRolsByUserAsync(int id)
+        {
+            var usuario = await GetUsuarioByIdAsync(id);
+
+            var usuarioRols = await _connection.Table<UsuarioRol>()
+                .Where(ur => ur.UsuarioId == usuario.UsuarioId)
+                .ToListAsync();
+
+
+            var listarTodosUsuariosRols = await _connection.Table<UsuarioRol>()
+                .ToListAsync();
+
+            foreach (var ur in listarTodosUsuariosRols)
+            {
+                
+                System.Diagnostics.Debug.WriteLine($"UsuarioRol - Id: {ur.Id}, UsuarioId: {ur.UsuarioId}, RolId: {ur.RolId}, FechaAsignado: {ur.FechaAsignado}");
+            }
+
+            var rolIds = usuarioRols.Select(ur => ur.RolId).ToList();
+
+            var roles = new List<Rol>();
+            foreach (var rolId in rolIds)
+            {
+                var rol = await GetRolByIdAsync(rolId);
+                if (rol != null)
+                {
+                    roles.Add(rol);
+                }
+            }
+            return roles;
         }
 
 

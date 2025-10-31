@@ -82,7 +82,6 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Fixed navbar at bottom -->
         <views:Navbar Grid.Row="1" />
     </Grid>
 </ContentPage>
