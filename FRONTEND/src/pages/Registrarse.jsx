@@ -1,22 +1,67 @@
 import React, { useState } from "react";
+import { useAuth } from "../services/AuthService.jsx";
+import { Link, useNavigate } from 'react-router-dom';
 import Navbar from "../components/Navbar";
 import "../styles/Registrarse.css";
 
 export default function Registrarse({ isLoggedIn, onToggle }) {
   const [form, setForm] = useState({
     nombre: "",
+    apellido: "",
+    documento: "",
     email: "",
     password: "",
-    confirm: "",
+    confirm: ""
   });
+  const { register, error } = useAuth()
+    const navigate = useNavigate()
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    alert("Registro enviado (placeholder)");
+    // setLoading(true);
+    //setError("");
+    // setSuccess("");
+
+    if(form.password != form.confirm){
+      throw new Error("las contraseñas no coinciden")
+    }
+
+    const obj = {
+      "Nombre": form.nombre, 
+      "Apellido": form.apellido,
+      "Documento": form.documento,
+      "Email": form.email,
+      "Password": form.password
+    }
+
+    console.log("Registrando usuario:", obj);
+
+    try {
+      await fetch("http://localhost:8080/api/usuarios")
+      const ok = await register("http://localhost:8080/api/usuarios/registro", obj)
+      if(!ok){
+        throw new Error(ok || "Error en el registro");
+      }
+      // setSuccess("Usuario registrado con éxito ✅");
+      setForm({ 
+        nombre: "",
+        apellido: "",
+        documento: "",
+        email: "",
+        password: "",
+        confirm: ""
+      });
+      navigate("/");
+    } catch (err) {
+      console.log(err);
+      //setError(err.message);
+    } finally {
+      // setLoading(false);
+    }
   };
 
   return (
@@ -42,6 +87,18 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
             </label>
 
             <label className="field">
+              <span className="label">Apelldio</span>
+              <input
+                name="apellido"
+                value={form.apellido}
+                onChange={handleChange}
+                className="input"
+                placeholder="Tu Aplellido"
+                required
+              />
+            </label>
+
+            <label className="field">
               <span className="label">Email</span>
               <input
                 type="email"
@@ -50,6 +107,18 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
                 onChange={handleChange}
                 className="input"
                 placeholder="you@example.com"
+                required
+              />
+            </label>
+
+            <label className="field">
+              <span className="label">Documento</span>
+              <input
+                name="documento"
+                value={form.documento}
+                onChange={handleChange}
+                className="input"
+                placeholder="Tu CI"
                 required
               />
             </label>
