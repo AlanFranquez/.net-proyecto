@@ -33,6 +33,7 @@ using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
 using FluentValidation;
 using MediatR;
 using System.Reflection;
+using Amazon.CognitoIdentityProvider;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
 using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
@@ -42,17 +43,36 @@ using Espectaculos.Application.Dispositivos.Commands.UpdateDispositivo;
 using Espectaculos.Application.Roles.Commands.CreateRol;
 using Espectaculos.Application.Roles.Commands.DeleteRol;
 using Espectaculos.Application.Roles.Commands.UpdateRol;
+using Espectaculos.Application.services;
+using Espectaculos.Application.Settings;
 using Espectaculos.Application.Sincronizaciones.Commands.CreateSincronizacion;
 using Espectaculos.Application.Sincronizaciones.Commands.DeleteSincronizacion;
 using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 using Npgsql;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using DotNetEnv;
+using Microsoft.Extensions.Options;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Espectaculos.WebApi.Utils;
+
+
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\.env");
+
+Console.WriteLine($"[AWS DEBUG] Path: {envPath}");
+if (File.Exists(envPath))
+{
+    DotNetEnv.Env.Load(envPath);
+}
+else
+{
+    DotNetEnv.Env.Load(); 
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,6 +92,41 @@ builder.Configuration
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables("APP__") // quita el prefijo "APP__" si existe
     .AddEnvironmentVariables();       // sin prefijo (toma el resto)
+
+var awsSettings = builder.Configuration.GetSection("AWS:Cognito").Get<AwsCognitoSettings>();
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.Authority = $"https://cognito-idp.{builder.Configuration["AWS:Region"]}.amazonaws.com/{awsSettings.UserPoolId}";
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = $"https://cognito-idp.{builder.Configuration["AWS:Region"]}.amazonaws.com/{awsSettings.UserPoolId}",
+            ValidateAudience = true,
+            ValidAudience = awsSettings.ClientId,
+            ValidateLifetime = true
+        };
+
+        // --- Leer token también desde cookie "espectaculos_session" ---
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                // Si Authorization header no presente, intentar cookie
+                if (string.IsNullOrEmpty(ctx.Request.Headers["Authorization"]))
+                {
+                    if (ctx.Request.Cookies.TryGetValue("espectaculos_session", out var tokenFromCookie))
+                    {
+                        ctx.Token = tokenFromCookie;
+                    }
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 // Log de diagnóstico en Development (no muestra el secreto)
 if (builder.Environment.IsDevelopment())
@@ -192,6 +247,7 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IValidationTokenService, HmacValidationTokenService>();
+builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
 
 // EF Core + Npgsql (simple y robusto)
 builder.Services.AddSingleton<AuditableEntitySaveChangesInterceptor>();
@@ -224,6 +280,7 @@ if (isDev)
             p.WithOrigins(devOrigins)
              .AllowAnyHeader()
              .AllowAnyMethod()
+             .AllowCredentials()
         );
     });
 }
@@ -300,6 +357,29 @@ builder.Services.AddScoped<IRolRepository, RolRepository>();
 builder.Services.AddScoped<ISincronizacionRepository, SincronizacionRepository>();
 builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
 builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.Notifications.LoggingNotificationSender>();
+builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
+
+var cognitoSection = builder.Configuration.GetSection("AWS:Cognito");
+var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>();
+if (cognitoSettings == null)
+    throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
+
+if (string.IsNullOrWhiteSpace(cognitoSettings.UserPoolId) || string.IsNullOrWhiteSpace(cognitoSettings.ClientId))
+    throw new InvalidOperationException("AWS:Cognito UserPoolId y ClientId deben estar configurados.");
+
+// Registrar IAmazonCognitoIdentityProvider usando region desde settings
+builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<AwsCognitoSettings>>().Value;
+    var region = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
+    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region);
+
+    // Usa credential chain (env vars, profile, IAM role). Si querés forzar credenciales, ver más abajo.
+    return new AmazonCognitoIdentityProviderClient(regionEndpoint);
+});
+
+// Registrar el servicio cognito (usa IAmazonCognitoIdentityProvider por DI)
+builder.Services.AddScoped<ICognitoService, CognitoService>();
 
 // Finalmente el UnitOfWork (depende de los repos registrados arriba)
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();

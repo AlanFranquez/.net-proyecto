@@ -1,8 +1,52 @@
-import React from "react";
+import React, { useState } from "react";
+import { useAuth } from "../services/AuthService.jsx";
 import Navbar from "../components/Navbar";
+import { Link, useNavigate } from 'react-router-dom';
 import "../styles/Login.css";
 
 export default function Login({ isLoggedIn, onToggle }) {
+  const [form, setForm] = useState({
+    email: "",
+    password: ""
+  });
+  const { login, error } = useAuth()
+  const navigate = useNavigate()
+  
+  const handleChange = (e) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+    // setLoading(true);
+    //setError("");
+    // setSuccess("");
+
+    const obj = {
+      "Email": form.email,
+      "Password": form.password
+    }
+
+    console.log("Registrando usuario:", obj);
+
+    try {
+      const ok = await login("http://localhost:8080/api/usuarios/login", obj)
+      if(!ok){
+        throw new Error(ok || "Error en el login");
+      }
+      // setSuccess("Usuario registrado con éxito ✅");
+      setForm({ 
+        email: "",
+        password: ""
+      });
+      navigate("/");
+    } catch (err) {
+      console.log(err);
+      //setError(err.message);
+    } finally {
+      // setLoading(false);
+    }
+  };
+
   return (
     <>
       <Navbar isLoggedIn={isLoggedIn} onToggle={onToggle} />
@@ -12,17 +56,16 @@ export default function Login({ isLoggedIn, onToggle }) {
           <h1 className="login-title">Login</h1>
 
           <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              alert("Placeholder login — no endpoints wired yet.");
-            }}
+            onSubmit={handleSubmit}
             className="login-form"
           >
             <label className="field">
               <span className="label">Email</span>
               <input
+                value={form.email}
+                onChange={handleChange}
+                name="email"
                 type="email"
-                defaultValue="john@doe.com"
                 className="input"
                 placeholder="you@example.com"
               />
@@ -32,7 +75,9 @@ export default function Login({ isLoggedIn, onToggle }) {
               <span className="label">Contraseña</span>
               <input
                 type="password"
-                defaultValue="password"
+                value={form.password}
+                onChange={handleChange}
+                name="password"
                 className="input"
                 placeholder="••••••••"
               />

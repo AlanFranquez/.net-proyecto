@@ -1,4 +1,5 @@
 ﻿using Espectaculos.Application.Abstractions;
+using Espectaculos.Application.services;
 using Espectaculos.Domain.Entities;
 using Espectaculos.Domain.Enums;
 using FluentValidation;
@@ -10,16 +11,20 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
     {
         private readonly IUnitOfWork _uow;
         private readonly IValidator<CreateUsuarioCommand> _validator;
+        private readonly ICognitoService _cognito;
 
-        public CreateUsuarioHandler(IUnitOfWork uow, IValidator<CreateUsuarioCommand> validator)
+        public CreateUsuarioHandler(IUnitOfWork uow, IValidator<CreateUsuarioCommand> validator, ICognitoService cognito)
         {
             _uow = uow;
             _validator = validator;
+            _cognito = cognito;
         }
 
         public async Task<Guid> Handle(CreateUsuarioCommand command, CancellationToken ct)
         {
             await _validator.ValidateAndThrowAsync(command, ct);
+            
+            var cognitoSub = await _cognito.RegisterUserAsync(command.Email, command.Password, ct);
 
             var usuario = new Usuario
             {
