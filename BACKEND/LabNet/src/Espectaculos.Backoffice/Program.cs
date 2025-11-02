@@ -1,26 +1,36 @@
-﻿using Espectaculos.Application.Abstractions;
+﻿using Espectaculos.Application;
+using Espectaculos.Application.Abstractions;
+using Espectaculos.Application.Common.Behaviors;  
+using FluentValidation;                             
+using MediatR;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Identity;
-using MediatR;
 using Espectaculos.Infrastructure;
 using Espectaculos.Infrastructure.Persistence;
-using Espectaculos.Application.Abstractions.Repositories;
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddRazorPages()
     .AddRazorPagesOptions(o =>
     {
         o.Conventions.AddAreaPageRoute("Admin", "/Dashboard/Index", "");
     });
+
 builder.Services.AddInfrastructure(
     builder.Configuration.GetConnectionString("Default")
 );
+
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssembly(typeof(IUnitOfWork).Assembly);
+    cfg.RegisterServicesFromAssembly(ApplicationAssembly.Value);
 });
+
+builder.Services.AddValidatorsFromAssembly(ApplicationAssembly.Value);
+
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>)); // ★
+
 builder.Services
     .AddDefaultIdentity<IdentityUser>(o =>
     {

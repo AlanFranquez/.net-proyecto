@@ -16,17 +16,18 @@
         <nav class="nav">
             <a href="/">Dashboard</a>
             <a href="/Admin/Usuarios">Gestión de usuarios</a>
-            <a href="/Admin/Roles">Roles y permisos</a>
+            <a href="/Admin/Roles">Roles</a>
             <a href="/Admin/Espacios">Espacios</a>
             <a href="/Admin/Reglas">Reglas de acceso</a>
             <a href="/Admin/Beneficios">Beneficios</a>
             <a href="/Admin/Novedades">Novedades</a>
-            <a href="/Admin/Reportes">Reportes / Auditoría</a>
+            <a href="/Admin/Reportes">Reportes</a>
         </nav>
     </aside>
     <main class="content">
         @RenderBody()
     </main>
 </div>
+@RenderSection("Scripts", required: false)
 </body>
 </html>

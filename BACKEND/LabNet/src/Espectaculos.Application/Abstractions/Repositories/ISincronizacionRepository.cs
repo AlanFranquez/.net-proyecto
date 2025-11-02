@@ -16,5 +16,6 @@ namespace Espectaculos.Application.Abstractions.Repositories
         Task UpdateAsync(Sincronizacion sincronizacion, CancellationToken ct = default);
         Task DeleteAsync(Guid id, CancellationToken ct = default);
         Task<IReadOnlyList<Sincronizacion>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default);
+        Task<int> CountPendientesAsync(CancellationToken ct = default);
     }
 }

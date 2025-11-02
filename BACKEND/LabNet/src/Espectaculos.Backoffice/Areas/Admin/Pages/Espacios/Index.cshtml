@@ -1,11 +1,57 @@
 ﻿@page
+@using System.Linq
 @model Espectaculos.Backoffice.Areas.Admin.Pages.Espacios.IndexModel
 @{
-    ViewData["Title"] = "Gestión de espacios";
+    ViewData["Title"] = "Espacios";
 }
-<h1>Gestión de espacios</h1>
-<p>Placeholder: CRUD de espacios y su disponibilidad.</p>
-<div class="card">
-    <strong>Listado de espacios (placeholder)</strong>
-    <div style="height:220px; border:1px dashed #cbd5e1; margin-top:8px;"></div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Espacios</h1>
+    <a asp-area="Admin" asp-page="/Espacios/Crear" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nuevo espacio
+    </a>
 </div>
+
+@if (TempData["Ok"] is string ok)
+{
+    <div class="alert alert-success py-2">@ok</div>
+}
+
+<table class="table table-sm align-middle">
+    <thead>
+    <tr>
+        <th>Nombre</th>
+        <th>Activo</th>
+        <th>Tipo</th>
+        <th>Modo</th>
+        <th>Reglas</th>
+        <th>Beneficios</th>
+        <th>Eventos</th>
+        <th style="width:200px"></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var e in Model.Items)
+    {
+        <tr>
+            <td>@e.Nombre</td>
+            <td>@(e.Activo ? "Sí" : "No")</td>
+            <td>@e.Tipo</td>
+            <td>@e.Modo</td>
+            <td>@e.ReglasCount</td>
+            <td>@e.BeneficiosCount</td>
+            <td>@e.EventosCount</td>
+            <td class="text-end">
+                <a asp-area="Admin" asp-page="/Espacios/Editar" asp-route-id="@e.Id" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i> Editar
+                </a>
+                <form method="post" asp-page-handler="Delete" asp-route-id="@e.Id" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar espacio?')">
+                        <i class="bi bi-trash"></i> Eliminar
+                    </button>
+                </form>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

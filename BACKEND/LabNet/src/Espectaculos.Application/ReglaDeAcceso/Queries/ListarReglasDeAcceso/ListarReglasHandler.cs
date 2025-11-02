@@ -29,6 +29,9 @@ namespace Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso
                 RequiereBiometriaConfirmacion = r.RequiereBiometriaConfirmacion.Equals(true),
                 EspaciosIDs = r.Espacios.Select(r => r.EspacioId).ToList()
             }).ToList();
+            
         }
+        
     }
+    
 }

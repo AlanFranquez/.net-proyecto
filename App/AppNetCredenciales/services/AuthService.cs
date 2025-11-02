@@ -20,7 +20,21 @@ namespace AppNetCredenciales.services
 
         public async Task<List<Usuario>> GetUsuarios()
         {
-            return await _db.GetUsuariosAsync();    
+            return await _db.GetUsuariosAsync();
+        }
+
+        public async Task ChangeRoleForLoggedUser(int newRole)
+        {
+                
+            var usuario = await GetUserLogged();
+
+            if (usuario != null)
+            {
+                await SessionManager.SaveUserRoleAsync(newRole);
+                await _db.ChangeUserSelectedRole(usuario.Email, newRole);
+
+            }
+
         }
 
         public async Task<bool> registrarUsuario(models.Usuario usuario)
@@ -34,6 +48,18 @@ namespace AppNetCredenciales.services
             return true;
         }
 
+       
+          
+
+        public async Task<List<Rol>> GetRolesForLoggedUser()
+        {
+            var user = await GetUserLogged();
+
+            List<Rol> roles = await _db.GetRolsByUserAsync(user.UsuarioId);
+
+            return roles;
+        }
+
         public async Task<bool> isUserLogged()
         {
             var consulta = await SessionManager.IsLoggedAsync();
@@ -42,8 +68,7 @@ namespace AppNetCredenciales.services
 
         public void logoutUsuario()
         {
-           SessionManager.Logout();
-       
+            SessionManager.Logout();
         }
 
         public async Task<models.Usuario> getUsuarioData(string email)
@@ -55,23 +80,26 @@ namespace AppNetCredenciales.services
         public async Task<models.Usuario> GetUserLogged()
         {
             var u = await _db.GetLoggedUserAsync();
-
             return u;
         }
 
         public async Task<bool> loginUsuario(string email, string password)
         {
-
             var consulta = await _db.loggeoCorrecto(email, password);
             if (consulta)
             {
                 var usuario = await _db.GetUsuarioByEmailAsync(email);
                 await SessionManager.SaveUserAsync(usuario.UsuarioId, usuario.Email);
+
+                if (usuario.RolId.HasValue && usuario.RolId.Value != 0)
+                {
+                    await SessionManager.SaveUserRoleAsync(usuario.RolId.Value);
+                }
+
                 return true;
             }
 
             return false;
-
         }
     }
 }

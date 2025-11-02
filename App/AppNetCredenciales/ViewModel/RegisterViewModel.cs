@@ -1,10 +1,12 @@
-﻿using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
-using AppNetCredenciales.Data;
+﻿using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using AppNetCredenciales.Views;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Data;
+using System.Runtime.CompilerServices;
+using System.Windows.Input;
 
 namespace AppNetCredenciales.ViewModel
 {
@@ -19,6 +21,8 @@ namespace AppNetCredenciales.ViewModel
         private readonly AuthService authService;
         private readonly RegisterView view;
         private readonly LocalDBService _db;
+        public ObservableCollection<SelectableRole> Roles { get; } = new();
+
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -72,14 +76,28 @@ namespace AppNetCredenciales.ViewModel
             {
                 if (Application.Current?.MainPage is not null)
                 {
-                    await Shell.Current.GoToAsync("login");
+                    await Shell.Current.GoToAsync("//login");
                 }
             });
+
+            _ = LoadRolesAsync();
         }
 
-        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        private async Task LoadRolesAsync()
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            try
+            {
+                var roles = await _db.GetRolesAsync();
+                Roles.Clear();
+                foreach (var r in roles)
+                {
+                    Roles.Add(new SelectableRole(r));
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error cargando roles: {ex}");
+            }
         }
 
         private async Task<bool> RegisterAsync()
@@ -118,21 +136,38 @@ namespace AppNetCredenciales.ViewModel
             };
 
             var credId = await _db.SaveCredencialAsync(credencial);
-            if (credId <= 0) return false;
+            if (credId <= 0)
+            {
+                Trabajando = false;
+                await view.DisplayAlert("Error", "No se pudo generar la credencial", "OK");
+                return false;
+            }
 
             usuario.CredencialId = credId;
             usuario.Credencial = credencial;
 
-
-
-            var registrado = await authService.registrarUsuario(usuario);
-
-            if (!registrado)
+            var saved = await _db.SaveUsuarioAsync(usuario);
+            if (saved <= 0)
             {
                 Trabajando = false;
-                await view.DisplayAlert("Error", "No se pudo registrar el usuario. Verifique los datos.", "OK");
+                await view.DisplayAlert("Error", "No se pudo guardar el usuario", "OK");
                 return false;
             }
+            var usuarioId = usuario.UsuarioId;
+            if (usuarioId == 0) usuarioId = saved;
+
+            var seleccionadas = Roles.Where(r => r.IsSelected).ToList();
+            foreach (var s in seleccionadas)
+            {
+                var ur = new UsuarioRol
+                {
+                    UsuarioId = usuarioId,
+                    RolId = s.Role.RolId,
+                    FechaAsignado = DateTime.UtcNow
+                };
+                await _db.SaveUsuarioRolAsync(ur);
+            }
+
 
             await view.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
 
@@ -141,5 +176,31 @@ namespace AppNetCredenciales.ViewModel
             Trabajando = false;
             return true;
         }
+
+        public class SelectableRole : INotifyPropertyChanged
+        {
+            private bool isSelected;
+            public Rol Role { get; }
+
+            public bool IsSelected
+            {
+                get => isSelected;
+                set { if (isSelected == value) return; isSelected = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsSelected))); }
+            }
+
+            public SelectableRole(Rol role)
+            {
+                Role = role;
+            }
+
+            public event PropertyChangedEventHandler PropertyChanged;
+        }
+
+        protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        
     }
 }

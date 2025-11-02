@@ -1,15 +1,16 @@
-﻿using Espectaculos.Domain.Enums;
-
-namespace Espectaculos.Application.DTOs;
+﻿namespace Espectaculos.Application.DTOs;
 
 public class EspacioDTO
 {
     public Guid Id { get; set; }
     public string Nombre { get; set; } = default!;
-    public bool Activo { get; set; } = default!;
-    public EspacioTipo Tipo { get; set; } = default!;
-    public Modo Modo { get; set; } = default!;
-    public IEnumerable<Guid>? EventoAccesoIds { get; set; } = null;
-    public IEnumerable<Guid>? ReglaIds { get; set; } = null;
-    public IEnumerable<Guid>? BeneficioIds { get; set; } = null;
+    public bool Activo { get; set; }
+    public string Tipo { get; set; } = default!; 
+    public string Modo { get; set; } = default!;
+    public int ReglasCount { get; set; }
+    public int BeneficiosCount { get; set; }
+    public int EventosCount { get; set; }
+    public List<Guid> ReglaIds { get; set; } = new();
+    public List<Guid> BeneficioIds { get; set; } = new();
+    public List<Guid> EventoIds { get; set; } = new();
 }
