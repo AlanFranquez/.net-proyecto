@@ -11,7 +11,6 @@
               IsDetecting="True"
               BarcodesDetected="BarcodesDetected" />
 
-        <!-- Use the funcionario bar and give it a name to subscribe in code-behind -->
         <views:NavbarFuncionario
             x:Name="BottomBar"
             VerticalOptions="End"

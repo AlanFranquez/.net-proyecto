@@ -1,13 +1,14 @@
+using AppNetCredenciales.Data;
+using CommunityToolkit.Maui.Views;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Dispatching;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.Dispatching;
-using Microsoft.Maui.Controls;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
-using AppNetCredenciales.Data;
 
 namespace AppNetCredenciales.Views
 {
@@ -37,7 +38,6 @@ namespace AppNetCredenciales.Views
         {
             base.OnAppearing();
 
-            // ensure camera permission before enabling detection
             var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.Camera>();
@@ -54,18 +54,15 @@ namespace AppNetCredenciales.Views
 
         protected override void OnDisappearing()
         {
-            // stop detection and cancel any pending retries
             _retryCts?.Cancel();
             cameraBarcodeReaderView.IsDetecting = false;
             base.OnDisappearing();
         }
 
-        // Turn detection on with basic error handling + retry
         private async Task StartDetectionSafeAsync()
         {
             try
             {
-                // toggle to ensure underlying camera is restarted cleanly
                 cameraBarcodeReaderView.IsDetecting = false;
                 await Task.Delay(200);
                 cameraBarcodeReaderView.IsDetecting = true;
@@ -104,7 +101,6 @@ namespace AppNetCredenciales.Views
             });
         }
 
-        // inside ScanView class — improved debug + tolerant validation
         protected async void BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
         {
             var first = e.Results?.FirstOrDefault();
@@ -134,35 +130,30 @@ namespace AppNetCredenciales.Views
 
         private async Task HandleScannedPayloadAsync(string payload)
         {
-            // payload example: "3b704a43ea764b318a80c63cbaa4aee2|1"
             var cryptoId = payload?.Split('|')[0].Trim();
 
-            if (string.IsNullOrEmpty(cryptoId))
-            {
-                System.Diagnostics.Debug.WriteLine("[Scan] Empty crypto id after parsing.");
-                return;
-            }
+            
 
             var usuario = await _db.GetLoggedUserAsync();
 
             if (usuario == null) return;
 
-            System.Diagnostics.Debug.WriteLine($"[Scan] Logged user id: {usuario.UsuarioId}");
-            System.Diagnostics.Debug.WriteLine($"[Scan] CREDENCIAL ID USUARIO: {usuario.CredencialId}");
-      
-
+            
 
 
             var cred = await _db.GetCredencialByCryptoIdAsync(cryptoId);
             if (cred == null)
             {
                 var all = await _db.GetCredencialesAsync();
-                System.Diagnostics.Debug.WriteLine($"[Scan] Scanned id '{cryptoId}' not found in DB. DB Creds: {string.Join(", ", all.Select(c => c.IdCriptografico ?? "<null>"))}");
-                
+
+                await DisplayAlert("Credencial no reconocida", $"No se encontró la credencial para '{cryptoId}'.", "Cerrar");
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[Scan] Found credential id {cred.CredencialId} for crypto id {cryptoId}");
+
+            var popupOk = new ScanResultPopup("Credencial reconocida", $"El usuario tiene permiso para acceder al espacio.", true);
+            await this.ShowPopupAsync(popupOk);
+
         }
-    }
+    }   
 }

@@ -2,6 +2,8 @@
 using AppNetCredenciales.services;
 using AppNetCredenciales.ViewModel;
 using AppNetCredenciales.Views;
+using Camera.MAUI;
+using CommunityToolkit.Maui;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui;
@@ -9,7 +11,6 @@ using Microsoft.Maui.Hosting;
 using System;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
-using Camera.MAUI;
 
 namespace AppNetCredenciales
 {
@@ -23,6 +24,7 @@ namespace AppNetCredenciales
             builder
                 .UseMauiApp<App>()
                 .UseMauiCameraView()
+                .UseMauiCommunityToolkit()
                 .UseBarcodeReader()
                 .ConfigureFonts(fonts =>
                 {
