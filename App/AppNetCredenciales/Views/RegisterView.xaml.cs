@@ -12,4 +12,21 @@ public partial class RegisterView : ContentPage
         InitializeComponent();
 		BindingContext = new RegisterViewModel(this, auth, db);
 	}
+
+    private void RolesCollection_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (BindingContext is not RegisterViewModel vm)
+            return;
+
+        // First clear all selections
+        foreach (var item in vm.Roles)
+            item.IsSelected = false;
+
+        // Mark selected items
+        foreach (var si in RolesCollection.SelectedItems)
+        {
+            if (si is RegisterViewModel.SelectableRole sr)
+                sr.IsSelected = true;
+        }
+    }
 }

@@ -11,58 +11,36 @@ using AppNetCredenciales.services;
 using AppNetCredenciales.models;
 using AppNetCredenciales.Data;
 
-using System.Diagnostics;
-
 namespace AppNetCredenciales.Views
 {
     public partial class Navbar : ContentView
     {
         public ICommand NavigateCommand { get; private set; }
-        public ICommand CambiarRolCommand { get; private set; }
-        public ObservableCollection<Rol> Roles { get; } = new ObservableCollection<Rol>();
-
-        private Rol _rolSeleccionado;
-        public Rol RolSeleccionado
-        {
-            get => _rolSeleccionado;
-            set
-            {
-                if (!ReferenceEquals(_rolSeleccionado, value))
-                {
-                    _rolSeleccionado = value;
-                    OnPropertyChanged(nameof(RolSeleccionado));
-
-                    if (_rolSeleccionado != null)
-                        CambiarRolCommand?.Execute(_rolSeleccionado);
-                }
-            }
-        }
         public ICommand LogoutCommand { get; private set; }
 
-        private readonly AuthService _authService;
-        private readonly LocalDBService _dbService;
+        // Bindable property so XAML can react to role changes
+        public static readonly BindableProperty IsFuncionarioProperty =
+            BindableProperty.Create(nameof(IsFuncionario), typeof(bool), typeof(Navbar), false);
+
+        public bool IsFuncionario
+        {
+            get => (bool)GetValue(IsFuncionarioProperty);
+            set => SetValue(IsFuncionarioProperty, value);
+        }
+
+        private readonly LocalDBService _db;
 
         public Navbar()
         {
             InitializeComponent();
+            _db = App.Services?.GetRequiredService<LocalDBService>()
+                  ?? throw new InvalidOperationException("LocalDBService not registered in DI.");
 
-            _authService = MauiProgram.ServiceProvider?.GetService<AuthService>();
-            _dbService = MauiProgram.ServiceProvider?.GetService<LocalDBService>() ?? new LocalDBService();
+            // check user roles (fire-and-forget)
+            _ = CheckIfFuncionarioAsync();
 
-            LogoutCommand = new Command(async () =>
-            {
-                try
-                {
-                    SessionManager.Logout();
-                    await Shell.Current.GoToAsync("//login");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"Logout error: {ex}");
-                }
-            });
+            _ = cambiarRolAUsuario();
 
-            // Comandos
             NavigateCommand = new Command<string>(async destino =>
             {
                 if (string.IsNullOrEmpty(destino)) return;
@@ -78,23 +56,13 @@ namespace AppNetCredenciales.Views
                 }
             });
 
-            CambiarRolCommand = new Command<Rol>(async nuevoRol =>
+            // Simple logout command
+            LogoutCommand = new Command(async () =>
             {
-                if (nuevoRol == null) return;
-
                 try
                 {
-                    if (_authService != null)
-                        await _authService.ChangeRoleForLoggedUser(nuevoRol.RolId);
-                    else
-                        await _dbService.ChangeUserSelectedRole(await SessionManager.GetUserEmailAsync(), nuevoRol.RolId);
-
-                    await SessionManager.SaveUserRoleAsync(nuevoRol.RolId);
-
-                    ActualizarPermisosSegunRol(nuevoRol.Tipo);
-
-                    if (Application.Current?.MainPage != null)
-                        await Application.Current.MainPage.DisplayAlert("Rol Cambiado", $"Ahora eres: {nuevoRol.Tipo}", "OK");
+                    SessionManager.Logout();
+                    await Shell.Current.GoToAsync("//login");
                 }
                 catch (Exception ex)
                 {
@@ -103,92 +71,53 @@ namespace AppNetCredenciales.Views
             });
 
             BindingContext = this;
-
-            _ = LoadRolesAsync();
         }
 
-        private async Task LoadRolesAsync()
+        private async Task CheckIfFuncionarioAsync()
         {
             try
             {
-                List<Rol> roles = null;
-
-                if (_authService != null)
+                var usuario = await _db.GetLoggedUserAsync();
+                if (usuario == null)
                 {
-                    roles = await _authService.GetRolesForLoggedUser();
-                    Debug.WriteLine($"[Navbar] Roles from AuthService: {(roles?.Count ?? 0)}");
+                    IsFuncionario = false;
+                    return;
                 }
 
-                if ((roles == null || roles.Count == 0) && _dbService != null)
-                {
-                    var userId = await SessionManager.GetUserIdAsync();
-                    if (userId > 0)
-                        roles = await _dbService.GetRolsByUserAsync(userId);
-
-                    if (roles == null || roles.Count == 0)
-                        roles = await _dbService.GetRolesAsync();
-                }
-
-                var raw = roles ?? new List<Rol>();
-                var distinctRoles = raw.GroupBy(r => r.RolId).Select(g => g.First()).ToList();
-
-                Roles.Clear();
-                foreach (var r in distinctRoles)
-                    Roles.Add(r);
-
-                if (Roles.Count > 0)
-                {
-                    var loggedRole = await _dbService.GetLoggedUserRoleAsync();
-                    RolSeleccionado = loggedRole != null
-                        ? Roles.FirstOrDefault(x => x.RolId == loggedRole.RolId) ?? Roles.First()
-                        : Roles.First();
-
-                    ActualizarPermisosSegunRol(RolSeleccionado.Tipo);
-                }
+                var roles = await _db.GetRolsByUserAsync(usuario.UsuarioId);
+                IsFuncionario = roles != null && roles.Any(r => string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading roles: {ex}");
+                Debug.WriteLine($"CheckIfFuncionarioAsync error: {ex}");
+                IsFuncionario = false;
             }
         }
 
-        private void ActualizarPermisosSegunRol(string rol)
+        private async Task cambiarRolAUsuario()
         {
-            var defaultNav = this.FindByName<StackLayout>("DefaultNav");
-            var funcionarioNav = this.FindByName<StackLayout>("FuncionarioNav");
+            var usuario = await _db.GetLoggedUserAsync();
 
-            bool isFuncionario = string.Equals(rol, "Funcionario", StringComparison.OrdinalIgnoreCase);
-
-            if (defaultNav != null)
-                defaultNav.IsVisible = !isFuncionario;
-
-            if (funcionarioNav != null)
-                funcionarioNav.IsVisible = isFuncionario;
-
-            if (isFuncionario)
-                _ = Shell.Current.GoToAsync("scan");
-            else
-                _ = Shell.Current.GoToAsync("espacio");
+            var rol = await _db.GetRolByTipoAsync("Usuario");
+            await _db.ChangeUserSelectedRole(usuario.Email, rol.RolId);
         }
 
         private async void OnLogoutClicked(object sender, EventArgs e)
         {
-            
-                SessionManager.Logout();
-                await Shell.Current.GoToAsync("login");
-           
-        }
-
-        private void OnRoleImageClicked(object sender, EventArgs e)
-        {
             try
             {
-                RolePicker?.Focus();
+                SessionManager.Logout();
+                await Shell.Current.GoToAsync("login");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error opening role picker: {ex}");
+                Debug.WriteLine($"Logout click error: {ex}");
             }
+        }
+
+        private async Task OnRoleImageClicked(object sender, EventArgs e)
+        {
+            await Shell.Current.GoToAsync("roleselection");
         }
     }
 }

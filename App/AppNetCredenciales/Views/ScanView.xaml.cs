@@ -7,6 +7,7 @@ using Microsoft.Maui.Dispatching;
 using Microsoft.Maui.Controls;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
+using AppNetCredenciales.Data;
 
 namespace AppNetCredenciales.Views
 {
@@ -15,18 +16,21 @@ namespace AppNetCredenciales.Views
         string lastDetectedBarcode = string.Empty;
         DateTime lastDetectedTime = DateTime.MinValue;
         CancellationTokenSource? _retryCts;
+        private readonly LocalDBService _db;
 
         public ScanView()
         {
             InitializeComponent();
-            // start disabled until permissions are granted
             cameraBarcodeReaderView.IsDetecting = false;
             cameraBarcodeReaderView.Options = new ZXing.Net.Maui.BarcodeReaderOptions
             {
-                Formats = ZXing.Net.Maui.BarcodeFormat.Ean13, 
+                Formats = ZXing.Net.Maui.BarcodeFormat.QrCode,
                 AutoRotate = true,
-                Multiple = true 
+                Multiple = false
             };
+
+            _db = App.Services?.GetRequiredService<LocalDBService>()
+                  ?? throw new InvalidOperationException("LocalDBService not registered in DI.");
         }
 
         protected override async void OnAppearing()
@@ -89,7 +93,7 @@ namespace AppNetCredenciales.Views
                 }
                 catch (Exception retryEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Retry {i+1} failed: {retryEx}");
+                    System.Diagnostics.Debug.WriteLine($"Retry {i + 1} failed: {retryEx}");
                 }
             }
 
@@ -100,28 +104,65 @@ namespace AppNetCredenciales.Views
             });
         }
 
-        protected void BarcodesDetected(object sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
+        // inside ScanView class — improved debug + tolerant validation
+        protected async void BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
         {
             var first = e.Results?.FirstOrDefault();
-            if (first is null)
-            {
-                return;
-            }
+            if (first is null) return;
 
-            if (first.Value == lastDetectedBarcode && (DateTime.Now - lastDetectedTime).TotalSeconds < 1)
-            {
-                return;
-            }
+            var payload = (first.Value ?? string.Empty).Trim();
+            System.Diagnostics.Debug.WriteLine($"[Scan] Scanned payload: '{payload}'");
 
-            lastDetectedBarcode = first.Value;
+            // debounce
+            if (payload == lastDetectedBarcode && (DateTime.Now - lastDetectedTime).TotalSeconds < 1) return;
+            lastDetectedBarcode = payload;
             lastDetectedTime = DateTime.Now;
 
-            MainThread.BeginInvokeOnMainThread(async () =>
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
                 cameraBarcodeReaderView.IsDetecting = false;
-                await DisplayAlert("Barcode Detected", first.Value, "OK");
-                cameraBarcodeReaderView.IsDetecting = true;
+                try
+                {
+                    await HandleScannedPayloadAsync(payload);
+                }
+                finally
+                {
+                    cameraBarcodeReaderView.IsDetecting = true;
+                }
             });
+        }
+
+        private async Task HandleScannedPayloadAsync(string payload)
+        {
+            // payload example: "3b704a43ea764b318a80c63cbaa4aee2|1"
+            var cryptoId = payload?.Split('|')[0].Trim();
+
+            if (string.IsNullOrEmpty(cryptoId))
+            {
+                System.Diagnostics.Debug.WriteLine("[Scan] Empty crypto id after parsing.");
+                return;
+            }
+
+            var usuario = await _db.GetLoggedUserAsync();
+
+            if (usuario == null) return;
+
+            System.Diagnostics.Debug.WriteLine($"[Scan] Logged user id: {usuario.UsuarioId}");
+            System.Diagnostics.Debug.WriteLine($"[Scan] CREDENCIAL ID USUARIO: {usuario.CredencialId}");
+      
+
+
+
+            var cred = await _db.GetCredencialByCryptoIdAsync(cryptoId);
+            if (cred == null)
+            {
+                var all = await _db.GetCredencialesAsync();
+                System.Diagnostics.Debug.WriteLine($"[Scan] Scanned id '{cryptoId}' not found in DB. DB Creds: {string.Join(", ", all.Select(c => c.IdCriptografico ?? "<null>"))}");
+                
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[Scan] Found credential id {cred.CredencialId} for crypto id {cryptoId}");
         }
     }
 }

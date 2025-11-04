@@ -1,5 +1,4 @@
-﻿
-using AppNetCredenciales.models;
+﻿using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using SQLite;
 using System;
@@ -8,6 +7,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AppNetCredenciales.Data
 {
@@ -293,13 +294,19 @@ namespace AppNetCredenciales.Data
 
         public async Task<int> SaveCredencialAsync(models.Credencial credencial)
         {
+            if (credencial == null) return 0;
+
             if (credencial.CredencialId == 0)
             {
-                return await _connection.InsertAsync(credencial);
+                // InsertAsync does not return the generated PK — it returns rows affected.
+                // SQLite-net sets the auto-increment PK on the object after InsertAsync completes.
+                await _connection.InsertAsync(credencial);
+                return credencial.CredencialId;
             }
             else
             {
-                return await _connection.UpdateAsync(credencial);
+                await _connection.UpdateAsync(credencial);
+                return credencial.CredencialId;
             }
         }
 
@@ -330,6 +337,32 @@ namespace AppNetCredenciales.Data
             }
         }
 
+        public async Task<models.Credencial?> GetCredencialByCryptoIdAsync(string idCriptografico)
+        {
+            if (string.IsNullOrWhiteSpace(idCriptografico))
+                return null;
+
+            idCriptografico = idCriptografico.Trim();
+
+            // Try fast exact DB lookup first
+            var exact = await _connection.Table<models.Credencial>()
+                                         .Where(c => c.IdCriptografico == idCriptografico)
+                                         .FirstOrDefaultAsync();
+            if (exact != null)
+                return exact;
+
+            // Fallback: load all and match in-memory using trimmed, case-insensitive comparison
+            var all = await GetCredencialesAsync();
+            var found = all.FirstOrDefault(c => string.Equals(c.IdCriptografico?.Trim(),
+                                                             idCriptografico,
+                                                             StringComparison.OrdinalIgnoreCase));
+            if (found != null)
+                return found;
+
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService] GetCredencialByCryptoIdAsync: '{idCriptografico}' not found. DB Creds: {string.Join(", ", all.Select(c => c.IdCriptografico ?? "<null>"))}");
+            return null;
+        }
+
         public async Task<bool> LoggedUserHasCredential()
         {
             if (await SessionManager.IsLoggedAsync())
@@ -356,22 +389,34 @@ namespace AppNetCredenciales.Data
 
 
         // CRUD operaciones para Usuario
+        public async Task<models.Rol?> GetRolByTipoAsync(string tipo)
+        {
+            if (string.IsNullOrWhiteSpace(tipo))
+                return null;
 
+            return await _connection.Table<models.Rol>()
+                .Where(r => r.Tipo == tipo)
+                .FirstOrDefaultAsync();
+        }
 
         public async Task<List<models.Usuario>> GetUsuariosAsync()
         {
             return await _connection.Table<models.Usuario>().ToListAsync();
         }
-
+       
         public async Task<int> SaveUsuarioAsync(models.Usuario usuario)
         {
+            if (usuario == null) return 0;
+
             if (usuario.UsuarioId == 0)
             {
-                return await _connection.InsertAsync(usuario);
+                await _connection.InsertAsync(usuario);
+                return usuario.UsuarioId;
             }
             else
             {
-                return await _connection.UpdateAsync(usuario);
+                await _connection.UpdateAsync(usuario);
+                return usuario.UsuarioId;
             }
         }
 
@@ -484,6 +529,39 @@ namespace AppNetCredenciales.Data
         {
             var u = await GetUsuarioByEmailAsync(email);
             return u != null && u.Password == password;
+        }
+
+        public async Task<string> DumpDatabaseAsync()
+        {
+            try
+            {
+                var dump = new
+                {
+                    Usuarios = await GetUsuariosAsync(),
+                    Roles = await GetRolesAsync(),
+                    UsuarioRols = await _connection.Table<UsuarioRol>().ToListAsync(),
+                    Credenciales = await GetCredencialesAsync(),
+                    Espacios = await GetEspaciosAsync(),
+                    EventosAcceso = await GetEventosAccesoAsync(),
+                    ReglasDeAcceso = await _connection.Table<ReglaDeAcceso>().ToListAsync(),
+                    EspacioReglas = await _connection.Table<EspacioReglaDeAcceso>().ToListAsync()
+                };
+
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    ReferenceHandler = ReferenceHandler.IgnoreCycles
+                };
+
+                var json = JsonSerializer.Serialize(dump, options);
+                System.Diagnostics.Debug.WriteLine(json);
+                return json;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] DumpDatabaseAsync error: " + ex);
+                return $"ERROR: {ex.Message}";
+            }
         }
     }
 }

@@ -12,55 +12,38 @@
                    HorizontalOptions="Center"
                    TextColor="black"/>
 
-            <Entry Placeholder="Nombre"
-                   Text="{Binding Nombre}"
-                   TextColor="black"
-                   PlaceholderColor="Gray"/>
+            <Entry Placeholder="Nombre" Text="{Binding Nombre}" TextColor="black" PlaceholderColor="Gray"/>
+            <Entry Placeholder="Apellido" Text="{Binding Apellido}" TextColor="Black" PlaceholderColor="Gray"/>
+            <Entry Placeholder="Documento" Text="{Binding Documento}" TextColor="Black" PlaceholderColor="Gray"/>
+            <Entry Placeholder="Correo electrónico" Text="{Binding Email}" Keyboard="Email" TextColor="Black" PlaceholderColor="Gray"/>
+            <Entry Placeholder="Contraseña" Text="{Binding Password}" IsPassword="True" TextColor="Black" PlaceholderColor="Gray"/>
 
-            <Entry Placeholder="Apellido"
-                   Text="{Binding Apellido}"
-                   TextColor="Black"
-                   PlaceholderColor="Gray"/>
-
-            <Entry Placeholder="Documento"
-                   Text="{Binding Documento}"
-                   TextColor="Black"
-                   PlaceholderColor="Gray"/>
-
-            <Entry Placeholder="Correo electrónico"
-                   Text="{Binding Email}"
-                   Keyboard="Email"
-                   TextColor="Black"
-                   PlaceholderColor="Gray"/>
-
-            <Entry Placeholder="Contraseña"
-                   Text="{Binding Password}"
-                   IsPassword="True"
-                   TextColor="Black"
-                   PlaceholderColor="Gray"/>
-
-            <!-- Lista de roles con selección múltiple -->
             <Label Text="Roles disponibles" TextColor="Black" FontAttributes="Bold" />
-            <CollectionView ItemsSource="{Binding Roles}" SelectionMode="None">
+
+            <!-- Enable Multiple selection and wire SelectionChanged -->
+            <CollectionView x:Name="RolesCollection"
+                            ItemsSource="{Binding Roles}"
+                            SelectionMode="Multiple"
+                            SelectionChanged="RolesCollection_SelectionChanged">
                 <CollectionView.ItemTemplate>
                     <DataTemplate>
-                        <HorizontalStackLayout Padding="5">
-                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" VerticalOptions="Center"/>
-                            <Label Text="{Binding Role.Tipo}" TextColor="Black" VerticalOptions="Center" Margin="10,0,0,0"/>
+                        <HorizontalStackLayout Padding="8" Spacing="12" VerticalOptions="Center">
+                            <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                      VerticalOptions="Center"
+                                      WidthRequest="36"
+                                      HeightRequest="36" />
+                            <Label Text="{Binding Role.Tipo}"
+                                   TextColor="Black"
+                                   VerticalOptions="Center" />
                         </HorizontalStackLayout>
                     </DataTemplate>
                 </CollectionView.ItemTemplate>
             </CollectionView>
 
-            <ActivityIndicator IsRunning="{Binding Trabajando}"
-                               IsVisible="{Binding Trabajando}" />
+            <ActivityIndicator IsRunning="{Binding Trabajando}" IsVisible="{Binding Trabajando}" />
 
-            <Button Text="Registrarse"
-                    Command="{Binding RegisterCommand}"
-                    BackgroundColor="#007AFF"
-                    TextColor="White" />
-
-            <Button Text="Login" Command="{Binding NavigateToLogin}"/>
+            <Button Text="Registrarse" Command="{Binding RegisterCommand}" BackgroundColor="#007AFF" TextColor="White" />
+            <Button Text="Login" Command="{Binding NavigateToLogin}" />
 
         </VerticalStackLayout>
     </ScrollView>

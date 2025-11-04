@@ -5,6 +5,8 @@ using AppNetCredenciales.Views;
 using AppNetCredenciales.services;
 using AppNetCredenciales.Data;
 using SQLitePCL;
+using System;
+using Microsoft.Maui.Controls;
 
 namespace AppNetCredenciales
 {
@@ -12,6 +14,10 @@ namespace AppNetCredenciales
     {
         private readonly AuthService _auth;
         private readonly LocalDBService _db;
+
+        // Expose the IServiceProvider so XAML-created views can resolve services
+        public static IServiceProvider Services { get; set; }
+
         public App(LocalDBService db, AuthService auth, LoginView loginView, LoginViewModel loginViewModel)
         {
             InitializeComponent();

@@ -2,8 +2,10 @@
 using AppNetCredenciales.services;
 using AppNetCredenciales.ViewModel;
 using AppNetCredenciales.Views;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui;
+using Microsoft.Maui.Hosting;
 using System;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
@@ -53,6 +55,7 @@ namespace AppNetCredenciales
             var app = builder.Build();
 
             ServiceProvider = app.Services;
+            App.Services = app.Services;
 
             return app;
         }

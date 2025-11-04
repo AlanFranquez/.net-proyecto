@@ -135,6 +135,7 @@ namespace AppNetCredenciales.ViewModel
                 FechaEmision = DateTime.UtcNow
             };
 
+            // Save and retrieve the actual PK from the object (SaveCredencialAsync now returns the PK)
             var credId = await _db.SaveCredencialAsync(credencial);
             if (credId <= 0)
             {
