@@ -30,9 +30,9 @@ public partial class HistorialView : ContentPage
     {
         if (e.CurrentSelection?.Count > 0 && e.CurrentSelection[0] is EventoAcceso acceso)
         {
-            // Ejemplo: navegar a una vista de detalle. Ajusta la ruta/nombre según tu proyecto.
-            // await Shell.Current.GoToAsync(nameof(CredencialView), true);
             ((CollectionView)sender).SelectedItem = null;
+
+            await Shell.Current.GoToAsync($"accesoPerfil?eventoId={acceso.EventoId}");
         }
     }
 }

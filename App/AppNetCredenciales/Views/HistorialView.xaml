@@ -10,7 +10,6 @@
         <ScrollView Grid.Row="0">
             <VerticalStackLayout Padding="20" Spacing="10">
 
-                <!-- HEADER: always visible -->
                 <Label Text="Historial de accesos"
                        FontSize="28"
                        FontAttributes="Bold"
@@ -43,14 +42,12 @@
                                    CornerRadius="12"
                                    HasShadow="True">
 
-                                <!-- Style changes depending on ResultadoStr -->
                                 <Frame.Triggers>
-                                    <DataTrigger TargetType="Frame" Binding="{Binding ResultadoStr}" Value="Rechazada">
+                                    <DataTrigger TargetType="Frame" Binding="{Binding ResultadoStr}" Value="Denegar">
                                         <Setter Property="BackgroundColor" Value="#FFF5F5" />
                                         <Setter Property="BorderColor" Value="#E74C3C" />
                                     </DataTrigger>
-                                    <DataTrigger TargetType="Frame" Binding="{Binding ResultadoStr}" Value="Permitida">
-                                        
+                                    <DataTrigger TargetType="Frame" Binding="{Binding ResultadoStr}" Value="Permitir">
                                         <Setter Property="BackgroundColor" Value="#A9E6C9" />
                                         <Setter Property="BorderColor" Value="#2ECC71" />
                                     </DataTrigger>
