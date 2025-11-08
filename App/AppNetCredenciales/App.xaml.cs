@@ -5,6 +5,8 @@ using AppNetCredenciales.Views;
 using AppNetCredenciales.services;
 using AppNetCredenciales.Data;
 using SQLitePCL;
+using System;
+using Microsoft.Maui.Controls;
 
 namespace AppNetCredenciales
 {
@@ -12,13 +14,15 @@ namespace AppNetCredenciales
     {
         private readonly AuthService _auth;
         private readonly LocalDBService _db;
+
+        public static IServiceProvider Services { get; set; }
+
         public App(LocalDBService db, AuthService auth, LoginView loginView, LoginViewModel loginViewModel)
         {
             InitializeComponent();
             this._db = db;
             MainPage = new AppShell();
 
-            // Fire-and-forget an async initializer (avoid blocking the UI thread)
             _ = InitializeAppAsync();
             _ = Task.Run(async () =>
             {

@@ -2,12 +2,15 @@
 using AppNetCredenciales.services;
 using AppNetCredenciales.ViewModel;
 using AppNetCredenciales.Views;
+using Camera.MAUI;
+using CommunityToolkit.Maui;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui;
+using Microsoft.Maui.Hosting;
 using System;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
-using Camera.MAUI;
 
 namespace AppNetCredenciales
 {
@@ -21,6 +24,7 @@ namespace AppNetCredenciales
             builder
                 .UseMauiApp<App>()
                 .UseMauiCameraView()
+                .UseMauiCommunityToolkit()
                 .UseBarcodeReader()
                 .ConfigureFonts(fonts =>
                 {
@@ -46,6 +50,7 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<EspacioPerfilView>();
             builder.Services.AddSingleton<EspacioPerfilViewModel>();
             builder.Services.AddSingleton<ScanView>();
+            builder.Services.AddSingleton<HistorialView>();
 #if DEBUG
             builder.Logging.AddDebug();
 #endif 
@@ -53,6 +58,7 @@ namespace AppNetCredenciales
             var app = builder.Build();
 
             ServiceProvider = app.Services;
+            App.Services = app.Services;
 
             return app;
         }

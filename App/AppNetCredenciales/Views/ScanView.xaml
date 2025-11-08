@@ -11,7 +11,8 @@
               IsDetecting="True"
               BarcodesDetected="BarcodesDetected" />
 
-        <views:Navbar
+        <views:NavbarFuncionario
+            x:Name="BottomBar"
             VerticalOptions="End"
             Margin="0"
             TranslationY="0" />

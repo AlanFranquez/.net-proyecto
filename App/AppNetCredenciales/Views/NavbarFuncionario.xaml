@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AppNetCredenciales.Views.NavbarFuncionario">
+    <Grid VerticalOptions="End" HeightRequest="72" BackgroundColor="#2B6CB0" Padding="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Button x:Name="EspacioButton"
+                Grid.Column="0"
+                Text="Modo Usuario"
+                IsVisible="False"
+                Clicked="EspacioButton_Clicked"
+                HorizontalOptions="Start"
+                VerticalOptions="Center" />
+
+        <Label x:Name="RoleLabel"
+               Grid.Column="1"
+               Text="Rol: Funcionario"
+               HorizontalOptions="Center"
+               VerticalOptions="Center"
+               TextColor="White" />
+
+    </Grid>
+</ContentView>

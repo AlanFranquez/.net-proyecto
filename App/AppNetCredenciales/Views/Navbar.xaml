@@ -28,20 +28,15 @@
               VerticalOptions="Center"
               HorizontalOptions="Fill">
             <Grid Grid.Column="0" WidthRequest="120" HeightRequest="48" HorizontalOptions="Start" VerticalOptions="Center">
-                <ImageButton x:Name="RoleImageButton"
-                             Source="{Binding RolSeleccionado.Image, FallbackValue='user.png'}"
-                             Style="{StaticResource NavIconButton}"
-                             Clicked="OnRoleImageClicked"
-                             BackgroundColor="Transparent" />
-                <Picker x:Name="RolePicker"
-                        ItemsSource="{Binding Roles}"
-                        ItemDisplayBinding="{Binding Tipo}"
-                        SelectedItem="{Binding RolSeleccionado, Mode=TwoWay}"
-                        BackgroundColor="Transparent"
-                        Title=""
-                        Margin="42,0,0,0"
-                        VerticalOptions="Center"
-                        HorizontalOptions="Start" />
+
+                <ImageButton Source="qrcode.png"
+             Style="{StaticResource NavIconButton}"
+             IsVisible="{Binding IsFuncionario}"
+             Command="{Binding NavigateCommand}"
+             CommandParameter="scan"
+             HorizontalOptions="Center"
+             VerticalOptions="Center"
+             AutomationId="scanLogoButton" />
             </Grid>
 
             <StackLayout x:Name="DefaultNav"
@@ -58,10 +53,11 @@
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
                              CommandParameter="espacio" />
+               
                 <ImageButton Source="clock.png"
-                             Style="{StaticResource NavIconButton}"
-                             Command="{Binding NavigateCommand}"
-                             CommandParameter="historial" />
+             Style="{StaticResource NavIconButton}"
+             Command="{Binding NavigateCommand}"
+             CommandParameter="historial" />
 
                 <ImageButton Source="logout.png"
              Style="{StaticResource NavIconButton}"

@@ -1,10 +1,14 @@
+using AppNetCredenciales.Data;
+using AppNetCredenciales.models;
+using CommunityToolkit.Maui.Views;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Dispatching;
+using SQLite;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.Dispatching;
-using Microsoft.Maui.Controls;
 using ZXing.Net.Maui;
 using ZXing.Net.Maui.Controls;
 
@@ -15,25 +19,27 @@ namespace AppNetCredenciales.Views
         string lastDetectedBarcode = string.Empty;
         DateTime lastDetectedTime = DateTime.MinValue;
         CancellationTokenSource? _retryCts;
+        private readonly LocalDBService _db;
 
         public ScanView()
         {
             InitializeComponent();
-            // start disabled until permissions are granted
             cameraBarcodeReaderView.IsDetecting = false;
             cameraBarcodeReaderView.Options = new ZXing.Net.Maui.BarcodeReaderOptions
             {
-                Formats = ZXing.Net.Maui.BarcodeFormat.Ean13, 
+                Formats = ZXing.Net.Maui.BarcodeFormat.QrCode,
                 AutoRotate = true,
-                Multiple = true 
+                Multiple = false
             };
+
+            _db = App.Services?.GetRequiredService<LocalDBService>()
+                  ?? throw new InvalidOperationException("LocalDBService not registered in DI.");
         }
 
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            // ensure camera permission before enabling detection
             var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.Camera>();
@@ -50,18 +56,15 @@ namespace AppNetCredenciales.Views
 
         protected override void OnDisappearing()
         {
-            // stop detection and cancel any pending retries
             _retryCts?.Cancel();
             cameraBarcodeReaderView.IsDetecting = false;
             base.OnDisappearing();
         }
 
-        // Turn detection on with basic error handling + retry
         private async Task StartDetectionSafeAsync()
         {
             try
             {
-                // toggle to ensure underlying camera is restarted cleanly
                 cameraBarcodeReaderView.IsDetecting = false;
                 await Task.Delay(200);
                 cameraBarcodeReaderView.IsDetecting = true;
@@ -89,7 +92,7 @@ namespace AppNetCredenciales.Views
                 }
                 catch (Exception retryEx)
                 {
-                    System.Diagnostics.Debug.WriteLine($"Retry {i+1} failed: {retryEx}");
+                    System.Diagnostics.Debug.WriteLine($"Retry {i + 1} failed: {retryEx}");
                 }
             }
 
@@ -100,28 +103,84 @@ namespace AppNetCredenciales.Views
             });
         }
 
-        protected void BarcodesDetected(object sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
+        protected async void BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
         {
             var first = e.Results?.FirstOrDefault();
-            if (first is null)
-            {
-                return;
-            }
+            if (first is null) return;
 
-            if (first.Value == lastDetectedBarcode && (DateTime.Now - lastDetectedTime).TotalSeconds < 1)
-            {
-                return;
-            }
+            var payload = (first.Value ?? string.Empty).Trim();
+            System.Diagnostics.Debug.WriteLine($"[Scan] Scanned payload: '{payload}'");
 
-            lastDetectedBarcode = first.Value;
+            if (payload == lastDetectedBarcode && (DateTime.Now - lastDetectedTime).TotalSeconds < 1) return;
+            lastDetectedBarcode = payload;
             lastDetectedTime = DateTime.Now;
 
-            MainThread.BeginInvokeOnMainThread(async () =>
+            await MainThread.InvokeOnMainThreadAsync(async () =>
             {
                 cameraBarcodeReaderView.IsDetecting = false;
-                await DisplayAlert("Barcode Detected", first.Value, "OK");
-                cameraBarcodeReaderView.IsDetecting = true;
+                try
+                {
+                    await HandleScannedPayloadAsync(payload);
+                }
+                finally
+                {
+                    cameraBarcodeReaderView.IsDetecting = true;
+                }
             });
         }
-    }
+
+        private async Task HandleScannedPayloadAsync(string payload)
+        {
+            var cryptoId = payload?.Split('|')[0].Trim();
+
+            var eventoId = payload?.Split('|').Length > 1
+                ? payload.Split('|')[1].Trim()
+                : string.Empty;
+
+            var usuario = await _db.GetLoggedUserAsync();
+            if (usuario == null) return;
+
+            if (!int.TryParse(eventoId, out int eventoIdInt))
+            {
+                await DisplayAlert("Evento no válido", $"El ID de evento '{eventoId}' no es válido.", "Cerrar");
+                return;
+            }
+
+            var evento = await _db.GetEventoByIdAsync(eventoIdInt);
+            var cred = await _db.GetCredencialByCryptoIdAsync(cryptoId);
+
+            if (cred == null || evento == null)
+            {
+                await DisplayAlert("Credencial no reconocida", $"No se encontró la credencial para '{cryptoId}'.", "Cerrar");
+
+                var evNegado = new EventoAcceso
+                {
+                    MomentoDeAcceso = DateTime.Now,
+                    CredencialId = usuario.CredencialId,
+                    Credencial = usuario.Credencial,
+                    Espacio = evento,
+                    EspacioId = evento?.EspacioId ?? 0,   
+                    Resultado = AccesoTipo.Denegar
+                };
+
+                await _db.SaveEventoAccesoAsync(evNegado);
+                return;
+            }
+
+            var popupOk = new ScanResultPopup("Credencial reconocida", $"El usuario tiene permiso para acceder al espacio.", true);
+            await this.ShowPopupAsync(popupOk);
+
+            var ev = new EventoAcceso
+            {
+                MomentoDeAcceso = DateTime.Now,
+                CredencialId = usuario.CredencialId,
+                Credencial = usuario.Credencial,
+                Espacio = evento,
+                EspacioId = evento.EspacioId,          // <-- critical: save the EspacioId
+                Resultado = AccesoTipo.Permitir
+            };
+
+            await _db.SaveEventoAccesoAsync(ev);
+        }
+    }   
 }
