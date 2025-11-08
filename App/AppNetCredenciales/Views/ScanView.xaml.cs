@@ -1,8 +1,10 @@
 using AppNetCredenciales.Data;
+using AppNetCredenciales.models;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Dispatching;
+using SQLite;
 using System;
 using System.Linq;
 using System.Threading;
@@ -109,7 +111,6 @@ namespace AppNetCredenciales.Views
             var payload = (first.Value ?? string.Empty).Trim();
             System.Diagnostics.Debug.WriteLine($"[Scan] Scanned payload: '{payload}'");
 
-            // debounce
             if (payload == lastDetectedBarcode && (DateTime.Now - lastDetectedTime).TotalSeconds < 1) return;
             lastDetectedBarcode = payload;
             lastDetectedTime = DateTime.Now;
@@ -132,28 +133,54 @@ namespace AppNetCredenciales.Views
         {
             var cryptoId = payload?.Split('|')[0].Trim();
 
-            
+            var eventoId = payload?.Split('|').Length > 1
+                ? payload.Split('|')[1].Trim()
+                : string.Empty;
 
             var usuario = await _db.GetLoggedUserAsync();
-
             if (usuario == null) return;
 
-            
-
-
-            var cred = await _db.GetCredencialByCryptoIdAsync(cryptoId);
-            if (cred == null)
+            if (!int.TryParse(eventoId, out int eventoIdInt))
             {
-                var all = await _db.GetCredencialesAsync();
-
-                await DisplayAlert("Credencial no reconocida", $"No se encontró la credencial para '{cryptoId}'.", "Cerrar");
+                await DisplayAlert("Evento no válido", $"El ID de evento '{eventoId}' no es válido.", "Cerrar");
                 return;
             }
 
+            var evento = await _db.GetEventoByIdAsync(eventoIdInt);
+            var cred = await _db.GetCredencialByCryptoIdAsync(cryptoId);
+
+            if (cred == null || evento == null)
+            {
+                await DisplayAlert("Credencial no reconocida", $"No se encontró la credencial para '{cryptoId}'.", "Cerrar");
+
+                var evNegado = new EventoAcceso
+                {
+                    MomentoDeAcceso = DateTime.Now,
+                    CredencialId = usuario.CredencialId,
+                    Credencial = usuario.Credencial,
+                    Espacio = evento,
+                    EspacioId = evento?.EspacioId ?? 0,   
+                    Resultado = AccesoTipo.Denegar
+                };
+
+                await _db.SaveEventoAccesoAsync(evNegado);
+                return;
+            }
 
             var popupOk = new ScanResultPopup("Credencial reconocida", $"El usuario tiene permiso para acceder al espacio.", true);
             await this.ShowPopupAsync(popupOk);
 
+            var ev = new EventoAcceso
+            {
+                MomentoDeAcceso = DateTime.Now,
+                CredencialId = usuario.CredencialId,
+                Credencial = usuario.Credencial,
+                Espacio = evento,
+                EspacioId = evento.EspacioId,          // <-- critical: save the EspacioId
+                Resultado = AccesoTipo.Permitir
+            };
+
+            await _db.SaveEventoAccesoAsync(ev);
         }
     }   
 }

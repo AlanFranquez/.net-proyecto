@@ -50,6 +50,7 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<EspacioPerfilView>();
             builder.Services.AddSingleton<EspacioPerfilViewModel>();
             builder.Services.AddSingleton<ScanView>();
+            builder.Services.AddSingleton<HistorialView>();
 #if DEBUG
             builder.Logging.AddDebug();
 #endif 

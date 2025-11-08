@@ -15,7 +15,6 @@ namespace AppNetCredenciales
         private readonly AuthService _auth;
         private readonly LocalDBService _db;
 
-        // Expose the IServiceProvider so XAML-created views can resolve services
         public static IServiceProvider Services { get; set; }
 
         public App(LocalDBService db, AuthService auth, LoginView loginView, LoginViewModel loginViewModel)
@@ -24,7 +23,6 @@ namespace AppNetCredenciales
             this._db = db;
             MainPage = new AppShell();
 
-            // Fire-and-forget an async initializer (avoid blocking the UI thread)
             _ = InitializeAppAsync();
             _ = Task.Run(async () =>
             {

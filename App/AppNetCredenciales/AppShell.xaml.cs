@@ -12,6 +12,7 @@ namespace AppNetCredenciales
             Routing.RegisterRoute("credencial", typeof(AppNetCredenciales.Views.CredencialView));
             Routing.RegisterRoute("espacioPerfil", typeof(AppNetCredenciales.Views.EspacioPerfilView));
             Routing.RegisterRoute("scan", typeof(AppNetCredenciales.Views.ScanView));
+            Routing.RegisterRoute("historial", typeof(AppNetCredenciales.Views.HistorialView));
         }
 
         

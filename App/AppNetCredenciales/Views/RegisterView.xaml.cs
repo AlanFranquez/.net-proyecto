@@ -18,11 +18,9 @@ public partial class RegisterView : ContentPage
         if (BindingContext is not RegisterViewModel vm)
             return;
 
-        // First clear all selections
         foreach (var item in vm.Roles)
             item.IsSelected = false;
 
-        // Mark selected items
         foreach (var si in RolesCollection.SelectedItems)
         {
             if (si is RegisterViewModel.SelectableRole sr)

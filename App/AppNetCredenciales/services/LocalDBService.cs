@@ -33,6 +33,23 @@ namespace AppNetCredenciales.Data
 
         }
 
+        public async Task<Espacio> GetEventoByIdAsync(int id)
+        {
+         
+                return await _connection.Table<Espacio>()
+                    .Where(e => e.EspacioId == id)
+                    .FirstOrDefaultAsync();
+         
+        }
+
+
+        public async Task<List<EventoAcceso>> GetEventosAccesoByUsuarioIdAsync(int credencialId)
+        {
+            return await _connection.Table<EventoAcceso>()
+                .Where(e => e.CredencialId == credencialId)
+                .ToListAsync();
+        }
+
         public async Task EnsureSchemaAndDataAsync()
         {
             try

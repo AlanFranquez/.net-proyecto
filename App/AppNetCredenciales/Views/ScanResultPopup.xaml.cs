@@ -12,7 +12,6 @@ namespace AppNetCredenciales.Views
 
         public ScanResultPopup(string title, string message, bool success)
         {
-            // Ensure this method exists in the generated partial class
             this.InitializeComponent();
 
             TitleLabel.Text = title;
