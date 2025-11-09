@@ -62,7 +62,7 @@ using OpenTelemetry.Trace;
 using Espectaculos.WebApi.Utils;
 
 
-var envPath = Path.Combine(Directory.GetCurrentDirectory(), "..\\..\\.env");
+var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
 Console.WriteLine($"[AWS DEBUG] Path: {envPath}");
 if (File.Exists(envPath))
@@ -139,7 +139,7 @@ string connectionString =
     config.GetConnectionString("Default")
     ?? config["ConnectionStrings__Default"]
     ?? "Host=localhost;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres";
-
+Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
 // ---- Servicios
 builder.Services.AddEndpointsApiExplorer();
 
@@ -452,7 +452,6 @@ async Task ApplyMigrationsAndSeedAsync()
 {
     using var scope = app.Services.CreateScope();
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<EspectaculosDbContext>();
