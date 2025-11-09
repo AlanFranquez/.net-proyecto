@@ -1,0 +1,29 @@
+# Resultados de pruebas
+results/*.json
+results/*.txt
+results/*.xml
+results/*.html
+
+# Excepto plantillas o ejemplos
+!results/.gitkeep
+
+# Logs de k6
+*.log
+
+# Archivos temporales
+*.tmp
+*.bak
+
+# Node modules si se usan extensiones de k6
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

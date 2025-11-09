@@ -57,7 +57,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_duration_bucket[5m]))) * 1000",
           "legendFormat": "P99"
         }
       ],
@@ -92,7 +92,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(sum(rate(http_server_request_duration_seconds_sum[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))) * 1000",
+          "expr": "(sum(rate(http_server_duration_sum[5m])) / sum(rate(http_server_duration_count[5m]))) * 1000",
           "legendFormat": "Promedio"
         }
       ],
@@ -127,7 +127,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "100 * (sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m])))",
+          "expr": "100 * (sum(rate(http_server_duration_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_count[5m])))",
           "legendFormat": "Tasa Error %"
         }
       ],
@@ -170,17 +170,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_duration_bucket[5m]))) * 1000",
           "legendFormat": "P50 (mediana)"
         },
         {
           "refId": "B",
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_duration_bucket[5m]))) * 1000",
           "legendFormat": "P95 (SLO: < 300ms)"
         },
         {
           "refId": "C",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_duration_bucket[5m]))) * 1000",
           "legendFormat": "P99 (SLO: < 500ms)"
         }
       ],
@@ -220,7 +220,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_duration_bucket[5m]))) * 1000",
           "legendFormat": "{{http_route}}"
         }
       ],
@@ -249,7 +249,7 @@
       "title": "RPS total",
       "gridPos": {"h": 7, "w": 12, "x": 0, "y": 10},
       "targets": [
-        { "refId": "A", "expr": "sum(rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "rps" }
+        { "refId": "A", "expr": "sum(rate(http_server_duration_count[1m]))", "legendFormat": "rps" }
       ],
       "fieldConfig": {"defaults": {"unit": "req/s", "min": 0}, "overrides": []}
     },
@@ -258,7 +258,7 @@
       "title": "RPS por código",
       "gridPos": {"h": 7, "w": 12, "x": 12, "y": 10},
       "targets": [
-        { "refId": "A", "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "{{http_response_status_code}}" }
+        { "refId": "A", "expr": "sum by (http_response_status_code) (rate(http_server_duration_count[1m]))", "legendFormat": "{{http_response_status_code}}" }
       ],
       "fieldConfig": {"defaults": {"unit": "req/s", "min": 0}, "overrides": []}
     },
@@ -269,7 +269,7 @@
       "title": "Error rate 5xx (%)",
       "gridPos": {"h": 7, "w": 24, "x": 0, "y": 18},
       "targets": [
-        { "refId": "A", "expr": "100 * sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "5xx %" }
+        { "refId": "A", "expr": "100 * sum(rate(http_server_duration_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_duration_count[5m]))", "legendFormat": "5xx %" }
       ],
       "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 100}, "overrides": []}
     },
@@ -302,4 +302,3 @@
     }
   ]
 }
-
