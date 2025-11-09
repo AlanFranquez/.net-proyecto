@@ -34,7 +34,7 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Email = command.Email,
                 Documento = command.Documento,
                 PasswordHash = command.Password,
-                Estado = UsuarioEstado.Activo,
+                //Estado = UsuarioEstado.Activo,
                 Credencial = null,
                 CredencialId = null,
                 UsuarioRoles = new List<UsuarioRol>(),

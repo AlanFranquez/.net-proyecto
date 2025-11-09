@@ -28,6 +28,10 @@ namespace AppNetCredenciales.models
         [SQLite.Column("apellido")]
         public string Apellido { get; set; }
 
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
+
+
         [SQLite.Column("email")]
         public string Email { get; set; }
 

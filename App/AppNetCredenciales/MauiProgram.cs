@@ -33,7 +33,6 @@ namespace AppNetCredenciales
                 });
 
             builder.Services.AddSingleton<LocalDBService>();
-
             builder.Services.AddTransient<MainPage>();
 
             builder.Services.AddSingleton<AuthService>();
