@@ -51,7 +51,6 @@
             </VerticalStackLayout>
         </ScrollView>
 
-
         <views:Navbar Grid.Row="1" />
     </Grid>
 </ContentPage>

@@ -33,7 +33,6 @@ namespace AppNetCredenciales
                 });
 
             builder.Services.AddSingleton<LocalDBService>();
-
             builder.Services.AddTransient<MainPage>();
 
             builder.Services.AddSingleton<AuthService>();
@@ -51,6 +50,7 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<EspacioPerfilViewModel>();
             builder.Services.AddSingleton<ScanView>();
             builder.Services.AddSingleton<HistorialView>();
+            builder.Services.AddSingleton<AppNetCredenciales.Services.ConnectivityService>();
 #if DEBUG
             builder.Logging.AddDebug();
 #endif 

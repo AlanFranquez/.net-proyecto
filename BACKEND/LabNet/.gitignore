@@ -57,3 +57,10 @@ wwwroot/dist/
 .env
 *.secrets.json
 secrets.json
+
+# Performance test results
+performance-tests/results/*.json
+performance-tests/results/*.txt
+performance-tests/results/*.xml
+performance-tests/results/*.html
+!performance-tests/results/.gitkeep

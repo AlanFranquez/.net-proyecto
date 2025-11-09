@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:views="clr-namespace:AppNetCredenciales.Views"
+             x:Class="AppNetCredenciales.Views.AccesoPerfilView"
+             Title="Detalle de acceso">
+
+    <Grid RowDefinitions="*,Auto" BackgroundColor="White">
+        <VerticalStackLayout Padding="20" Spacing="12" BackgroundColor="White">
+            <Label Text="{Binding Espacio.Titulo, FallbackValue='(Evento desconocido)'}"
+               FontSize="20" FontAttributes="Bold" TextColor="Black" />
+
+            <Label Text="{Binding MomentoDeAcceso, StringFormat='📅 {0:dd/MM/yyyy HH:mm}'}"
+               FontSize="14" TextColor="Black"/>
+
+            <Label Text="{Binding CredencialId, StringFormat='Credencial: {0}'}" FontSize="14" TextColor="Black"  />
+
+            <Label Text="{Binding ResultadoStr, StringFormat='Resultado: {0}'}" FontSize="14"  TextColor="Black"/>
+
+            <Label Text="{Binding Motivo, FallbackValue=''}" FontSize="13" TextColor="Black" />
+
+        </VerticalStackLayout>
+        <views:Navbar Grid.Row="1" />
+    </Grid>
+</ContentPage>

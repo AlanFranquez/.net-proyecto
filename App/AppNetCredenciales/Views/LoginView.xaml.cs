@@ -1,15 +1,22 @@
-using System;
-using System.Formats.Asn1;
 using AppNetCredenciales.Data;
 using AppNetCredenciales.services;
+using AppNetCredenciales.Services;
 using AppNetCredenciales.ViewModel;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Networking;
+using System;
+using System.Formats.Asn1;
+using System.Runtime.CompilerServices;
 
 namespace AppNetCredenciales.Views;
 
 public partial class LoginView : ContentPage
 {
+    private readonly ApiService _apiService = new ApiService();
+    private readonly LocalDBService _dbService;
     public LoginView(AuthService auth, LocalDBService db)
     {
+        this._dbService = db;
         SessionManager.Logout();
         InitializeComponent();
         BindingContext = new LoginViewModel(this, auth, db);
@@ -23,18 +30,31 @@ public partial class LoginView : ContentPage
         }
     }
 
+    // inside chequearConectividad
     private async void chequearConectividad(object sender, EventArgs e)
     {
 
-        NetworkAccess networkAccess = Connectivity.Current.NetworkAccess;
+        await _dbService.SincronizarUsuariosFromBack();
+        var raw = await _apiService.GetUsuariosRawAsync();
+        System.Diagnostics.Debug.WriteLine($"[ApiTest] Raw users response: {raw}");
+        await DisplayAlert("Raw response", (raw?.Length > 100 ? raw.Substring(0, 100) + "..." : raw) ?? "<null>", "OK");
 
-        if (networkAccess == NetworkAccess.Internet)
+        // 2) Use the typed DTO and show the fields explicitly
+        var usuarios = await _apiService.GetUsuariosAsync();
+        if (usuarios.Count > 0)
         {
-            await DisplayAlert("Conectividad", "Estás conectado a Internet.", "OK");
+
+            var first = usuarios[0];
+            System.Diagnostics.Debug.WriteLine($"[ApiTest] First usuarioId={first.UsuarioId} email={first.Email}");
+            await DisplayAlert("API test", $"usuarioId: {first.UsuarioId}\nemail: {first.Email}\nnombre: {first.Nombre}", "OK");
         }
         else
         {
-            await DisplayAlert("Conectividad", "No estás conectado a Internet.", "OK");
+            await DisplayAlert("API test", "No users returned", "OK");
         }
+
+        // 3) connectivity info
+        var networkAccess = Connectivity.Current.NetworkAccess;
+        await DisplayAlert("Conectividad", networkAccess == NetworkAccess.Internet ? "Con Internet" : "Sin Internet", "OK");
     }
 }
