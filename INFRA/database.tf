@@ -11,11 +11,11 @@ resource "aws_db_subnet_group" "rds_subnet_group" {
 resource "aws_db_instance" "postgres" {
   identifier        = "postgres-db"
   engine            = "postgres"
-  engine_version    = "16.2"
+  engine_version    = "16.6"
   instance_class    = "db.t3.micro"
   allocated_storage = 20
-  username          = "admin"
-  password          = "admin"
+  username          = "postgres_user"
+  password          = "postgres_user"
   skip_final_snapshot = true
 
   db_subnet_group_name = aws_db_subnet_group.rds_subnet_group.name

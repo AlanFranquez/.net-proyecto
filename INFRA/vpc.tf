@@ -7,6 +7,10 @@ resource "aws_vpc" "main" {
   tags = {
     Name = "main-vpc"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # PUBLIC Subnets
@@ -19,6 +23,10 @@ resource "aws_subnet" "public_a" {
   tags = {
     Name = "public-subnet"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_subnet" "public_b" {
@@ -29,6 +37,10 @@ resource "aws_subnet" "public_b" {
 
   tags = {
     Name = "public-subnet"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -41,6 +53,10 @@ resource "aws_subnet" "private_a" {
   tags = {
     Name = "private-subnet"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_subnet" "private_b" {
@@ -50,6 +66,10 @@ resource "aws_subnet" "private_b" {
   tags = {
     Name = "private-subnet"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Internet Gateway
@@ -58,6 +78,10 @@ resource "aws_internet_gateway" "igw" {
 
   tags = {
     Name = "main-igw"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -73,31 +97,27 @@ resource "aws_route_table" "public_rt" {
   tags = {
     Name = "public-rt"
   }
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Asociación route table pública - subnet pública
 resource "aws_route_table_association" "public_assoc_a" {
   subnet_id      = aws_subnet.public_a.id
   route_table_id = aws_route_table.public_rt.id
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 resource "aws_route_table_association" "public_assoc_b" {
   subnet_id      = aws_subnet.public_b.id
   route_table_id = aws_route_table.public_rt.id
-}
 
-# 5. NAT Gateway
-resource "aws_eip" "nat_eip" {
-  domain = "vpc"
-}
-
-resource "aws_nat_gateway" "nat" {
-  allocation_id = aws_eip.nat_eip.id
-  subnet_id     = aws_subnet.public_a.id
-
-  depends_on = [aws_internet_gateway.igw]
-
-  tags = {
-    Name = "main-nat"
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
@@ -105,22 +125,29 @@ resource "aws_nat_gateway" "nat" {
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.main.id
 
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat.id
-  }
-
   tags = {
     Name = "private-rt"
+  }
+
+  lifecycle {
+    prevent_destroy = true
   }
 }
 
 resource "aws_route_table_association" "private_assoc_a" {
   subnet_id      = aws_subnet.private_a.id
   route_table_id = aws_route_table.private_rt.id
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_route_table_association" "private_assoc_b" {
   subnet_id      = aws_subnet.private_b.id
   route_table_id = aws_route_table.private_rt.id
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }

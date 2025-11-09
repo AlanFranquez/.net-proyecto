@@ -11,16 +11,7 @@ resource "aws_ecr_repository" "app_repo" {
   }
 }
 
-# ECS Cluster
-resource "aws_ecs_cluster" "app_cluster" {
-  name = "dotnet-cluster"
-
-  tags = {
-    Name = "dotnet-cluster"
-  }
-}
-
-# 12. Application Load Balancer
+# Application Load Balancer
 resource "aws_lb" "app_alb" {
   name               = "myapp-alb"
   internal           = false
@@ -33,109 +24,31 @@ resource "aws_lb" "app_alb" {
   }
 }
 
-# Target group
-resource "aws_lb_target_group" "app_tg" {
-  name        = "myapp-tg"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip" # necesario para Fargate
+# EKS
+resource "aws_eks_cluster" "main" {
+  name     = "eks-lab-cluster"
+  role_arn = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060-LabEksClusterRole-UAoaMXxwnHCl"
 
-  health_check {
-    path = "/"
-    interval = 30
+  vpc_config {
+    subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
   }
 
-  tags = {
-    Name = "myapp-tg"
-  }
+  version = "1.29"
 }
 
-# Listener HTTP 80
-resource "aws_lb_listener" "http_listener" {
-  load_balancer_arn = aws_lb.app_alb.arn
-  port              = 80
-  protocol          = "HTTP"
+# 🔹 Crear node group (opcional)
+resource "aws_eks_node_group" "default" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "eks-lab-nodes"
+  node_role_arn   = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060356-LabEksNodeRole-jHAS2pPr2WQi"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.app_tg.arn
-  }
-}
+  subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
 
-# 13. ECS Task Definition
-resource "aws_ecs_task_definition" "app_task" {
-  family                   = "myapp-task"
-  network_mode              = "awsvpc"
-  requires_compatibilities  = ["FARGATE"]
-  cpu                       = "256"
-  memory                    = "512"
-  execution_role_arn        = aws_iam_role.ecs_task_execution_role.arn
-  container_definitions = jsonencode([
-    {
-      name      = "myapp-container"
-      image     = "${aws_ecr_repository.app_repo.repository_url}:latest"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 80
-          hostPort      = 80
-        }
-      ]
-      environment = [
-        {
-          name  = "REDIS_HOST"
-          value = aws_elasticache_cluster.redis.cache_nodes[0].address
-        },
-        {
-          name  = "DB_HOST"
-          value = aws_db_instance.postgres.address
-        },
-        {
-          name  = "DB_USER"
-          value = "admin"
-        },
-        {
-          name  = "DB_PASSWORD"
-          value = "admin"
-        }
-      ]
-    }
-  ])
-
-  runtime_platform {
-    operating_system_family = "LINUX"
-    cpu_architecture        = "X86_64"
+  scaling_config {
+    desired_size = 2
+    max_size     = 3
+    min_size     = 1
   }
 
-  tags = {
-    Name = "myapp-task"
-  }
-}
-
-# 15. ECS Service
-resource "aws_ecs_service" "app_service" {
-  name            = "myapp-service"
-  cluster         = aws_ecs_cluster.app_cluster.id
-  task_definition = aws_ecs_task_definition.app_task.arn
-  launch_type     = "FARGATE"
-  desired_count   = 1
-
-  network_configuration {
-    subnets          = [aws_subnet.public_a.id, aws_subnet.public_b.id]
-    security_groups  = [aws_security_group.ecs_sg.id]
-    assign_public_ip = true
-  }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.app_tg.arn
-    container_name   = "myapp-container"
-    container_port   = 80
-  }
-
-  depends_on = [aws_lb_listener.http_listener]
-
-  tags = {
-    Name = "myapp-service"
-  }
+  instance_types = ["t3.medium"]
 }

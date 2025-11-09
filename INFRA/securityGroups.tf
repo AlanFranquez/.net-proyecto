@@ -75,8 +75,8 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
-# SG para las ECS tasks
-resource "aws_security_group" "ecs_sg" {
+# SG para EKS
+resource "aws_security_group" "eks_sg" {
   name   = "ecs-sg"
   vpc_id = aws_vpc.main.id
 
@@ -96,6 +96,6 @@ resource "aws_security_group" "ecs_sg" {
   }
 
   tags = {
-    Name = "ecs-sg"
+    Name = "eks-sg"
   }
 }
