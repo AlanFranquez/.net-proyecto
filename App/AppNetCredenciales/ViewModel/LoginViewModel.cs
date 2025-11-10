@@ -75,7 +75,7 @@ namespace AppNetCredenciales.ViewModel
                 return;
             }
 
-            string lista = string.Join("\n", usuarios.Select(u => $"{u.Nombre} {u.Apellido} - {u.Email}"));
+            string lista = string.Join("\n", usuarios.Select(u => $"{u.Nombre} {u.Apellido} - {u.Email} - {u.Password} - {u.idApi}"));
             await App.Current.MainPage.DisplayAlert("Usuarios registrados", lista, "Cerrar");
         }
 
@@ -107,7 +107,8 @@ namespace AppNetCredenciales.ViewModel
 
             try
             {
-                await SessionManager.SaveUserAsync(u.UsuarioId, Email);
+                System.Diagnostics.Debug.WriteLine($"DATOS DE USURIO {u.UsuarioId} - {u.Email} - {u.idApi}");
+                await SessionManager.SaveUserAsync(u.UsuarioId, Email, u.idApi);
 
                 int idRol = u.RolId ?? 0;
 

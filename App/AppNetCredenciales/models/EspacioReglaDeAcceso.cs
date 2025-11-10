@@ -14,6 +14,9 @@ namespace AppNetCredenciales.models {
         public int Id { get; set; }
 
         public int ReglaId { get; set; }
+
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
         public int EspacioId { get; set; }
         
         [Ignore]

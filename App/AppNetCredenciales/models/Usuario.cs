@@ -36,6 +36,7 @@ namespace AppNetCredenciales.models
         public string Email { get; set; }
 
 
+
         [SQLite.Column("falta_cargar")]
         public bool FaltaCargar { get; set; }
 

@@ -19,6 +19,8 @@ namespace AppNetCredenciales.Data
         private const string DBName = "LocalDB.db3";
         private readonly SQLiteAsyncConnection _connection;
         private readonly ApiService apiService = new ApiService();
+        private readonly ConnectivityService connectivityService = new ConnectivityService();
+
 
         public LocalDBService()
         {
@@ -35,7 +37,90 @@ namespace AppNetCredenciales.Data
 
         }
 
+        // Credencial
+
+        public async Task<List<Credencial>> SincronizarCredencialesFromBack(bool removeMissing = false)
+        {
+            var apiCredenciales = await apiService.GetCredencialesAsync();
+            if (apiCredenciales == null)
+            {
+                return await GetCredencialesAsync();
+            }
+            var localList = await GetCredencialesAsync();
+            foreach (var a in localList)
+            {
+                await DeleteCredencialAsync(a);
+            }
+            foreach (var a in apiCredenciales)
+            {
+                var nuevo = new Credencial
+                {
+                    idApi = a.CredencialId,
+                    Tipo = ParseEnumOrDefault<CredencialTipo>(a.Tipo),
+                    Estado = ParseEnumOrDefault<CredencialEstado>(a.Estado),
+                    IdCriptografico = a.IdCriptografico,
+                    FechaEmision = a.FechaEmision,
+                    FechaExpiracion = a.FechaExpiracion,
+                    FaltaCarga = false,
+                    usuarioIdApi = a.usuarioIdApi
+                };
+                await SaveCredencialAsync(nuevo);
+            }
+            return await GetCredencialesAsync();
+        }
+
         // Sincronizacion Maui to back
+        private static T ParseEnumOrDefault<T>(string? value) where T : struct, Enum
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return default;
+
+            value = value.Trim();
+
+            if (int.TryParse(value, out var intVal))
+            {
+                if (Enum.IsDefined(typeof(T), intVal))
+                    return (T)Enum.ToObject(typeof(T), intVal);
+            }
+
+            if (Enum.TryParse<T>(value, ignoreCase: true, out var parsed))
+                return parsed;
+
+            
+            return default;
+        }
+        public async Task<List<Espacio>> SincronizarEspaciosFromBack(bool removeMissing = false)
+        {
+
+            var apiEspacios = await apiService.GetEspaciosAsync();
+
+            if (apiEspacios == null)
+            {
+                return await GetEspaciosAsync();
+            }
+            var localList = await GetEspaciosAsync();
+
+            foreach (var a in localList)
+            {
+                await DeleteEspacioAsync(a);
+            }
+
+            foreach (var a in apiEspacios)
+            {
+                var nuevo = new Espacio
+                {
+                    idApi = a.EspacioId,
+                    Nombre = a.Nombre,
+                    Activo = a.Activo,
+                    Tipo = ParseEnumOrDefault<EspacioTipo>(a.Tipo),
+                    faltaCarga = false
+                };
+                await SaveEspacioAsync(nuevo);
+            }
+
+            // Devuelve la lista actualizada
+            return await GetEspaciosAsync();
+        }
         public async Task<List<Usuario>> SincronizarUsuariosFromBack(bool removeMissing = false)
         {
             var apiUsers = await apiService.GetUsuariosAsync();
@@ -45,7 +130,6 @@ namespace AppNetCredenciales.Data
                 return await GetUsuariosAsync();
             }
 
-            // load local users and index by normalized email
             var localList = await GetUsuariosAsync();
             var localByEmail = localList
                 .Where(u => !string.IsNullOrWhiteSpace(u.Email))
@@ -66,6 +150,7 @@ namespace AppNetCredenciales.Data
                     var changed = false;
                     var apiNombre = a.Nombre ?? string.Empty;
                     var apiApellido = a.Apellido ?? string.Empty;
+                    var password = a.Password ?? string.Empty;
 
                     if (!string.Equals(local.Nombre ?? string.Empty, apiNombre, StringComparison.Ordinal))
                     {
@@ -78,15 +163,15 @@ namespace AppNetCredenciales.Data
                         changed = true;
                     }
 
-                    // if you have more fields in the DTO (documento, estado, etc.) compare and set them here
+                    local.Password = password;
 
+                    
                     if (changed)
                     {
                         System.Diagnostics.Debug.WriteLine($"[LocalDBService] Updating local user {local.Email}");
                         await SaveUsuarioAsync(local);
                     }
 
-                    // remove from index so remaining entries are local-only
                     localByEmail.Remove(key);
                 }
                 else
@@ -97,9 +182,10 @@ namespace AppNetCredenciales.Data
                         Email = a.Email,
                         Nombre = a.Nombre ?? string.Empty,
                         Apellido = a.Apellido ?? string.Empty,
-                        Password = string.Empty,
+                        Password = a.Password,
                         FaltaCargar = true,
-                        idApi = a.UsuarioId
+                        idApi = a.UsuarioId,
+                        
                     };
                     System.Diagnostics.Debug.WriteLine($"[LocalDBService] Inserting new local user {nuevo.Email}");
                     await SaveUsuarioAsync(nuevo);
@@ -142,12 +228,8 @@ namespace AppNetCredenciales.Data
             try
             {
                 var roles = await GetRolesAsync();
-                // If any Rol rows have RolId == 0 we assume old/broken schema/data and recreate tables
                 if (roles.Any(r => r.RolId == 0))
                 {
-                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Detected roles with RolId==0 -> recreating tables");
-
-                    // Drop tables in safe order and recreate with current model attributes
                     await _connection.DropTableAsync<UsuarioRol>();
                     await _connection.DropTableAsync<Rol>();
                     await _connection.DropTableAsync<Usuario>();
@@ -354,6 +436,26 @@ namespace AppNetCredenciales.Data
 
         public async Task<List<models.Espacio>> GetEspaciosAsync()
         {
+            if (connectivityService.IsConnected)
+            {
+                var listApi = await apiService.GetEspaciosAsync();
+                List<Espacio> listaEspacios = new List<Espacio>();
+                foreach (var a in listApi)
+                {
+                    var espacio = new Espacio
+                    {
+                        idApi = a.EspacioId,
+                        Nombre = a.Nombre,
+                        Activo = a.Activo,
+                        Tipo = ParseEnumOrDefault<EspacioTipo>(a.Tipo),
+                        faltaCarga = false
+                    };
+                    listaEspacios.Add(espacio);
+                }
+
+                return listaEspacios;
+            }
+
             return await _connection.Table<models.Espacio>().ToListAsync();
         }
 
@@ -381,18 +483,34 @@ namespace AppNetCredenciales.Data
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<List<models.Espacio>> GetEspaciosFuturos()
-        {
-            var today = DateTime.Today;
-            return await _connection.Table<models.Espacio>()
-                .Where(e => e.Fecha >= today)
-                .ToListAsync();
-        }
+        
 
 
         // CRUD operaciones para credenciales
         public async Task<List<models.Credencial>> GetCredencialesAsync()
         {
+            if(connectivityService.IsConnected)
+            {
+                var listApi = await apiService.GetCredencialesAsync();
+                List<Credencial> listaCredenciales = new List<Credencial>();
+                foreach (var a in listApi)
+                {
+                    var credencial = new Credencial
+                    {
+                        idApi = a.CredencialId,
+                        Tipo = ParseEnumOrDefault<CredencialTipo>(a.Tipo),
+                        Estado = ParseEnumOrDefault<CredencialEstado>(a.Estado),
+                        IdCriptografico = a.IdCriptografico,
+                        FechaEmision = a.FechaEmision,
+                        FechaExpiracion = a.FechaExpiracion,
+                        FaltaCarga = false,
+                        usuarioIdApi = a.usuarioIdApi
+                    };
+                    listaCredenciales.Add(credencial);
+                }
+                return listaCredenciales;
+            }
+
             return await _connection.Table<models.Credencial>().ToListAsync();
         }
 
@@ -400,10 +518,102 @@ namespace AppNetCredenciales.Data
         {
             if (credencial == null) return 0;
 
+            // Try remote creation only when connected
+            if (connectivityService.IsConnected)
+            {
+                // Ensure we have a valid usuarioIdApi (GUID). If not, try to get/create it.
+                if (string.IsNullOrWhiteSpace(credencial.usuarioIdApi) || !Guid.TryParse(credencial.usuarioIdApi, out _))
+                {
+                    try
+                    {
+                        if (await SessionManager.IsLoggedAsync())
+                        {
+                            var emailLogged = await SessionManager.GetUserEmailAsync();
+                            if (!string.IsNullOrWhiteSpace(emailLogged))
+                            {
+                                var localUser = await GetUsuarioByEmailAsync(emailLogged);
+                                if (localUser != null)
+                                {
+                                    // If the local user has no idApi, create the user on the backend first
+                                    if (string.IsNullOrWhiteSpace(localUser.idApi))
+                                    {
+                                        var newUserDto = new ApiService.NewUsuarioDto
+                                        {
+                                            Nombre = localUser.Nombre ?? string.Empty,
+                                            Apellido = localUser.Apellido ?? string.Empty,
+                                            Email = localUser.Email ?? string.Empty,
+                                            Documento = localUser.Documento ?? string.Empty,
+                                            Password = localUser.Password ?? string.Empty
+                                        };
+
+                                        var created = await apiService.CreateUsuarioAsync(newUserDto);
+                                        if (created != null && !string.IsNullOrWhiteSpace(created.UsuarioId))
+                                        {
+                                            localUser.idApi = created.UsuarioId;
+                                            await SaveUsuarioAsync(localUser);
+                                        }
+                                        else
+                                        {
+                                            System.Diagnostics.Debug.WriteLine("[LocalDBService] Failed to create user on backend; will not create credencial remotely.");
+                                        }
+                                    }
+
+                                    // Use the now-populated idApi if valid
+                                    if (!string.IsNullOrWhiteSpace(localUser.idApi) && Guid.TryParse(localUser.idApi, out _))
+                                    {
+                                        credencial.usuarioIdApi = localUser.idApi;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] Error ensuring usuarioIdApi: {ex.Message}");
+                    }
+                }
+
+                // If we have a valid usuarioIdApi, attempt to create the credencial on the backend
+                if (!string.IsNullOrWhiteSpace(credencial.usuarioIdApi) && Guid.TryParse(credencial.usuarioIdApi, out _))
+                {
+                    try
+                    {
+                        ApiService.CredentialDto dto = new ApiService.CredentialDto
+                        {
+                            CredencialId = credencial.idApi,
+                            Tipo = credencial.Tipo.ToString(),
+                            Estado = credencial.Estado.ToString(),
+                            IdCriptografico = credencial.IdCriptografico,
+                            FechaEmision = credencial.FechaEmision,
+                            FechaExpiracion = credencial.FechaExpiracion,
+                            usuarioIdApi = credencial.usuarioIdApi
+                        };
+
+                        var res = await apiService.crearCredencial(dto);
+                        if (res == null)
+                        {
+                            System.Diagnostics.Debug.WriteLine("[LocalDBService] Error al crear la credencial en el back");
+                            // fallback: continue and save locally
+                        }
+                        else
+                        {
+                            credencial.idApi = res;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] crearCredencial exception: {ex.Message}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] usuarioIdApi still invalid or absent after attempts; skipping remote create.");
+                }
+            }
+
+            // Persist locally (always)
             if (credencial.CredencialId == 0)
             {
-                // InsertAsync does not return the generated PK — it returns rows affected.
-                // SQLite-net sets the auto-increment PK on the object after InsertAsync completes.
                 await _connection.InsertAsync(credencial);
                 return credencial.CredencialId;
             }

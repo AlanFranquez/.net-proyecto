@@ -14,8 +14,8 @@ public partial class EspacioView : ContentPage
     public EspacioView(AuthService auth, LocalDBService db)
     {
         InitializeComponent();
-        this._auth = auth;
 
+        this._auth = auth;
         _viewModel = new EspacioViewModel(auth, db);
         BindingContext = _viewModel;
     }
@@ -30,6 +30,7 @@ public partial class EspacioView : ContentPage
             return;
         }
 
+        // Load espacios when the page appears
         await _viewModel.LoadEspaciosAsync();
     }
 
@@ -39,22 +40,9 @@ public partial class EspacioView : ContentPage
         if (espacio == null)
             return;
 
-
-        // Mostrar información en consola / Output
-        Debug.WriteLine($"ID: {espacio.EspacioId}");
-        Debug.WriteLine($"Título: {espacio.Titulo}");
-        Debug.WriteLine($"Descripción: {espacio.Descripcion}");
-        Debug.WriteLine($"Fecha: {espacio.Fecha}");
-        Debug.WriteLine($"Lugar: {espacio.Lugar}");
-        Debug.WriteLine($"Stock: {espacio.Stock}");
-        Debug.WriteLine($"Disponible: {espacio.Disponible}");
-        Debug.WriteLine($"Publicado: {espacio.Publicado}");
-
         await Shell.Current.GoToAsync($"espacioPerfil?id={espacio.EspacioId}");
 
         if (sender is CollectionView cv)
             cv.SelectedItem = null;
     }
-
-    
 }

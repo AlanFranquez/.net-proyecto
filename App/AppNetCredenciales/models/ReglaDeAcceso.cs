@@ -14,6 +14,9 @@ namespace AppNetCredenciales.models
         public int ReglaId { get; set; }
         public string? ObjetivoTipo { get; set; }
         public string? VentanaHoraria { get; set; }
+
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
         public DateTime? VigenciaInicio { get; set; }
         public DateTime? VigenciaFin { get; set; }
         public int Prioridad { get; set; }

@@ -29,6 +29,9 @@ namespace AppNetCredenciales.models
         [SQLite.Column("id")]
         public int CredencialId { get; set; }
 
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
+
 
         [Column("tipo")]
         public string TipoStr {
@@ -51,10 +54,14 @@ namespace AppNetCredenciales.models
         [Ignore]
         public CredencialEstado Estado { get; set; }
         public string? IdCriptografico { get; set; }
+
+        public bool FaltaCarga { get; set; }
         public DateTime FechaEmision { get; set; }
         public DateTime? FechaExpiracion { get; set; }
 
+        public string usuarioIdApi { get; set; }
 
 
-    }
+
+        }
 }

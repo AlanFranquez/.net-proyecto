@@ -17,6 +17,9 @@ namespace AppNetCredenciales.models
         public int Id { get; set; }
         public int UsuarioId { get; set; }
 
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
+
         [Ignore]
         public Usuario Usuario { get; set; } = default!;
 

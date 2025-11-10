@@ -11,12 +11,12 @@ namespace AppNetCredenciales.services
     public static class SessionManager
     {
 
-        public static async Task SaveUserAsync(int id, string email)
+        public static async Task SaveUserAsync(int id, string email, string usuarioIdApi)
         {
-
-
             await SecureStorage.SetAsync("id", id.ToString());
             await SecureStorage.SetAsync("email", email);
+            if (usuarioIdApi != null)
+                await SecureStorage.SetAsync("usuarioApiId", usuarioIdApi);
         }
 
         public static async Task<int> GetUserRoleIdAsync()
@@ -37,6 +37,13 @@ namespace AppNetCredenciales.services
             var id = await SecureStorage.GetAsync("id");
 
             return int.Parse(id);
+        }
+
+        public static async Task<string> GetUserIdAsyncAPI()
+        {
+            var id = await SecureStorage.GetAsync("usuarioIdApi");
+
+            return id;
         }
 
 

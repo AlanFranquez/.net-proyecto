@@ -31,7 +31,10 @@ namespace AppNetCredenciales.models
         public DateTime MomentoDeAcceso { get; set; }
         
         public int CredencialId { get; set; }
-        
+
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
+
         [Ignore]        
         public Credencial Credencial { get; set; } = default!;
         public int EspacioId { get; set; }

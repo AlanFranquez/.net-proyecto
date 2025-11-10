@@ -15,6 +15,9 @@ namespace AppNetCredenciales.models
         public int RolId { get; set; }
         public string Tipo { get; set; } = default!;
         public int Prioridad { get; set; }
+
+        [SQLite.Column("idApi")]
+        public string idApi { get; set; }
         public DateTime FechaAsignado { get; set; }
     }
 }

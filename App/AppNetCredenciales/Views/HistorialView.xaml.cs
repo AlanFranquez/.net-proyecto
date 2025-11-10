@@ -23,7 +23,6 @@ public partial class HistorialView : ContentPage
     protected async override void OnAppearing()
     {
         base.OnAppearing();
-        await _viewModel.LoadAccesosAsync();
     }
 
     private async void OnAccesoSelected(object sender, SelectionChangedEventArgs e)

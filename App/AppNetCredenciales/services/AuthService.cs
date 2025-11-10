@@ -89,7 +89,7 @@ namespace AppNetCredenciales.services
             if (consulta)
             {
                 var usuario = await _db.GetUsuarioByEmailAsync(email);
-                await SessionManager.SaveUserAsync(usuario.UsuarioId, usuario.Email);
+                await SessionManager.SaveUserAsync(usuario.UsuarioId, usuario.Email, usuario.idApi);
 
                 if (usuario.RolId.HasValue && usuario.RolId.Value != 0)
                 {

@@ -16,6 +16,7 @@ namespace AppNetCredenciales.ViewModel
         {
             this._db = db;
             this._authService = auth;
+            
         }
 
 
