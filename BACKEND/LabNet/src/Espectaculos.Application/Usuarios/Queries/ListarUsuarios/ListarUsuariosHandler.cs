@@ -26,6 +26,7 @@ namespace Espectaculos.Application.Usuarios.Queries.ListarUsuarios
                 Email = u.Email,
                 Documento = u.Documento,
                 Estado = u.Estado,
+                Password = u.PasswordHash,
                 CredencialId = u.CredencialId,
                 RolesIDs = u.UsuarioRoles.Select(r => r.RolId).ToList(),
                 DispositivosIDs = u.Dispositivos.Select(r => r.DispositivoId).ToList(),

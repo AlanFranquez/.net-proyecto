@@ -143,13 +143,18 @@ namespace AppNetCredenciales.ViewModel
             {
                 try
                 {
+                    var seleccionadasRoles = Roles.Where(r => r.IsSelected).ToList();
                     var nuevoDto = new ApiService.NewUsuarioDto
                     {
                         Nombre = usuario.Nombre,
                         Apellido = usuario.Apellido,
                         Email = usuario.Email,
                         Password = usuario.Password,
-                        Documento = usuario.Documento
+                        Documento = usuario.Documento,
+                        RolesIDs = seleccionadasRoles
+                                    .Select(r => r.Role.idApi)
+                                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                                    .ToArray()
                     };
 
                     var apiResult = await _api_service_create_usuario_safe(nuevoDto);
@@ -181,7 +186,7 @@ namespace AppNetCredenciales.ViewModel
                 IdCriptografico = Guid.NewGuid().ToString("N"),
                 FechaEmision = DateTime.UtcNow,
                 FechaExpiracion = DateTime.UtcNow.AddYears(1),
-                FaltaCarga = true, // default to true; cleared if remote creation succeeds
+                FaltaCarga = true, 
                 usuarioIdApi = usuario.idApi
             };
 

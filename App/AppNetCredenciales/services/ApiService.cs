@@ -25,6 +25,25 @@ namespace AppNetCredenciales.Services
             };
         }
 
+        public async Task<List<RolDto>>GetRolesAsync()
+        {
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<RolDto>>("roles", _jsonOptions)
+                           ?? new List<RolDto>();
+                foreach (var item in list)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] rolId={item.RolId} tipo={item.Tipo}");
+                }
+                return list;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Error fetching roles: {ex}");
+                return new List<RolDto>();
+            }
+        }
+
         // Credencial
         public async Task<List<CredentialDto>> GetCredencialesAsync()
         {
@@ -61,7 +80,6 @@ namespace AppNetCredenciales.Services
                 if (string.IsNullOrWhiteSpace(content))
                     return null;
 
-                // Intentar deserializar a DTO completo si el servidor devuelve el objeto
                 try
                 {
                     var dto = JsonSerializer.Deserialize<CredentialDto>(content, _jsonOptions);
@@ -70,7 +88,7 @@ namespace AppNetCredenciales.Services
                 }
                 catch (JsonException) { /* ignore and try other parsing strategies */ }
 
-                // Intentar parse flexible: { credencialId: "..."} o { id: "..." } o "123" o 123
+               
                 try
                 {
                     using var doc = JsonDocument.Parse(content);
@@ -172,7 +190,6 @@ namespace AppNetCredenciales.Services
                 var requestJson = JsonSerializer.Serialize(nuevo, _jsonOptions);
                 System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync -> request JSON: {requestJson}");
 
-                // Build request explicitly so podemos inspeccionar headers y body
                 using var req = new HttpRequestMessage(HttpMethod.Post, "usuarios/registro")
                 {
                     Content = JsonContent.Create(nuevo, options: _jsonOptions)
@@ -254,6 +271,23 @@ namespace AppNetCredenciales.Services
 
         }
 
+
+        public class RolDto
+        {
+            [JsonPropertyName("rolId")]
+            public string? RolId { get; set; }
+
+            [JsonPropertyName("tipo")]
+            public string? Tipo { get; set; }
+
+            [JsonPropertyName("prioridad")]
+            public int Prioridad { get; set; }
+
+            [JsonPropertyName("fechaAsignado")]
+            public DateTime fechaAsignado { get; set; }
+
+        }
+
         public class CredentialDto
         {
             [JsonPropertyName("credencialId")]
@@ -290,6 +324,12 @@ namespace AppNetCredenciales.Services
 
             [JsonPropertyName("password")]
             public string? Password { get; set; }
+
+            [JsonPropertyName("documento")]
+            public string? Documento { get; set; }
+
+            [JsonPropertyName("rolesIDs")]
+            public string[]? RolesIDs { get; set; }
         }
 
         public class NewUsuarioDto
@@ -308,6 +348,8 @@ namespace AppNetCredenciales.Services
 
             [JsonPropertyName("password")]
             public string Password { get; set; }
+            [JsonPropertyName("rolesIDs")]
+            public string[]? RolesIDs { get; set; }
         }
 
         

@@ -1,15 +1,19 @@
 ﻿using AppNetCredenciales.models;
 using AppNetCredenciales.services;
+using AppNetCredenciales.Services;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.ApplicationModel.Communication;
 using SQLite;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using AppNetCredenciales.Services;
+using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AppNetCredenciales.Data
 {
@@ -35,6 +39,35 @@ namespace AppNetCredenciales.Data
             _connection.CreateTableAsync<EspacioReglaDeAcceso>().GetAwaiter().GetResult();
             _connection.CreateTableAsync<ReglaDeAcceso>().GetAwaiter().GetResult();
 
+        }
+
+
+        // Roles
+
+        public async Task<List<Rol>> SincronizarRolesFromBack(bool removeMissing = false)
+        {
+            var apiRoles = await apiService.GetRolesAsync();
+            if (apiRoles == null)
+            {
+                return await GetRolesAsync();
+            }
+            var localList = await GetRolesAsync();
+            foreach (var a in localList)
+            {
+                await DeleteRolAsync(a);
+            }
+            foreach (var a in apiRoles)
+            {
+                var nuevo = new Rol
+                {
+                    idApi = a.RolId,
+                    Tipo = a.Tipo,
+                    Prioridad = a.Prioridad,
+                    FechaAsignado = a.fechaAsignado,
+                };
+                await SaveRolAsync(nuevo);
+            }
+            return await GetRolesAsync();
         }
 
         // Credencial
@@ -89,6 +122,46 @@ namespace AppNetCredenciales.Data
             
             return default;
         }
+        public async Task<List<Usuario>> SincronizarUsuariosFromBack(bool removeMissing = false)
+        {
+
+            var apiEspacios = await apiService.GetUsuariosAsync();
+
+            if (apiEspacios == null)
+            {
+                return await GetUsuariosAsync();
+            }
+            var localList = await GetUsuariosAsync();
+
+            foreach (var a in localList)
+            {
+                await DeleteUsuarioAsync(a);
+            }
+
+            
+
+                foreach (var a in apiEspacios)
+                {
+                    var nuevo = new Usuario
+                    {
+                        Nombre = a.Nombre,
+                        Apellido = a.Apellido,
+                        Email = a.Email,
+                        FaltaCargar = false,
+                        Documento = a.Documento,
+                        RolesIDs = a.RolesIDs,
+                        idApi = a.UsuarioId,
+                        Password = a.Password
+                    };
+
+                    await SaveUsuarioAsync(nuevo);
+                }
+                    
+            
+
+            // Devuelve la lista actualizada
+            return await GetUsuariosAsync();
+        }
         public async Task<List<Espacio>> SincronizarEspaciosFromBack(bool removeMissing = false)
         {
 
@@ -120,90 +193,6 @@ namespace AppNetCredenciales.Data
 
             // Devuelve la lista actualizada
             return await GetEspaciosAsync();
-        }
-        public async Task<List<Usuario>> SincronizarUsuariosFromBack(bool removeMissing = false)
-        {
-            var apiUsers = await apiService.GetUsuariosAsync();
-            if (apiUsers == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[LocalDBService] No users returned from API.");
-                return await GetUsuariosAsync();
-            }
-
-            var localList = await GetUsuariosAsync();
-            var localByEmail = localList
-                .Where(u => !string.IsNullOrWhiteSpace(u.Email))
-                .ToDictionary(u => u.Email!.Trim().ToLowerInvariant(), u => u, StringComparer.OrdinalIgnoreCase);
-
-            foreach (var a in apiUsers)
-            {
-                if (string.IsNullOrWhiteSpace(a.Email))
-                {
-                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Skipping API user with empty email.");
-                    continue;
-                }
-
-                var key = a.Email.Trim().ToLowerInvariant();
-                if (localByEmail.TryGetValue(key, out var local))
-                {
-                    // update local if values differ
-                    var changed = false;
-                    var apiNombre = a.Nombre ?? string.Empty;
-                    var apiApellido = a.Apellido ?? string.Empty;
-                    var password = a.Password ?? string.Empty;
-
-                    if (!string.Equals(local.Nombre ?? string.Empty, apiNombre, StringComparison.Ordinal))
-                    {
-                        local.Nombre = apiNombre;
-                        changed = true;
-                    }
-                    if (!string.Equals(local.Apellido ?? string.Empty, apiApellido, StringComparison.Ordinal))
-                    {
-                        local.Apellido = apiApellido;
-                        changed = true;
-                    }
-
-                    local.Password = password;
-
-                    
-                    if (changed)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] Updating local user {local.Email}");
-                        await SaveUsuarioAsync(local);
-                    }
-
-                    localByEmail.Remove(key);
-                }
-                else
-                {
-                    // insert missing user
-                    var nuevo = new Usuario
-                    {
-                        Email = a.Email,
-                        Nombre = a.Nombre ?? string.Empty,
-                        Apellido = a.Apellido ?? string.Empty,
-                        Password = a.Password,
-                        FaltaCargar = true,
-                        idApi = a.UsuarioId,
-                        
-                    };
-                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Inserting new local user {nuevo.Email}");
-                    await SaveUsuarioAsync(nuevo);
-                }
-            }
-
-            if (removeMissing && localByEmail.Any())
-            {
-                // delete local users not found in API
-                foreach (var toDelete in localByEmail.Values)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Deleting local user not present on server: {toDelete.Email}");
-                    await DeleteUsuarioAsync(toDelete);
-                }
-            }
-
-            // return fresh local list after sync
-            return await GetUsuariosAsync();
         }
 
         public async Task<Espacio> GetEventoByIdAsync(int id)
@@ -404,6 +393,27 @@ namespace AppNetCredenciales.Data
 
         public async Task<List<models.Rol>> GetRolesAsync()
         {
+
+             if(connectivityService.IsConnected)
+            {
+                List<Rol> listaRoles = new List<Rol>();
+
+                var listApi = await apiService.GetRolesAsync();
+                foreach (var a in listApi)
+                {
+                    var rol = new Rol
+                    {
+                        idApi = a.RolId,
+                        Tipo = a.Tipo,
+                        Prioridad = a.Prioridad,
+                        FechaAsignado = a.fechaAsignado,
+                    };
+                    listaRoles.Add(rol);
+                }
+
+                return listaRoles;
+            }
+
             return await _connection.Table<models.Rol>().ToListAsync();
         }
 
@@ -436,10 +446,16 @@ namespace AppNetCredenciales.Data
 
         public async Task<List<models.Espacio>> GetEspaciosAsync()
         {
+            // When online: fetch from API and update local DB (upsert) so offline view matches online
             if (connectivityService.IsConnected)
             {
                 var listApi = await apiService.GetEspaciosAsync();
-                List<Espacio> listaEspacios = new List<Espacio>();
+                if (listApi == null)
+                {
+                    return await _connection.Table<models.Espacio>().ToListAsync();
+                }
+
+                var listaEspacios = new List<Espacio>();
                 foreach (var a in listApi)
                 {
                     var espacio = new Espacio
@@ -450,12 +466,17 @@ namespace AppNetCredenciales.Data
                         Tipo = ParseEnumOrDefault<EspacioTipo>(a.Tipo),
                         faltaCarga = false
                     };
+
                     listaEspacios.Add(espacio);
+
+                    // keep local DB in sync (upsert)
+                    await UpsertEspacioAsync(espacio);
                 }
 
                 return listaEspacios;
             }
 
+            // When offline: show what's in local DB
             return await _connection.Table<models.Espacio>().ToListAsync();
         }
 
@@ -483,7 +504,28 @@ namespace AppNetCredenciales.Data
                 .FirstOrDefaultAsync();
         }
 
-        
+        private async Task<int> UpsertEspacioAsync(Espacio espacio)
+        {
+            if (espacio == null) return 0;
+
+            if (!string.IsNullOrWhiteSpace(espacio.idApi))
+            {
+                var existing = await _connection.Table<Espacio>()
+                    .Where(e => e.idApi == espacio.idApi)
+                    .FirstOrDefaultAsync();
+
+                if (existing != null)
+                {
+                    existing.Nombre = espacio.Nombre;
+                    existing.Activo = espacio.Activo;
+                    existing.Tipo = espacio.Tipo;
+                    existing.faltaCarga = espacio.faltaCarga;
+                    return await _connection.UpdateAsync(existing);
+                }
+            }
+
+            return await _connection.InsertAsync(espacio);
+        }
 
 
         // CRUD operaciones para credenciales

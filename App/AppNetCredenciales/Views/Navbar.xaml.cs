@@ -56,7 +56,6 @@ namespace AppNetCredenciales.Views
                 }
             });
 
-            // Simple logout command
             LogoutCommand = new Command(async () =>
             {
                 try
@@ -84,8 +83,20 @@ namespace AppNetCredenciales.Views
                     return;
                 }
 
-                var roles = await _db.GetRolsByUserAsync(usuario.UsuarioId);
-                IsFuncionario = roles != null && roles.Any(r => string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase));
+                var userRoleIds = usuario.RolesIDs ?? Array.Empty<string>();
+
+                if (userRoleIds.Length > 0)
+                {
+                    var roles = await _db.GetRolesAsync();
+                    IsFuncionario = roles.Any(r =>
+                        string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase)
+                        && !string.IsNullOrWhiteSpace(r.idApi)
+                        && userRoleIds.Contains(r.idApi, StringComparer.OrdinalIgnoreCase));
+                    return;
+                }
+
+                var localRoles = await _db.GetRolsByUserAsync(usuario.UsuarioId);
+                IsFuncionario = localRoles.Any(r => string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase));
             }
             catch (Exception ex)
             {
