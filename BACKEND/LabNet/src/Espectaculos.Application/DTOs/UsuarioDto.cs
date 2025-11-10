@@ -1,5 +1,4 @@
 ﻿using Espectaculos.Domain.Enums;
-
 namespace Espectaculos.Application.DTOs;
 
 public class UsuarioDto
