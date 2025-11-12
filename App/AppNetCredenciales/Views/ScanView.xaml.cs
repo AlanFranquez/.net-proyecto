@@ -1,5 +1,6 @@
 using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
+using AppNetCredenciales.Services;
 using CommunityToolkit.Maui.Views;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
@@ -20,6 +21,8 @@ namespace AppNetCredenciales.Views
         DateTime lastDetectedTime = DateTime.MinValue;
         CancellationTokenSource? _retryCts;
         private readonly LocalDBService _db;
+        private readonly BiometricService _biometricService;
+        private bool _biometricAuthenticated = false;
 
         public ScanView()
         {
@@ -34,12 +37,50 @@ namespace AppNetCredenciales.Views
 
             _db = App.Services?.GetRequiredService<LocalDBService>()
                   ?? throw new InvalidOperationException("LocalDBService not registered in DI.");
+            
+            _biometricService = App.Services?.GetRequiredService<BiometricService>()
+                  ?? new BiometricService();
         }
 
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
+            // Resetear autenticación biométrica cada vez que aparece la vista
+            _biometricAuthenticated = false;
+
+            // Solicitar autenticación biométrica PRIMERO usando DisplayAlert
+            bool userWantsToAuthenticate = await DisplayAlert(
+                "Autenticación Requerida",
+                "Debes verificar tu identidad con huella digital antes de escanear credenciales.\n\n¿Deseas continuar?",
+                "Autenticar",
+                "Cancelar");
+
+            if (!userWantsToAuthenticate)
+            {
+                await DisplayAlert("Autenticación Cancelada", 
+                    "Debes autenticarte con tu huella digital para usar el escáner.", 
+                    "OK");
+                await Shell.Current.GoToAsync("..");
+                return;
+            }
+
+            // Realizar autenticación biométrica real
+            var biometricResult = await _biometricService.AuthenticateAsync(
+                "Verificar tu identidad para escanear credenciales");
+
+            if (!biometricResult.Success)
+            {
+                await DisplayAlert("Autenticación Fallida", 
+                    biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.", 
+                    "OK");
+                await Shell.Current.GoToAsync("..");
+                return;
+            }
+
+            _biometricAuthenticated = true;
+
+            // Ahora sí, solicitar permisos de cámara
             var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.Camera>();
@@ -58,6 +99,7 @@ namespace AppNetCredenciales.Views
         {
             _retryCts?.Cancel();
             cameraBarcodeReaderView.IsDetecting = false;
+            _biometricAuthenticated = false;
             base.OnDisappearing();
         }
 
@@ -105,6 +147,13 @@ namespace AppNetCredenciales.Views
 
         protected async void BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
         {
+            // Verificar que el usuario esté autenticado biométricamente
+            if (!_biometricAuthenticated)
+            {
+                System.Diagnostics.Debug.WriteLine("[Scan] Intento de escaneo sin autenticación biométrica");
+                return;
+            }
+
             var first = e.Results?.FirstOrDefault();
             if (first is null) return;
 
@@ -178,7 +227,8 @@ namespace AppNetCredenciales.Views
                     CredencialId = usuario.CredencialId,
                     Credencial = usuario.Credencial,
                     Espacio = evento,
-                    EspacioId = evento?.idApi ?? 0,
+                    EspacioId = evento?.EspacioId ?? 0,
+                    EspacioIdApi = evento?.idApi,
                     Resultado = AccesoTipo.Denegar
                 };
 
@@ -196,6 +246,7 @@ namespace AppNetCredenciales.Views
                 Credencial = usuario.Credencial,
                 Espacio = evento,
                 EspacioId = evento.EspacioId,
+                EspacioIdApi = evento.idApi,
                 Resultado = AccesoTipo.Permitir
             };
 

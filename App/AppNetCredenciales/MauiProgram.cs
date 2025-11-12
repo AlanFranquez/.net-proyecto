@@ -1,5 +1,6 @@
 ﻿using AppNetCredenciales.Data;
 using AppNetCredenciales.services;
+using AppNetCredenciales.Services;
 using AppNetCredenciales.ViewModel;
 using AppNetCredenciales.Views;
 using Camera.MAUI;
@@ -51,6 +52,11 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<ScanView>();
             builder.Services.AddSingleton<HistorialView>();
             builder.Services.AddSingleton<AppNetCredenciales.Services.ConnectivityService>();
+            
+            // Nuevos servicios de seguridad
+            builder.Services.AddSingleton<BiometricService>();
+            builder.Services.AddSingleton<NFCService>();
+            
 #if DEBUG
             builder.Logging.AddDebug();
 #endif 
