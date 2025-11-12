@@ -36,7 +36,6 @@
               VerticalOptions="Center"
               HorizontalOptions="Fill">
 
-            <!-- Left side: Mode switch button (only visible if user has Usuario role) -->
             <Button x:Name="EspacioButton"
                     Grid.Column="0"
                     Text="Ir a Espacios"
@@ -46,7 +45,6 @@
                     HorizontalOptions="Start"
                     VerticalOptions="Center" />
 
-            <!-- Center: Role label -->
             <Label x:Name="RoleLabel"
                    Grid.Column="1"
                    Text="Rol: Funcionario"
@@ -56,21 +54,18 @@
                    FontAttributes="Bold"
                    FontSize="16" />
 
-            <!-- Right side: Navigation buttons for Funcionario -->
             <StackLayout Orientation="Horizontal"
                         Grid.Column="2"
                         HorizontalOptions="End"
                         VerticalOptions="Center"
                         Spacing="8">
                 
-                <!-- Scan QR button -->
                 <ImageButton Source="qrcode.png"
                             Style="{StaticResource NavIconButton}"
                             Command="{Binding NavigateCommand}"
                             CommandParameter="scan"
                             AutomationId="scanButton" />
 
-                <!-- Logout button -->
                 <ImageButton Source="logout.png"
                             Style="{StaticResource NavIconButton}"
                             Command="{Binding LogoutCommand}"

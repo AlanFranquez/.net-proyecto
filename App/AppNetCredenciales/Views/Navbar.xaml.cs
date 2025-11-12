@@ -108,7 +108,6 @@ namespace AppNetCredenciales.Views
                     Debug.WriteLine($"[Navbar] Funcionario role found in RolesIDs array: {hasFuncionarioFromArray}");
                 }
 
-                // Check local roles as additional verification
                 bool hasFuncionarioFromLocal = false;
                 var localRoles = await _db.GetRolesAsync();
 

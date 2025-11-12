@@ -11,11 +11,13 @@ public partial class HistorialView : ContentPage
 {
     private readonly HistorialViewModel _viewModel;
     private readonly AuthService _authService;
+    private readonly LocalDBService _db;
 
     public HistorialView(AuthService auth, LocalDBService db)
     {
         InitializeComponent();
         _authService = auth;
+        _db = db;
         _viewModel = new HistorialViewModel(auth, db);
         BindingContext = _viewModel;
     }
@@ -23,6 +25,26 @@ public partial class HistorialView : ContentPage
     protected async override void OnAppearing()
     {
         base.OnAppearing();
+
+        await LoadHistorialAsync();
+    }
+
+    private async Task LoadHistorialAsync()
+    {
+        try
+        {
+            var usuario = await _db.GetLoggedUserAsync();
+            if (usuario != null && usuario.CredencialId > 0)
+            {
+                var eventos = await _db.GetEventosAccesoByUsuarioIdAsync(usuario.CredencialId);
+                // Update the ViewModel's collection here if needed
+                // _viewModel.UpdateEventos(eventos);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[HistorialView] Error loading historial: {ex}");
+        }
     }
 
     private async void OnAccesoSelected(object sender, SelectionChangedEventArgs e)

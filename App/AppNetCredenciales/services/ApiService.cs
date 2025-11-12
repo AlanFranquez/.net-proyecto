@@ -288,7 +288,7 @@ namespace AppNetCredenciales.Services
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync error: {ex}");
-                throw; // rethrow so you can see exception in debugger call stack
+                throw; 
             }
         }
 
@@ -302,6 +302,12 @@ namespace AppNetCredenciales.Services
             public string? Tipo { get; set; }
             [JsonPropertyName("activo")]
             public bool Activo { get; set; }
+
+            [JsonPropertyName("modo")]
+            public string? Modo { get; set; }
+
+            [JsonPropertyName("beneficiosIds")]
+            public string[]? BeneficiosIds { get; set; }
 
 
         }

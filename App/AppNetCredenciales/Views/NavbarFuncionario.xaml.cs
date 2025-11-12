@@ -106,14 +106,13 @@ namespace AppNetCredenciales.Views
                 var usuario = await _dbService.GetLoggedUserAsync();
                 if (usuario == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("NavbarFuncionario: no logged user found.");
+                    System.Diagnostics.Debug.WriteLine("[NavbarFuncionario] No logged user found.");
                     return;
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[NavbarFuncionario] Configuring for user: {usuario.Email}");
                 System.Diagnostics.Debug.WriteLine($"[NavbarFuncionario] User RolesIDs: [{string.Join(", ", usuario.RolesIDs ?? Array.Empty<string>())}]");
 
-                // Check if user has Usuario role in addition to Funcionario
                 bool hasUsuarioRole = false;
                 var userRoleIds = usuario.RolesIDs ?? Array.Empty<string>();
 
@@ -155,6 +154,9 @@ namespace AppNetCredenciales.Views
                     HasUsuarioRole = hasUsuarioRole;
                     RoleLabel.Text = "Rol: Funcionario";
                     System.Diagnostics.Debug.WriteLine($"[NavbarFuncionario] UI Updated - HasUsuarioRole: {hasUsuarioRole}");
+
+                    // Force property change notification
+                    OnPropertyChanged(nameof(HasUsuarioRole));
                 });
             }
             catch (Exception ex)
@@ -169,11 +171,9 @@ namespace AppNetCredenciales.Views
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
-
-        // Legacy event handlers for backward compatibility
         private void ScanButton_Clicked(object sender, EventArgs e)
         {
-            NavigateCommand?.Execute("espacio");
+            NavigateCommand?.Execute("scan"); // Fixed: was "espacio", should be "scan"
         }
 
         private void EspacioButton_Clicked(object sender, EventArgs e)

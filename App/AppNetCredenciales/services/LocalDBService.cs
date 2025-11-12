@@ -41,17 +41,14 @@ namespace AppNetCredenciales.Data
 
         }
 
-        // Add this method inside the LocalDBService class
         public async Task<EventoAcceso> SaveAndPushEventoAccesoAsync(EventoAcceso evento)
         {
             if (evento == null) throw new ArgumentNullException(nameof(evento));
 
-            // Persist locally first
             await SaveEventoAccesoAsync(evento);
 
             try
             {
-                // Only try to push when connected
                 if (!connectivityService.IsConnected)
                 {
                     System.Diagnostics.Debug.WriteLine("[LocalDBService] Offline: saved evento locally, will sync later.");
@@ -73,11 +70,11 @@ namespace AppNetCredenciales.Data
                 var created = await apiService.CreateEventoAccesoAsync(dto);
                 if (created != null)
                 {
-                    // map returned server id back to local model and update local row
+                 
                     if (!string.IsNullOrWhiteSpace(created.EventoAccesoId))
                     {
                         evento.idApi = created.EventoAccesoId;
-                        await SaveEventoAccesoAsync(evento); // update local record with idApi
+                        await SaveEventoAccesoAsync(evento);
                     }
 
                     System.Diagnostics.Debug.WriteLine($"[LocalDBService] Evento pushed to API, id={evento.idApi}");
