@@ -36,13 +36,13 @@ public partial class EspacioView : ContentPage
 
     private async void OnEspacioSelected(object sender, SelectionChangedEventArgs e)
     {
-        var espacio = e.CurrentSelection.FirstOrDefault() as Espacio;
-        if (espacio == null)
+        var seleccionado = e.CurrentSelection?.FirstOrDefault() as Espacio;
+        if (seleccionado == null)
             return;
 
-        await Shell.Current.GoToAsync($"espacioPerfil?id={espacio.EspacioId}");
+        // Match the route registered in AppShell.xaml.cs (espacioPerfil)
+        await Shell.Current.GoToAsync($"espacioPerfil?espacioId={seleccionado.EspacioId}");
 
-        if (sender is CollectionView cv)
-            cv.SelectedItem = null;
+        if (sender is CollectionView cv) cv.SelectedItem = null;
     }
 }

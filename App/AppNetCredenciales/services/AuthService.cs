@@ -44,7 +44,18 @@ namespace AppNetCredenciales.services
             {
                 return false;
             }
+
             await _db.SaveUsuarioAsync(usuario);
+
+            try
+            {
+                await _db.CreateUsuarioRemoteAsync(usuario);
+            }
+            catch
+            {
+           
+            }
+
             return true;
         }
 

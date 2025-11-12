@@ -20,6 +20,7 @@ namespace AppNetCredenciales
             Routing.RegisterRoute("historial", typeof(AppNetCredenciales.Views.HistorialView));
             Routing.RegisterRoute("accesoPerfil", typeof(AppNetCredenciales.Views.AccesoPerfilView));
 
+
             _connectivityService = App.Services.GetRequiredService<ConnectivityService>();
             _connectivityService.ConnectivityChanged += ConnectivityService_ConnectivityChanged;
         }

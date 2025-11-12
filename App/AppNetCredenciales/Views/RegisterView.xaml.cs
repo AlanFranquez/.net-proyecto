@@ -10,6 +10,7 @@ public partial class RegisterView : ContentPage
 	{
         SessionManager.Logout();
         InitializeComponent();
+        
 		BindingContext = new RegisterViewModel(this, auth, db);
 	}
 

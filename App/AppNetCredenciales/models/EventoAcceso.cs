@@ -32,13 +32,17 @@ namespace AppNetCredenciales.models
         
         public int CredencialId { get; set; }
 
+        public string CredencialIdApi { get; set; }
+
         [SQLite.Column("idApi")]
         public string idApi { get; set; }
 
         [Ignore]        
         public Credencial Credencial { get; set; } = default!;
         public int EspacioId { get; set; }
-        
+
+        public string? EspacioIdApi { get; set; }
+
         [Ignore]
         public Espacio Espacio { get; set; } = default!;
 

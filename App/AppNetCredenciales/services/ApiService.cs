@@ -25,6 +25,45 @@ namespace AppNetCredenciales.Services
             };
         }
 
+        public async Task<List<EventoAccesoDto>> GetEventosAccesoAsync() {             
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<EventoAccesoDto>>("eventos", _jsonOptions)
+                           ?? new List<EventoAccesoDto>();
+                foreach (var item in list)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] eventoAccesoId={item.EventoAccesoId} momentoDeAcceso={item.MomentoDeAcceso}");
+                }
+                return list;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Error fetching eventosAcceso: {ex}");
+                return new List<EventoAccesoDto>();
+            }
+        }
+
+        public async Task<EventoAccesoDto?> CreateEventoAccesoAsync(EventoAccesoDto nuevo)
+        {
+            try
+            {
+                var resp = await _httpClient.PostAsJsonAsync("eventos", nuevo, _jsonOptions);
+                var content = await resp.Content.ReadAsStringAsync();
+                if (!resp.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] CreateEventoAccesoAsync failed: {resp.StatusCode} content={content}");
+                    return null;
+                }
+                var dto = JsonSerializer.Deserialize<EventoAccesoDto>(content, _jsonOptions);
+                return dto;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateEventoAccesoAsync error: {ex}");
+                return null;
+            }
+        }
+
         public async Task<List<RolDto>>GetRolesAsync()
         {
             try
@@ -113,7 +152,6 @@ namespace AppNetCredenciales.Services
                 }
                 catch (JsonException) { /* malformed -> fallback */ }
 
-                // Fallback: raw trimmed content (puede venir sin JSON)
                 var trimmed = content.Trim();
                 if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.Length >= 2)
                     trimmed = trimmed.Substring(1, trimmed.Length - 2);
@@ -186,7 +224,6 @@ namespace AppNetCredenciales.Services
         {
             try
             {
-                // Log request payload
                 var requestJson = JsonSerializer.Serialize(nuevo, _jsonOptions);
                 System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync -> request JSON: {requestJson}");
 
@@ -203,7 +240,7 @@ namespace AppNetCredenciales.Services
 
                 if (!resp.IsSuccessStatusCode)
                 {
-                    // return null but leave the details in debug output; caller can inspect logs
+                   
                     return null;
                 }
 
@@ -265,8 +302,6 @@ namespace AppNetCredenciales.Services
             public string? Tipo { get; set; }
             [JsonPropertyName("activo")]
             public bool Activo { get; set; }
-
-            
 
 
         }
@@ -330,6 +365,29 @@ namespace AppNetCredenciales.Services
 
             [JsonPropertyName("rolesIDs")]
             public string[]? RolesIDs { get; set; }
+        }
+
+        public class EventoAccesoDto
+        {
+            [JsonPropertyName("eventoAccesoId")]
+            public string? EventoAccesoId { get; set; }
+            [JsonPropertyName("momentoDeAcceso")]
+            public DateTime MomentoDeAcceso { get; set; }
+            [JsonPropertyName("credencialId")]
+            public string? CredencialId { get; set; }
+            [JsonPropertyName("espacioId")]
+            public string? EspacioId { get; set; }
+            [JsonPropertyName("resultado")]
+            public string? Resultado { get; set; }
+            [JsonPropertyName("motivo")]
+            public string? Motivo { get; set; }
+            [JsonPropertyName("modo")]
+            public string? Modo { get; set; }
+
+
+
+            [JsonPropertyName("firma")]
+            public string? Firma { get; set; }
         }
 
         public class NewUsuarioDto

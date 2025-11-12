@@ -2,46 +2,56 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:views="clr-namespace:AppNetCredenciales.Views"
              x:Class="AppNetCredenciales.Views.EspacioPerfilView"
-             Title="Detalle del Espacio"
+             Title="Perfil del Espacio"
              BackgroundColor="White">
 
     <Grid RowDefinitions="*,Auto">
         <ScrollView Grid.Row="0">
             <VerticalStackLayout Padding="10" Spacing="10">
 
-                <Label Text="{Binding Espacio.Titulo}"
-                       FontSize="24"
+                <Label Text="{Binding Nombre}"
+                       FontSize="22"
                        FontAttributes="Bold"
                        HorizontalOptions="Center"
                        TextColor="Black"/>
 
-                <Label Text="{Binding Espacio.Descripcion}"
-                       FontSize="16"
+                <Label Text="{Binding idApi}"
+                       FontSize="12"
                        TextColor="Gray"/>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
+                    <Label Text="Tipo:" FontAttributes="Bold" TextColor="Black"/>
+                    <Label Text="{Binding Tipo}" Grid.Column="1" TextColor="Black"/>
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
+                    <Label Text="Activo:" FontAttributes="Bold" TextColor="Black"/>
+                    <Label Text="{Binding Activo}" Grid.Column="1" TextColor="Black"/>
+                </Grid>
+
+                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
                     <Label Text="Lugar:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Espacio.Lugar}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="{Binding Lugar}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
                     <Label Text="Fecha:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Espacio.Fecha, StringFormat='{0:dd/MM/yyyy HH:mm}'}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy HH:mm}'}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
                     <Label Text="Stock:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Espacio.Stock}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="{Binding Stock}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
                     <Label Text="Disponible:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Espacio.Disponible}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="{Binding Disponible}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
                     <Label Text="Publicado:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Espacio.Publicado}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="{Binding Publicado}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <BoxView HeightRequest="24" Color="Transparent" />

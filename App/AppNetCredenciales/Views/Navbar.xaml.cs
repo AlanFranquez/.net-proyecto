@@ -39,8 +39,6 @@ namespace AppNetCredenciales.Views
             // check user roles (fire-and-forget)
             _ = CheckIfFuncionarioAsync();
 
-            _ = cambiarRolAUsuario();
-
             NavigateCommand = new Command<string>(async destino =>
             {
                 if (string.IsNullOrEmpty(destino)) return;
@@ -65,7 +63,7 @@ namespace AppNetCredenciales.Views
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"Error cambiando rol: {ex}");
+                    Debug.WriteLine($"Error en logout: {ex}");
                 }
             });
 
@@ -83,34 +81,70 @@ namespace AppNetCredenciales.Views
                     return;
                 }
 
+                Debug.WriteLine($"[Navbar] Checking roles for user: {usuario.Email}");
+                Debug.WriteLine($"[Navbar] RolesIDsJson: {usuario.RolesIDsJson}");
+                Debug.WriteLine($"[Navbar] RolesIDs array length: {usuario.RolesIDs?.Length ?? 0}");
+
                 var userRoleIds = usuario.RolesIDs ?? Array.Empty<string>();
+                bool hasFuncionarioFromArray = false;
 
                 if (userRoleIds.Length > 0)
                 {
                     var roles = await _db.GetRolesAsync();
-                    IsFuncionario = roles.Any(r =>
+                    
+                    Debug.WriteLine($"[Navbar] Available roles from DB:");
+                    foreach (var role in roles)
+                    {
+                        Debug.WriteLine($"[Navbar] - Role: {role.Tipo}, idApi: {role.idApi}");
+                    }
+
+                    Debug.WriteLine($"[Navbar] User's role IDs: [{string.Join(", ", userRoleIds)}]");
+
+                    hasFuncionarioFromArray = roles.Any(r =>
                         string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase)
                         && !string.IsNullOrWhiteSpace(r.idApi)
                         && userRoleIds.Contains(r.idApi, StringComparer.OrdinalIgnoreCase));
-                    return;
+
+                    Debug.WriteLine($"[Navbar] Funcionario role found in RolesIDs array: {hasFuncionarioFromArray}");
                 }
 
-                var localRoles = await _db.GetRolsByUserAsync(usuario.UsuarioId);
-                IsFuncionario = localRoles.Any(r => string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase));
+                // Check local roles as additional verification
+                bool hasFuncionarioFromLocal = false;
+                var localRoles = await _db.GetRolesAsync();
+
+                if (userRoleIds?.Length > 0)
+                {
+                    foreach (var roleId in userRoleIds)
+                    {
+                        foreach (var localRole in localRoles)
+                        {
+                            if (string.Equals(localRole.idApi, roleId, StringComparison.OrdinalIgnoreCase) 
+                                && string.Equals(localRole.Tipo, "Funcionario", StringComparison.OrdinalIgnoreCase))
+                            {
+                                hasFuncionarioFromLocal = true;
+                                break;
+                            }
+                        }
+                        if (hasFuncionarioFromLocal) break;
+                    }
+                }
+
+                IsFuncionario = hasFuncionarioFromArray || hasFuncionarioFromLocal;
+                
+                Debug.WriteLine($"[Navbar] Final IsFuncionario result: {IsFuncionario}");
+
+                // Force UI update on main thread
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    OnPropertyChanged(nameof(IsFuncionario));
+                    Debug.WriteLine($"[Navbar] UI Updated - IsFuncionario: {IsFuncionario}");
+                });
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"CheckIfFuncionarioAsync error: {ex}");
                 IsFuncionario = false;
             }
-        }
-
-        private async Task cambiarRolAUsuario()
-        {
-            var usuario = await _db.GetLoggedUserAsync();
-
-            var rol = await _db.GetRolByTipoAsync("Usuario");
-            await _db.ChangeUserSelectedRole(usuario.Email, rol.RolId);
         }
 
         private async void OnLogoutClicked(object sender, EventArgs e)

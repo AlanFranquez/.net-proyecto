@@ -39,8 +39,9 @@ public partial class LoginView : ContentPage
         var raw = await _apiService.GetUsuariosRawAsync();
         System.Diagnostics.Debug.WriteLine($"[ApiTest] Raw users response: {raw}");
         await DisplayAlert("Raw response", (raw?.Length > 100 ? raw.Substring(0, 100) + "..." : raw) ?? "<null>", "OK");
+        
+     
 
-        // 2) Use the typed DTO and show the fields explicitly
         var usuarios = await _apiService.GetUsuariosAsync();
         if (usuarios.Count > 0)
         {
@@ -54,7 +55,6 @@ public partial class LoginView : ContentPage
             await DisplayAlert("API test", "No users returned", "OK");
         }
 
-        // 3) connectivity info
         var networkAccess = Connectivity.Current.NetworkAccess;
         await DisplayAlert("Conectividad", networkAccess == NetworkAccess.Internet ? "Con Internet" : "Sin Internet", "OK");
     }

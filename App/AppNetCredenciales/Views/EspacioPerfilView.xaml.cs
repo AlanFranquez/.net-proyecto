@@ -1,16 +1,15 @@
 using AppNetCredenciales.Data;
+using AppNetCredenciales.models;
 using System.Diagnostics;
 
 namespace AppNetCredenciales.Views;
 
-[QueryProperty(nameof(EspacioId), "id")]
+[QueryProperty(nameof(EspacioId), "espacioId")]
 public partial class EspacioPerfilView : ContentPage
 {
     private int _espacioId;
     private readonly LocalDBService _db;
 
-    // Parameterless ctor so Shell can construct the page on platforms
-    // where DI isn't used for route activation.
     public EspacioPerfilView() : this(MauiProgram.ServiceProvider?.GetService<LocalDBService>()
                                       ?? throw new InvalidOperationException("LocalDBService not registered"))
     { }
@@ -42,7 +41,17 @@ public partial class EspacioPerfilView : ContentPage
                 return;
             }
 
-            var espacio = await this._db.GetEspacioByIdAsync(id);
+            Debug.WriteLine($"[EspacioPerfil] Loading Espacio with id: {id}");
+
+            var espacios = await this._db.GetEspaciosAsync();
+
+            foreach (var e in espacios)
+            {
+                Debug.WriteLine($"[EspacioPerfil] Found Espacio: {e.EspacioId} - {e.Nombre}");
+            }
+
+            var espacio = espacios.FirstOrDefault(e => e.EspacioId == id);
+
             if (espacio == null)
             {
                 Debug.WriteLine($"[EspacioPerfil] Espacio not found for id {id}");
@@ -50,7 +59,8 @@ public partial class EspacioPerfilView : ContentPage
                 return;
             }
 
-            BindingContext = new { Espacio = espacio };
+            // Set the BindingContext to the Espacio instance so XAML {Binding Nombre}, {Binding Lugar}, etc. work.
+            BindingContext = espacio;
         }
         catch (Exception ex)
         {
@@ -64,16 +74,27 @@ public partial class EspacioPerfilView : ContentPage
         try
         {
             var usuario = await _db.GetLoggedUserAsync();
+
             if (usuario != null && usuario.Credencial == null && usuario.CredencialId > 0)
             {
                 usuario.Credencial = await _db.GetCredencialByIdAsync(usuario.CredencialId);
             }
 
-            var espacio = (BindingContext as dynamic)?.Espacio;
+            var cred = usuario?.Credencial;
 
-            if (usuario != null && usuario.Credencial != null && espacio != null && !string.IsNullOrEmpty(usuario.Credencial.IdCriptografico))
+            Debug.WriteLine($"CREDENCIAL DEBUG => {usuario.CredencialId}");
+
+            var getAllCredenciales = await _db.GetCredencialesAsync();
+
+            foreach(var a in getAllCredenciales)
             {
-                string qrData = $"{usuario.Credencial.IdCriptografico}|{espacio.EspacioId}";
+                Debug.WriteLine($"DATOS DE CREDENCIALES -> {a.CredencialId} - {a.idApi} - {a.usuarioIdApi}");
+            }
+            var espacio = BindingContext as Espacio;
+
+            if (cred != null && espacio != null && !string.IsNullOrEmpty(cred.IdCriptografico))
+            {
+                string qrData = $"{cred.IdCriptografico}|{espacio.EspacioId}";
                 var modal = new QRModalPage(qrData);
                 await Navigation.PushModalAsync(modal);
             }

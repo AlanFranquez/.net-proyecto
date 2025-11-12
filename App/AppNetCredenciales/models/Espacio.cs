@@ -28,7 +28,9 @@ namespace AppNetCredenciales.models
         [AutoIncrement]
         [SQLite.Column("id")]
         public int EspacioId { get; set; }
-        public string Nombre { get; set; }
+
+
+        public string? Nombre { get; set; }
         public bool Activo { get; set; } = true;
         public EspacioTipo Tipo { get; set; }
 
@@ -38,13 +40,22 @@ namespace AppNetCredenciales.models
             set => Tipo = (EspacioTipo)value;
         }
 
-
         public bool faltaCarga { get; set; }
-        
-        public string idApi { get; set; }
 
+        // API id may be null/empty; make it nullable
+        public string? idApi { get; set; }
 
+        // Properties referenced by XAML bindings — keep them nullable/defaults to avoid binding warnings.
+        public string? Descripcion { get; set; }
+        public string? Lugar { get; set; }
+        public DateTime? Fecha { get; set; }
+        public int Stock { get; set; }
+        public int Disponible { get; set; }
+        public bool Publicado { get; set; }
 
+        // If some XAML binds Emitida to a Color property, expose a Color-typed property or convert in XAML.
+        // Add a string representation as safe default; if XAML expects Color, change type accordingly.
+        public string? Emitida { get; set; }
 
     }
 }

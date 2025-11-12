@@ -159,11 +159,11 @@ namespace AppNetCredenciales.Views
                     CredencialId = usuario.CredencialId,
                     Credencial = usuario.Credencial,
                     Espacio = evento,
-                    EspacioId = evento?.EspacioId ?? 0,   
+                    EspacioId = evento?.EspacioId ?? 0,
                     Resultado = AccesoTipo.Denegar
                 };
 
-                await _db.SaveEventoAccesoAsync(evNegado);
+                await _db.SaveAndPushEventoAccesoAsync(evNegado);
                 return;
             }
 
@@ -176,11 +176,11 @@ namespace AppNetCredenciales.Views
                 CredencialId = usuario.CredencialId,
                 Credencial = usuario.Credencial,
                 Espacio = evento,
-                EspacioId = evento.EspacioId,          // <-- critical: save the EspacioId
+                EspacioId = evento.EspacioId,
                 Resultado = AccesoTipo.Permitir
             };
 
-            await _db.SaveEventoAccesoAsync(ev);
+            await _db.SaveAndPushEventoAccesoAsync(ev);
         }
     }   
 }

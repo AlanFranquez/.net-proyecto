@@ -6,6 +6,7 @@ using AppNetCredenciales.Views;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 
@@ -144,6 +145,11 @@ namespace AppNetCredenciales.ViewModel
                 try
                 {
                     var seleccionadasRoles = Roles.Where(r => r.IsSelected).ToList();
+
+                    foreach (var r in seleccionadasRoles)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Register] Selected role: {r.Role.Tipo} (ID API: {r.Role.idApi})");
+                    }
                     var nuevoDto = new ApiService.NewUsuarioDto
                     {
                         Nombre = usuario.Nombre,
@@ -157,14 +163,19 @@ namespace AppNetCredenciales.ViewModel
                                     .ToArray()
                     };
 
-                    var apiResult = await _api_service_create_usuario_safe(nuevoDto);
-                    System.Diagnostics.Debug.WriteLine($"[Register] API create usuario result: {apiResult?.UsuarioId}");
-
-                    if (apiResult != null && !string.IsNullOrWhiteSpace(apiResult.UsuarioId))
+                    if(_connectivityService.IsConnected)
                     {
-                        usuario.idApi = apiResult.UsuarioId;
+
+                        var apiResult = await _api_service_create_usuario_safe(nuevoDto);
+                    } else
+                    {
+                        usuario.idApi = Guid.NewGuid().ToString();
+                        
                         await _db.SaveUsuarioAsync(usuario);
                     }
+
+
+                    
                 }
                 catch (Exception ex)
                 {
@@ -178,7 +189,6 @@ namespace AppNetCredenciales.ViewModel
                 await _db.SaveUsuarioAsync(usuario);
             }
 
-            // Create credential: only attempt remote creation if we have a backend usuario id (GUID)
             var credencial = new Credencial
             {
                 Tipo = CredencialTipo.Campus,
@@ -190,53 +200,21 @@ namespace AppNetCredenciales.ViewModel
                 usuarioIdApi = usuario.idApi
             };
 
-            if (_connectivity_service_is_valid_guid(usuario.idApi))
-            {
-                // set FaltaCarga false only when remote creation succeeds
-                var credId = await _db.SaveCredencialAsync(new Credencial
-                {
-                    Tipo = credencial.Tipo,
-                    Estado = credencial.Estado,
-                    IdCriptografico = credencial.IdCriptografico,
-                    FechaEmision = credencial.FechaEmision,
-                    FechaExpiracion = credencial.FechaExpiracion,
-                    FaltaCarga = false,
-                    usuarioIdApi = usuario.idApi
-                });
+            var createdCredId = await _db.SaveCredencialAsync(credencial);
 
-                if (credId <= 0)
-                {
-                    // couldn't create remotely or save; fall back to local-only cred
-                    credencial.FaltaCarga = true;
-                    credencial.usuarioIdApi = null;
-                    await _db.SaveCredencialAsync(credencial);
-                }
-                else
-                {
-                    // ensure local user points to credencial if needed (optional)
-                }
+            if (createdCredId > 0)
+            {
+                usuario.CredencialId = createdCredId;
+                await _db.SaveUsuarioAsync(usuario);
             }
             else
             {
-                // offline or no backend user id: save credencial locally for later sync
+                // fallback: mark credential for sync later and ensure saved locally
                 credencial.FaltaCarga = true;
-                credencial.usuarioIdApi = null;
                 await _db.SaveCredencialAsync(credencial);
             }
 
-            // Assign selected roles to the (local) user
-            var usuarioId = usuario.UsuarioId;
-            var seleccionadas = Roles.Where(r => r.IsSelected).ToList();
-            foreach (var s in seleccionadas)
-            {
-                var ur = new UsuarioRol
-                {
-                    UsuarioId = usuarioId,
-                    RolId = s.Role.RolId,
-                    FechaAsignado = DateTime.UtcNow
-                };
-                await _db.SaveUsuarioRolAsync(ur);
-            }
+            
 
             await view.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
             await view.Navigation.PopAsync();
@@ -245,11 +223,12 @@ namespace AppNetCredenciales.ViewModel
             return true;
         }
 
-        // small helpers extracted to keep RegisterAsync readable
+ 
         private async Task<ApiService.UsuarioDto?> _api_service_create_usuario_safe(ApiService.NewUsuarioDto dto)
         {
             try
             {
+
                 var apiResult = await _apiService.CreateUsuarioAsync(dto);
                 if (apiResult != null && !string.IsNullOrWhiteSpace(apiResult.UsuarioId))
                     return apiResult;
@@ -266,10 +245,7 @@ namespace AppNetCredenciales.ViewModel
             }
         }
 
-        private static bool _connectivity_service_is_valid_guid(string? id)
-        {
-            return !string.IsNullOrWhiteSpace(id) && Guid.TryParse(id, out _);
-        }
+   
 
         public class SelectableRole : INotifyPropertyChanged
         {

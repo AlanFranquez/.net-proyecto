@@ -41,6 +41,89 @@ namespace AppNetCredenciales.Data
 
         }
 
+        // Add this method inside the LocalDBService class
+        public async Task<EventoAcceso> SaveAndPushEventoAccesoAsync(EventoAcceso evento)
+        {
+            if (evento == null) throw new ArgumentNullException(nameof(evento));
+
+            // Persist locally first
+            await SaveEventoAccesoAsync(evento);
+
+            try
+            {
+                // Only try to push when connected
+                if (!connectivityService.IsConnected)
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Offline: saved evento locally, will sync later.");
+                    return evento;
+                }
+
+                var dto = new ApiService.EventoAccesoDto
+                {
+                    EventoAccesoId = evento.idApi,
+                    MomentoDeAcceso = evento.MomentoDeAcceso,
+                    CredencialId = evento.Credencial?.idApi ?? evento.CredencialIdApi,
+                    EspacioId = evento.Espacio?.idApi ?? evento.EspacioIdApi,
+                    Resultado = evento.ResultadoStr,
+                    Motivo = evento.Motivo,
+                    Modo = evento.ModoStr,
+                    Firma = evento.Firma
+                };
+
+                var created = await apiService.CreateEventoAccesoAsync(dto);
+                if (created != null)
+                {
+                    // map returned server id back to local model and update local row
+                    if (!string.IsNullOrWhiteSpace(created.EventoAccesoId))
+                    {
+                        evento.idApi = created.EventoAccesoId;
+                        await SaveEventoAccesoAsync(evento); // update local record with idApi
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Evento pushed to API, id={evento.idApi}");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] API did not return a created EventoAcceso.");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Push evento error: {ex}");
+                // keep local record; will try again on next sync
+            }
+
+            return evento;
+        }
+
+
+        public async Task<List<EventoAcceso>> SincronizarEventosFromBack(bool removeMissing = false)
+        {
+            var apiEventos = await apiService.GetEventosAccesoAsync();
+            if (apiEventos == null)
+            {
+                return await GetEventosAccesoAsync();
+            }
+            var localList = await GetEventosAccesoAsync();
+            foreach (var a in localList)
+            {
+                await DeleteEventoAccesoAsync(a);
+            }
+            foreach (var a in apiEventos)
+            {
+                var nuevo = new EventoAcceso
+                {
+                    idApi = a.EventoAccesoId,
+                    MomentoDeAcceso = a.MomentoDeAcceso,
+                    CredencialIdApi = a.CredencialId,
+                    EspacioIdApi = a.EspacioId,
+                    Resultado = ParseEnumOrDefault<AccesoTipo>(a.Resultado),
+                    Motivo = a.Motivo
+                };
+                await SaveEventoAccesoAsync(nuevo);
+            }
+            return await GetEventosAccesoAsync();
+        }
 
         // Roles
 
@@ -216,8 +299,14 @@ namespace AppNetCredenciales.Data
         {
             try
             {
-                var roles = await GetRolesAsync();
-                if (roles.Any(r => r.RolId == 0))
+                // Inspect the local DB rows directly instead of calling GetRolesAsync()
+                // (GetRolesAsync may return API data when online and that list will have RolId == 0,
+                // causing an unwanted schema reset).
+                var localRoles = await _connection.Table<Rol>().ToListAsync();
+
+                // Only recreate schema when the local DB contains broken/placeholder rows (RolId == 0)
+                // coming from the local DB itself.
+                if (localRoles.Any(r => r.RolId == 0))
                 {
                     await _connection.DropTableAsync<UsuarioRol>();
                     await _connection.DropTableAsync<Rol>();
@@ -446,37 +535,8 @@ namespace AppNetCredenciales.Data
 
         public async Task<List<models.Espacio>> GetEspaciosAsync()
         {
-            // When online: fetch from API and update local DB (upsert) so offline view matches online
-            if (connectivityService.IsConnected)
-            {
-                var listApi = await apiService.GetEspaciosAsync();
-                if (listApi == null)
-                {
-                    return await _connection.Table<models.Espacio>().ToListAsync();
-                }
-
-                var listaEspacios = new List<Espacio>();
-                foreach (var a in listApi)
-                {
-                    var espacio = new Espacio
-                    {
-                        idApi = a.EspacioId,
-                        Nombre = a.Nombre,
-                        Activo = a.Activo,
-                        Tipo = ParseEnumOrDefault<EspacioTipo>(a.Tipo),
-                        faltaCarga = false
-                    };
-
-                    listaEspacios.Add(espacio);
-
-                    // keep local DB in sync (upsert)
-                    await UpsertEspacioAsync(espacio);
-                }
-
-                return listaEspacios;
-            }
-
-            // When offline: show what's in local DB
+            
+                
             return await _connection.Table<models.Espacio>().ToListAsync();
         }
 
@@ -554,6 +614,61 @@ namespace AppNetCredenciales.Data
             }
 
             return await _connection.Table<models.Credencial>().ToListAsync();
+        }
+
+        // Add these members inside the LocalDBService class
+
+        // Upsert a credencial into local DB using idApi if present.
+        private async Task<int> UpsertCredencialAsync(Credencial credencial)
+        {
+            if (credencial == null) return 0;
+
+            if (!string.IsNullOrWhiteSpace(credencial.idApi))
+            {
+                var existing = await _connection.Table<Credencial>()
+                                               .Where(c => c.idApi == credencial.idApi)
+                                               .FirstOrDefaultAsync();
+                if (existing != null)
+                {
+                    // copy relevant fields
+                    existing.IdCriptografico = credencial.IdCriptografico;
+                    existing.Tipo = credencial.Tipo;
+                    existing.Estado = credencial.Estado;
+                    existing.FaltaCarga = credencial.FaltaCarga;
+                    existing.FechaEmision = credencial.FechaEmision;
+                    existing.FechaExpiracion = credencial.FechaExpiracion;
+                    existing.usuarioIdApi = credencial.usuarioIdApi;
+                    return await _connection.UpdateAsync(existing);
+                }
+            }
+
+            return await _connection.InsertAsync(credencial);
+        }
+
+     
+        public async Task<string?> CreateUsuarioRemoteAsync(models.Usuario usuario)
+        {
+            if (usuario == null) return null;
+            if (!connectivityService.IsConnected) return null;
+
+            var newUserDto = new ApiService.NewUsuarioDto
+            {
+                Nombre = usuario.Nombre ?? string.Empty,
+                Apellido = usuario.Apellido ?? string.Empty,
+                Email = usuario.Email ?? string.Empty,
+                Documento = usuario.Documento ?? string.Empty,
+                Password = usuario.Password ?? string.Empty
+            };
+
+            var created = await apiService.CreateUsuarioAsync(newUserDto);
+            if (created != null && !string.IsNullOrWhiteSpace(created.UsuarioId))
+            {
+                usuario.idApi = created.UsuarioId;
+                await SaveUsuarioAsync(usuario);
+                return usuario.idApi;
+            }
+
+            return null;
         }
 
         public async Task<int> SaveCredencialAsync(models.Credencial credencial)
@@ -700,7 +815,6 @@ namespace AppNetCredenciales.Data
 
             idCriptografico = idCriptografico.Trim();
 
-            // Try fast exact DB lookup first
             var exact = await _connection.Table<models.Credencial>()
                                          .Where(c => c.IdCriptografico == idCriptografico)
                                          .FirstOrDefaultAsync();
@@ -749,7 +863,7 @@ namespace AppNetCredenciales.Data
         {
             if (string.IsNullOrWhiteSpace(tipo))
                 return null;
-
+                
             return await _connection.Table<models.Rol>()
                 .Where(r => r.Tipo == tipo)
                 .FirstOrDefaultAsync();
@@ -759,20 +873,16 @@ namespace AppNetCredenciales.Data
         {
             return await _connection.Table<models.Usuario>().ToListAsync();
         }
-       
+
         public async Task<int> SaveUsuarioAsync(models.Usuario usuario)
         {
-            if (usuario == null) return 0;
-
             if (usuario.UsuarioId == 0)
             {
-                await _connection.InsertAsync(usuario);
-                return usuario.UsuarioId;
+                return await _connection.InsertAsync(usuario);
             }
             else
             {
-                await _connection.UpdateAsync(usuario);
-                return usuario.UsuarioId;
+                return await _connection.UpdateAsync(usuario);
             }
         }
 

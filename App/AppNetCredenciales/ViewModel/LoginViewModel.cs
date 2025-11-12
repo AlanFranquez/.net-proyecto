@@ -69,6 +69,13 @@ namespace AppNetCredenciales.ViewModel
         {
             var usuarios = await authService.GetUsuarios();
 
+            var eventos = await dbService.GetEspaciosAsync();
+            System.Diagnostics.Debug.WriteLine("DESDE LA FUNCION  SHOW USUARIOS ASYNC, PARA MOSTRAR TAMbien eventos");
+            foreach (var ev in eventos)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Evento] {ev.EspacioId} - {ev.Nombre} - {ev.Descripcion}");
+            }
+
             if (usuarios == null || usuarios.Count == 0)
             {
                 await App.Current.MainPage.DisplayAlert("Usuarios", "No hay usuarios registrados.", "OK");

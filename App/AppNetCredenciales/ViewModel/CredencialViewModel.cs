@@ -2,6 +2,7 @@
 using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
@@ -30,7 +31,7 @@ public class CredencialViewModel : INotifyPropertyChanged
     public async Task LoadCredencialAsync()
     {
         // 🔹 Obtener usuario logueado
-        var usuario = await _auth.GetUserLogged();
+        var usuario = await _db.GetLoggedUserAsync();
 
         Credencial = usuario != null ?
             await _db.GetCredencialByIdAsync(usuario.CredencialId)
@@ -39,6 +40,21 @@ public class CredencialViewModel : INotifyPropertyChanged
         // 🔹 Si no existe, crear una credencial de ejemplo
         if (Credencial == null)
         {
+
+            var credenciales = await _db.GetCredencialesAsync();
+            Debug.WriteLine("Buscando credenciales para el usuario: " + usuario.idApi);
+            foreach (var a in credenciales)
+            {
+
+                Debug.WriteLine($"{a.CredencialId} - {a.usuarioIdApi}");
+                if(a.usuarioIdApi == usuario.idApi)
+                {
+                    Credencial = a;
+                    return;
+                }
+            }
+            
+
             Credencial = new Credencial
             {
                 Tipo = CredencialTipo.Campus,
