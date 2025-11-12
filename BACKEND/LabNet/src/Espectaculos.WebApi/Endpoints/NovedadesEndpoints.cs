@@ -1,5 +1,10 @@
 ﻿using MediatR;
-using Espectaculos.Domain.Enums;
+using NTipo = Espectaculos.Domain.Enums.NotificacionTipo;
+using Espectaculos.Application.Novedades.Queries;
+using Espectaculos.Application.Novedades.Commands.CreateNovedad;
+using Espectaculos.Application.Novedades.Commands.UpdateNovedad;
+using Espectaculos.Application.Novedades.Commands.PublishUnpublish;
+using Espectaculos.Application.Novedades.Commands.DeleteNovedad;
 
 namespace Espectaculos.WebApi.Endpoints.Novedades;
 
@@ -9,8 +14,8 @@ public static class NovedadesEndpoints
     {
         var g = app.MapGroup("/api/novedades").WithTags("Novedades");
 
-        g.MapGet("", async (string? q, NotificacionTipo? tipo, bool published = false, bool active = false,
-                int page = 1, int pageSize = 20, ISender sender)
+        g.MapGet("", async (ISender sender, string? q, NTipo? tipo, bool published = false, bool active = false,
+                            int page = 1, int pageSize = 20)
             => await sender.Send(new ListarNovedadesQuery(q, tipo, published, active, page, pageSize)));
 
         g.MapPost("", async (CreateNovedadCommand cmd, ISender sender) =>
@@ -21,7 +26,7 @@ public static class NovedadesEndpoints
 
         g.MapPut("{id:guid}", async (Guid id, UpdateNovedadCommand cmd, ISender sender) =>
         {
-            if (id != cmd.Id) return Results.BadRequest("Id mismatch");
+            if (id != cmd.NovedadId) return Results.BadRequest("Id mismatch");
             await sender.Send(cmd);
             return Results.NoContent();
         });

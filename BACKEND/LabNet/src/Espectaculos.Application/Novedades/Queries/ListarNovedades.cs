@@ -1,19 +1,18 @@
-﻿namespace Espectaculos.Application.Novedades.Queries;
-
-public class ListarNovedades
-{
-    
-}// ListarNovedadesQuery.cs
+﻿using MediatR;
+using System.Linq;
 using Espectaculos.Application.Abstractions.Repositories;
-using Espectaculos.Domain.Enums;
-using MediatR;
+namespace Espectaculos.Application.Novedades.Queries;
+public record ListarNovedadesQuery(
+    string? Q,
+    Espectaculos.Domain.Enums.NotificacionTipo? Tipo, // ⬅️ fully-qualified
+    bool OnlyPublished,
+    bool OnlyActive,
+    int Page = 1,
+    int PageSize = 20
+) : IRequest<(IReadOnlyList<NovedadDto> Items, int Total)>;
 
-public record ListarNovedadesQuery(string? Q, NotificacionTipo? Tipo, bool OnlyPublished, bool OnlyActive,
-    int Page = 1, int PageSize = 20)
-    : IRequest<(IReadOnlyList<NovedadDto> Items, int Total)>;
-
-public record NovedadDto(Guid Id, string Titulo, string? Contenido, NotificacionTipo Tipo,
-    bool Publicado, DateTime? DesdeUtc, DateTime? HastaUtc);
+public record NovedadDto(Guid Id, string Titulo, string? Contenido,
+    Espectaculos.Domain.Enums.NotificacionTipo Tipo, bool Publicado, DateTime? DesdeUtc, DateTime? HastaUtc);
 
 public class ListarNovedadesHandler
     : IRequestHandler<ListarNovedadesQuery, (IReadOnlyList<NovedadDto> Items, int Total)>
