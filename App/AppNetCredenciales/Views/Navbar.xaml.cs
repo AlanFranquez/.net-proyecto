@@ -36,14 +36,12 @@ namespace AppNetCredenciales.Views
             _db = App.Services?.GetRequiredService<LocalDBService>()
                   ?? throw new InvalidOperationException("LocalDBService not registered in DI.");
 
-            // check user roles (fire-and-forget)
-            _ = CheckIfFuncionarioAsync();
-
             NavigateCommand = new Command<string>(async destino =>
             {
                 if (string.IsNullOrEmpty(destino)) return;
                 try
                 {
+                    Debug.WriteLine($"[Navbar] Navigating to: {destino}");
                     await Shell.Current.GoToAsync(destino);
                 }
                 catch (Exception ex)
@@ -58,6 +56,7 @@ namespace AppNetCredenciales.Views
             {
                 try
                 {
+                    Debug.WriteLine("[Navbar] Logout command executed");
                     SessionManager.Logout();
                     await Shell.Current.GoToAsync("//login");
                 }
@@ -67,9 +66,16 @@ namespace AppNetCredenciales.Views
                 }
             });
 
+            // Set BindingContext FIRST
             BindingContext = this;
 
-            }
+            // Add debug logging
+            Debug.WriteLine($"[Navbar] Constructor - BindingContext set: {BindingContext != null}");
+            Debug.WriteLine($"[Navbar] Constructor - Initial IsFuncionario: {IsFuncionario}");
+
+            // Check user roles (fire-and-forget)
+            _ = CheckIfFuncionarioAsync();
+        }
 
         private async Task CheckIfFuncionarioAsync()
         {

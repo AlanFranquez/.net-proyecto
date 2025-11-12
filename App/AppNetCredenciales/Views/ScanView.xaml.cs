@@ -140,14 +140,33 @@ namespace AppNetCredenciales.Views
             var usuario = await _db.GetLoggedUserAsync();
             if (usuario == null) return;
 
-            if (!int.TryParse(eventoId, out int eventoIdInt))
+            
+
+            var eventos = await _db.GetEspaciosAsync();
+            Espacio evento = null;
+            foreach (var e in eventos)
             {
-                await DisplayAlert("Evento no válido", $"El ID de evento '{eventoId}' no es válido.", "Cerrar");
-                return;
+                if(e == null) continue;
+                if (e.idApi == eventoId)
+                {
+                    evento = e;
+                }
             }
 
-            var evento = await _db.GetEventoByIdAsync(eventoIdInt);
-            var cred = await _db.GetCredencialByCryptoIdAsync(cryptoId);
+
+            var credenciales = await _db.GetCredencialesAsync();
+
+            Credencial cred = null;
+
+            foreach(var c in credenciales)
+            {
+
+                if (c == null) continue;
+                if(c.IdCriptografico == cryptoId)
+                {
+                    cred = c;
+                }
+            }
 
             if (cred == null || evento == null)
             {
@@ -159,7 +178,7 @@ namespace AppNetCredenciales.Views
                     CredencialId = usuario.CredencialId,
                     Credencial = usuario.Credencial,
                     Espacio = evento,
-                    EspacioId = evento?.EspacioId ?? 0,
+                    EspacioId = evento?.idApi ?? 0,
                     Resultado = AccesoTipo.Denegar
                 };
 

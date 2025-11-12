@@ -28,65 +28,42 @@
               VerticalOptions="Center"
               HorizontalOptions="Fill">
 
-            <!-- Left side QR button only visible for Funcionario -->
-            <Grid Grid.Column="0" WidthRequest="120" HeightRequest="48" HorizontalOptions="Start" VerticalOptions="Center">
-                <ImageButton Source="qrcode.png"
-                            Style="{StaticResource NavIconButton}"
-                            IsVisible="{Binding IsFuncionario}"
-                            Command="{Binding NavigateCommand}"
-                            CommandParameter="scan"
-                            HorizontalOptions="Center"
-                            VerticalOptions="Center"
-                            AutomationId="scanLogoButton" />
-            </Grid>
+            <!-- QR button for Funcionario -->
+            <ImageButton Grid.Column="0"
+                        Source="qrcode.png"
+                        Style="{StaticResource NavIconButton}"
+                        IsVisible="{Binding IsFuncionario}"
+                        Command="{Binding NavigateCommand}"
+                        CommandParameter="scan"
+                        HorizontalOptions="Start" />
 
-            <!-- Navigation buttons container -->
-            <StackLayout Orientation="Horizontal"
-                         Grid.Column="2"
+            <!-- Regular user navigation icons -->
+            <StackLayout Grid.Column="2"
+                         Orientation="Horizontal"
                          HorizontalOptions="End"
                          VerticalOptions="Center"
-                         Spacing="8" 
-                         Padding="0">
+                         Spacing="8">
 
-                <!-- Regular user buttons - Use DataTrigger to hide when IsFuncionario is true -->
+                <!-- Icons for NON-funcionario users -->
                 <ImageButton Source="idcard.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
-                             CommandParameter="credencial">
-                    <ImageButton.Triggers>
-                        <DataTrigger TargetType="ImageButton" Binding="{Binding IsFuncionario}" Value="True">
-                            <Setter Property="IsVisible" Value="False" />
-                        </DataTrigger>
-                    </ImageButton.Triggers>
-                </ImageButton>
+                             CommandParameter="credencial"/>
 
                 <ImageButton Source="calendarevents.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
-                             CommandParameter="espacio">
-                    <ImageButton.Triggers>
-                        <DataTrigger TargetType="ImageButton" Binding="{Binding IsFuncionario}" Value="True">
-                            <Setter Property="IsVisible" Value="False" />
-                        </DataTrigger>
-                    </ImageButton.Triggers>
-                </ImageButton>
+                             CommandParameter="espacio"/>
 
                 <ImageButton Source="clock.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
-                             CommandParameter="historial">
-                    <ImageButton.Triggers>
-                        <DataTrigger TargetType="ImageButton" Binding="{Binding IsFuncionario}" Value="True">
-                            <Setter Property="IsVisible" Value="False" />
-                        </DataTrigger>
-                    </ImageButton.Triggers>
-                </ImageButton>
+                             CommandParameter="historial"/>
 
-                <!-- Logout button - always visible -->
+                <!-- Logout button - ALWAYS VISIBLE for everyone -->
                 <ImageButton Source="logout.png"
                              Style="{StaticResource NavIconButton}"
-                             Command="{Binding LogoutCommand}"
-                             CommandParameter="logout" />
+                             Command="{Binding LogoutCommand}" />
             </StackLayout>
         </Grid>
     </Frame>

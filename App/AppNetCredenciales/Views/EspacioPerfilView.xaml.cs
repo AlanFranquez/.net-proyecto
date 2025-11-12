@@ -63,20 +63,10 @@ public partial class EspacioPerfilView : ContentPage
                 return;
             }
 
-            Debug.WriteLine($"[EspacioPerfil] Found matching espacio:");
-            Debug.WriteLine($"[EspacioPerfil] - idApi: {espacio.idApi}");
-            Debug.WriteLine($"[EspacioPerfil] - Nombre: '{espacio.Nombre}'");
-            Debug.WriteLine($"[EspacioPerfil] - Tipo: {espacio.Tipo}");
-            Debug.WriteLine($"[EspacioPerfil] - Activo: {espacio.Activo}");
-            Debug.WriteLine($"[EspacioPerfil] - EspacioId: {espacio.EspacioId}");
-            Debug.WriteLine($"[EspacioPerfil] - Descripcion: '{espacio.Descripcion}'");
-
-            // Check if the space data is valid
             if (string.IsNullOrEmpty(espacio.Nombre) || espacio.Nombre == "string")
             {
                 Debug.WriteLine($"[EspacioPerfil] WARNING: Espacio has invalid or corrupted name data!");
 
-                // Try to force refresh from API if connected
                 if (connectiviyService.IsConnected)
                 {
                     Debug.WriteLine($"[EspacioPerfil] Attempting to refresh espacios from API...");
@@ -85,12 +75,8 @@ public partial class EspacioPerfilView : ContentPage
                         var refreshedEspacios = await this._db.SincronizarEspaciosFromBack();
                         Debug.WriteLine($"[EspacioPerfil] Refreshed {refreshedEspacios?.Count ?? 0} espacios from API");
 
-                        // Try to find the space again
                         espacio = refreshedEspacios.FirstOrDefault(e => e.idApi == id);
-                        if (espacio != null)
-                        {
-                            Debug.WriteLine($"[EspacioPerfil] After refresh - Nombre: '{espacio.Nombre}'");
-                        }
+                        
                     }
                     catch (Exception refreshEx)
                     {
@@ -99,12 +85,10 @@ public partial class EspacioPerfilView : ContentPage
                 }
             }
 
-            // Set the BindingContext to the Espacio instance so XAML bindings work
             BindingContext = espacio;
 
             Debug.WriteLine($"[EspacioPerfil] BindingContext set successfully");
 
-            // Force property change notification
             OnPropertyChanged(nameof(BindingContext));
         }
         catch (Exception ex)
@@ -130,13 +114,12 @@ public partial class EspacioPerfilView : ContentPage
                 {
                     cred = a;
                 }
-                Debug.WriteLine($"DATOS DE CREDENCIALES -> {a.CredencialId} - {a.idApi} - {a.usuarioIdApi}");
             }
             var espacio = BindingContext as Espacio;
 
             if (cred != null && espacio != null && !string.IsNullOrEmpty(cred.IdCriptografico))
             {
-                string qrData = $"{cred.IdCriptografico}|{espacio.EspacioId}";
+                string qrData = $"{cred.IdCriptografico}|{espacio.idApi}";
                 var modal = new QRModalPage(qrData);
                 await Navigation.PushModalAsync(modal);
             }
@@ -147,7 +130,6 @@ public partial class EspacioPerfilView : ContentPage
         }
         catch (Exception ex)
         {
-            Debug.WriteLine($"[EspacioPerfil] OnShowQRClicked error: {ex}");
             await DisplayAlert("Error", "Ocurrió un error.", "OK");
         }
     }
