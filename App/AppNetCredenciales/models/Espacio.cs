@@ -46,7 +46,7 @@ namespace AppNetCredenciales.models
         public string? idApi { get; set; }
         public string? Descripcion { get; set; }
 
-        public string[]? beneficioIds { get; set; }
+        //public string[]? beneficioIds { get; set; }
 
     }
 }

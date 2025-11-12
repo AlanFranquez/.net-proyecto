@@ -1,5 +1,6 @@
 using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
+using AppNetCredenciales.Services;
 using System.Diagnostics;
 
 namespace AppNetCredenciales.Views;
@@ -7,8 +8,9 @@ namespace AppNetCredenciales.Views;
 [QueryProperty(nameof(EspacioId), "espacioId")]
 public partial class EspacioPerfilView : ContentPage
 {
-    private int _espacioId;
+    private string _espacioId;
     private readonly LocalDBService _db;
+    private readonly ConnectivityService connectiviyService = new ConnectivityService();
 
     public EspacioPerfilView() : this(MauiProgram.ServiceProvider?.GetService<LocalDBService>()
                                       ?? throw new InvalidOperationException("LocalDBService not registered"))
@@ -21,7 +23,7 @@ public partial class EspacioPerfilView : ContentPage
         InitializeComponent();
     }
 
-    public int EspacioId
+    public string EspacioId
     {
         get => _espacioId;
         set
@@ -31,11 +33,11 @@ public partial class EspacioPerfilView : ContentPage
         }
     }
 
-    private async Task CargarEspacioAsync(int id)
+    private async Task CargarEspacioAsync(string id)
     {
         try
         {
-            if (id <= 0)
+            if (id == null)
             {
                 Debug.WriteLine($"[EspacioPerfil] Invalid id: {id}");
                 return;
@@ -45,27 +47,70 @@ public partial class EspacioPerfilView : ContentPage
 
             var espacios = await this._db.GetEspaciosAsync();
 
+            Debug.WriteLine($"[EspacioPerfil] Total espacios found: {espacios?.Count ?? 0}");
+
             foreach (var e in espacios)
             {
-                Debug.WriteLine($"[EspacioPerfil] Found Espacio: {e.EspacioId} - {e.Nombre}");
+                Debug.WriteLine($"[EspacioPerfil] Found Espacio: idApi={e.idApi}, Nombre='{e.Nombre}', Tipo={e.Tipo}, Activo={e.Activo}, EspacioId={e.EspacioId}");
             }
 
-            var espacio = espacios.FirstOrDefault(e => e.EspacioId == id);
+            var espacio = espacios.FirstOrDefault(e => e.idApi == id);
 
             if (espacio == null)
             {
                 Debug.WriteLine($"[EspacioPerfil] Espacio not found for id {id}");
-                await DisplayAlert("Error", "Espacio no encontrado.", "OK");
+                await DisplayAlert("Error", $"Espacio con ID {id} no encontrado.", "OK");
                 return;
             }
 
-            // Set the BindingContext to the Espacio instance so XAML {Binding Nombre}, {Binding Lugar}, etc. work.
+            Debug.WriteLine($"[EspacioPerfil] Found matching espacio:");
+            Debug.WriteLine($"[EspacioPerfil] - idApi: {espacio.idApi}");
+            Debug.WriteLine($"[EspacioPerfil] - Nombre: '{espacio.Nombre}'");
+            Debug.WriteLine($"[EspacioPerfil] - Tipo: {espacio.Tipo}");
+            Debug.WriteLine($"[EspacioPerfil] - Activo: {espacio.Activo}");
+            Debug.WriteLine($"[EspacioPerfil] - EspacioId: {espacio.EspacioId}");
+            Debug.WriteLine($"[EspacioPerfil] - Descripcion: '{espacio.Descripcion}'");
+
+            // Check if the space data is valid
+            if (string.IsNullOrEmpty(espacio.Nombre) || espacio.Nombre == "string")
+            {
+                Debug.WriteLine($"[EspacioPerfil] WARNING: Espacio has invalid or corrupted name data!");
+
+                // Try to force refresh from API if connected
+                if (connectiviyService.IsConnected)
+                {
+                    Debug.WriteLine($"[EspacioPerfil] Attempting to refresh espacios from API...");
+                    try
+                    {
+                        var refreshedEspacios = await this._db.SincronizarEspaciosFromBack();
+                        Debug.WriteLine($"[EspacioPerfil] Refreshed {refreshedEspacios?.Count ?? 0} espacios from API");
+
+                        // Try to find the space again
+                        espacio = refreshedEspacios.FirstOrDefault(e => e.idApi == id);
+                        if (espacio != null)
+                        {
+                            Debug.WriteLine($"[EspacioPerfil] After refresh - Nombre: '{espacio.Nombre}'");
+                        }
+                    }
+                    catch (Exception refreshEx)
+                    {
+                        Debug.WriteLine($"[EspacioPerfil] Failed to refresh from API: {refreshEx.Message}");
+                    }
+                }
+            }
+
+            // Set the BindingContext to the Espacio instance so XAML bindings work
             BindingContext = espacio;
+
+            Debug.WriteLine($"[EspacioPerfil] BindingContext set successfully");
+
+            // Force property change notification
+            OnPropertyChanged(nameof(BindingContext));
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"[EspacioPerfil] CargarEspacioAsync error: {ex}");
-            await DisplayAlert("Error", "Ocurrió un error cargando el espacio.", "OK");
+            await DisplayAlert("Error", $"Ocurrió un error cargando el espacio: {ex.Message}", "OK");
         }
     }
 
@@ -75,19 +120,16 @@ public partial class EspacioPerfilView : ContentPage
         {
             var usuario = await _db.GetLoggedUserAsync();
 
-            if (usuario != null && usuario.Credencial == null && usuario.CredencialId > 0)
-            {
-                usuario.Credencial = await _db.GetCredencialByIdAsync(usuario.CredencialId);
-            }
 
-            var cred = usuario?.Credencial;
-
-            Debug.WriteLine($"CREDENCIAL DEBUG => {usuario.CredencialId}");
-
+            Credencial cred = null;
             var getAllCredenciales = await _db.GetCredencialesAsync();
 
             foreach(var a in getAllCredenciales)
             {
+                if(a.usuarioIdApi == usuario.idApi)
+                {
+                    cred = a;
+                }
                 Debug.WriteLine($"DATOS DE CREDENCIALES -> {a.CredencialId} - {a.idApi} - {a.usuarioIdApi}");
             }
             var espacio = BindingContext as Espacio;

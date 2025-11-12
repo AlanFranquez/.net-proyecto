@@ -30,28 +30,18 @@
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
-                    <Label Text="Lugar:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Lugar}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="Descripción:" FontAttributes="Bold" TextColor="Black"/>
+                    <Label Text="{Binding Descripcion}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
-                    <Label Text="Fecha:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Fecha, StringFormat='{0:dd/MM/yyyy HH:mm}'}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="ID Interno:" FontAttributes="Bold" TextColor="Black"/>
+                    <Label Text="{Binding EspacioId}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
-                    <Label Text="Stock:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Stock}" Grid.Column="1" TextColor="Black"/>
-                </Grid>
-
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
-                    <Label Text="Disponible:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Disponible}" Grid.Column="1" TextColor="Black"/>
-                </Grid>
-
-                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto" Margin="0,5">
-                    <Label Text="Publicado:" FontAttributes="Bold" TextColor="Black"/>
-                    <Label Text="{Binding Publicado}" Grid.Column="1" TextColor="Black"/>
+                    <Label Text="Falta Carga:" FontAttributes="Bold" TextColor="Black"/>
+                    <Label Text="{Binding faltaCarga}" Grid.Column="1" TextColor="Black"/>
                 </Grid>
 
                 <BoxView HeightRequest="24" Color="Transparent" />

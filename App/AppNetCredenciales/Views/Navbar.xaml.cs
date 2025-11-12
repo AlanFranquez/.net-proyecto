@@ -68,7 +68,8 @@ namespace AppNetCredenciales.Views
             });
 
             BindingContext = this;
-        }
+
+            }
 
         private async Task CheckIfFuncionarioAsync()
         {
@@ -81,9 +82,6 @@ namespace AppNetCredenciales.Views
                     return;
                 }
 
-                Debug.WriteLine($"[Navbar] Checking roles for user: {usuario.Email}");
-                Debug.WriteLine($"[Navbar] RolesIDsJson: {usuario.RolesIDsJson}");
-                Debug.WriteLine($"[Navbar] RolesIDs array length: {usuario.RolesIDs?.Length ?? 0}");
 
                 var userRoleIds = usuario.RolesIDs ?? Array.Empty<string>();
                 bool hasFuncionarioFromArray = false;
@@ -98,14 +96,12 @@ namespace AppNetCredenciales.Views
                         Debug.WriteLine($"[Navbar] - Role: {role.Tipo}, idApi: {role.idApi}");
                     }
 
-                    Debug.WriteLine($"[Navbar] User's role IDs: [{string.Join(", ", userRoleIds)}]");
 
                     hasFuncionarioFromArray = roles.Any(r =>
                         string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase)
                         && !string.IsNullOrWhiteSpace(r.idApi)
                         && userRoleIds.Contains(r.idApi, StringComparer.OrdinalIgnoreCase));
 
-                    Debug.WriteLine($"[Navbar] Funcionario role found in RolesIDs array: {hasFuncionarioFromArray}");
                 }
 
                 bool hasFuncionarioFromLocal = false;
@@ -132,7 +128,6 @@ namespace AppNetCredenciales.Views
                 
                 Debug.WriteLine($"[Navbar] Final IsFuncionario result: {IsFuncionario}");
 
-                // Force UI update on main thread
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     OnPropertyChanged(nameof(IsFuncionario));

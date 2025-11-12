@@ -33,20 +33,14 @@ public class CredencialViewModel : INotifyPropertyChanged
         // 🔹 Obtener usuario logueado
         var usuario = await _db.GetLoggedUserAsync();
 
-        Credencial = usuario != null ?
-            await _db.GetCredencialByIdAsync(usuario.CredencialId)
-            : null;
-
-        // 🔹 Si no existe, crear una credencial de ejemplo
-        if (Credencial == null)
-        {
+        
 
             var credenciales = await _db.GetCredencialesAsync();
             Debug.WriteLine("Buscando credenciales para el usuario: " + usuario.idApi);
             foreach (var a in credenciales)
             {
 
-                Debug.WriteLine($"{a.CredencialId} - {a.usuarioIdApi}");
+            Debug.WriteLine($"CREDENCIAL ID => {a.usuarioIdApi} !-! ID DEL USUARIO: {usuario.idApi}");
                 if(a.usuarioIdApi == usuario.idApi)
                 {
                     Credencial = a;
@@ -54,6 +48,9 @@ public class CredencialViewModel : INotifyPropertyChanged
                 }
             }
             
+
+            if(Credencial == null)
+        {
 
             Credencial = new Credencial
             {

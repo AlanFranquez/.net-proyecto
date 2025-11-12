@@ -40,8 +40,7 @@ public partial class EspacioView : ContentPage
         if (seleccionado == null)
             return;
 
-        // Match the route registered in AppShell.xaml.cs (espacioPerfil)
-        await Shell.Current.GoToAsync($"espacioPerfil?espacioId={seleccionado.EspacioId}");
+        await Shell.Current.GoToAsync($"espacioPerfil?espacioId={seleccionado.idApi}");
 
         if (sender is CollectionView cv) cv.SelectedItem = null;
     }

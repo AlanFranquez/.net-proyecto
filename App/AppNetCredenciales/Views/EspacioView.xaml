@@ -40,7 +40,6 @@
                                 <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="16" LineBreakMode="TailTruncation" />
                                 <Label Text="{Binding Descripcion}" FontSize="12" TextColor="white" LineBreakMode="TailTruncation" />
                                 <Label Text="{Binding Tipo}" FontSize="12" TextColor="white" LineBreakMode="TailTruncation" />
-
                                 <Label Text="{Binding Activo}" FontSize="12" TextColor="white" LineBreakMode="TailTruncation" />
                             </StackLayout>
                             <Label Grid.Column="2" Text="{Binding EspacioId}" FontSize="12" TextColor="#999" VerticalOptions="Center" HorizontalOptions="End" />
@@ -50,6 +49,7 @@
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <views:Navbar Grid.Row="1" />
+        <!-- Bottom: Navbar - Changed from Grid.Row="1" to Grid.Row="2" -->
+        <views:Navbar Grid.Row="2" />
     </Grid>
 </ContentPage>

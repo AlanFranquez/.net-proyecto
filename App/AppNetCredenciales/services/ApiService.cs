@@ -294,7 +294,7 @@ namespace AppNetCredenciales.Services
 
         public class EspacioDto
         {
-            [JsonPropertyName("espacioId")]
+            [JsonPropertyName("id")]
             public string? EspacioId { get; set; }
             [JsonPropertyName("nombre")]
             public string? Nombre { get; set; }

@@ -16,7 +16,7 @@
         </ResourceDictionary>
     </ContentView.Resources>
 
-     <Frame Padding="8"
+    <Frame Padding="8"
            CornerRadius="12"
            HasShadow="True"
            BackgroundColor="{StaticResource NavBackground}"
@@ -27,7 +27,7 @@
         <Grid ColumnDefinitions="Auto,*,Auto"
               VerticalOptions="Center"
               HorizontalOptions="Fill">
-            
+
             <!-- Left side QR button only visible for Funcionario -->
             <Grid Grid.Column="0" WidthRequest="120" HeightRequest="48" HorizontalOptions="Start" VerticalOptions="Center">
                 <ImageButton Source="qrcode.png"
@@ -40,42 +40,49 @@
                             AutomationId="scanLogoButton" />
             </Grid>
 
-            <!-- Default navigation for regular users -->
-            <StackLayout x:Name="DefaultNav"
-                         Orientation="Horizontal"
+            <!-- Navigation buttons container -->
+            <StackLayout Orientation="Horizontal"
                          Grid.Column="2"
                          HorizontalOptions="End"
                          VerticalOptions="Center"
                          Spacing="8" 
-                         Padding="0"
-                         IsVisible="{Binding IsFuncionario, Converter={StaticResource InvertedBoolConverter}}">
+                         Padding="0">
+
+                <!-- Regular user buttons - Use DataTrigger to hide when IsFuncionario is true -->
                 <ImageButton Source="idcard.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
-                             CommandParameter="credencial" />
+                             CommandParameter="credencial">
+                    <ImageButton.Triggers>
+                        <DataTrigger TargetType="ImageButton" Binding="{Binding IsFuncionario}" Value="True">
+                            <Setter Property="IsVisible" Value="False" />
+                        </DataTrigger>
+                    </ImageButton.Triggers>
+                </ImageButton>
+
                 <ImageButton Source="calendarevents.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
-                             CommandParameter="espacio" />
+                             CommandParameter="espacio">
+                    <ImageButton.Triggers>
+                        <DataTrigger TargetType="ImageButton" Binding="{Binding IsFuncionario}" Value="True">
+                            <Setter Property="IsVisible" Value="False" />
+                        </DataTrigger>
+                    </ImageButton.Triggers>
+                </ImageButton>
+
                 <ImageButton Source="clock.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding NavigateCommand}"
-                             CommandParameter="historial" />
-                <ImageButton Source="logout.png"
-                             Style="{StaticResource NavIconButton}"
-                             Command="{Binding LogoutCommand}"
-                             CommandParameter="logout" />
-            </StackLayout>
+                             CommandParameter="historial">
+                    <ImageButton.Triggers>
+                        <DataTrigger TargetType="ImageButton" Binding="{Binding IsFuncionario}" Value="True">
+                            <Setter Property="IsVisible" Value="False" />
+                        </DataTrigger>
+                    </ImageButton.Triggers>
+                </ImageButton>
 
-            <!-- Navigation for Funcionario users -->
-            <StackLayout x:Name="FuncionarioNav"
-                         Orientation="Horizontal"
-                         Grid.Column="2"
-                         HorizontalOptions="End"
-                         VerticalOptions="Center"
-                         Spacing="8"
-                         Padding="0"
-                         IsVisible="{Binding IsFuncionario}">
+                <!-- Logout button - always visible -->
                 <ImageButton Source="logout.png"
                              Style="{StaticResource NavIconButton}"
                              Command="{Binding LogoutCommand}"

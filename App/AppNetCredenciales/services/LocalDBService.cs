@@ -7,6 +7,7 @@ using SQLite;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -260,6 +261,7 @@ namespace AppNetCredenciales.Data
 
             foreach (var a in apiEspacios)
             {
+                Debug.WriteLine($"ESPACIO A GENERAR => {a.EspacioId}");
                 var nuevo = new Espacio
                 {
                     idApi = a.EspacioId,
