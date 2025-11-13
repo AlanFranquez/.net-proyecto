@@ -9,10 +9,6 @@ resource "aws_cognito_user_pool" "usuarios" {
     require_numbers   = true
     require_symbols   = false
   }
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 resource "aws_cognito_user_pool_client" "app_cliente" {
@@ -27,8 +23,4 @@ resource "aws_cognito_user_pool_client" "app_cliente" {
   ]
 
   generate_secret = false
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
