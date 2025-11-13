@@ -1,6 +1,8 @@
 ﻿using MediatR;
 using System.Linq;
 using Espectaculos.Application.Abstractions.Repositories;
+using Espectaculos.Application.DTOs;
+
 namespace Espectaculos.Application.Novedades.Queries;
 public record ListarNovedadesQuery(
     string? Q,
@@ -10,9 +12,6 @@ public record ListarNovedadesQuery(
     int Page = 1,
     int PageSize = 20
 ) : IRequest<(IReadOnlyList<NovedadDto> Items, int Total)>;
-
-public record NovedadDto(Guid Id, string Titulo, string? Contenido,
-    Espectaculos.Domain.Enums.NotificacionTipo Tipo, bool Publicado, DateTime? DesdeUtc, DateTime? HastaUtc);
 
 public class ListarNovedadesHandler
     : IRequestHandler<ListarNovedadesQuery, (IReadOnlyList<NovedadDto> Items, int Total)>

@@ -30,14 +30,17 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Beneficios
                 return RedirectToPage("/Beneficios/Index", new { area = "Admin" });
             }
 
+            // DateTime? -> DateOnly?
+            DateOnly? ToDateOnly(DateTime? dt) => dt.HasValue ? DateOnly.FromDateTime(dt.Value) : (DateOnly?)null;
+
             Vm = new EditarVm
             {
                 Id = b.BeneficioId,
                 Tipo = b.Tipo,
                 Nombre = b.Nombre,
                 Descripcion = b.Descripcion,
-                VigenciaInicio = b.VigenciaInicio,
-                VigenciaFin = b.VigenciaFin,
+                VigenciaInicio = ToDateOnly(b.VigenciaInicio),
+                VigenciaFin = ToDateOnly(b.VigenciaFin),
                 CupoTotal = b.CupoTotal,
                 CupoPorUsuario = b.CupoPorUsuario,
                 RequiereBiometria = b.RequiereBiometria,
@@ -52,14 +55,18 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Beneficios
             if (!ModelState.IsValid)
                 return Page();
 
+            DateTime? ToUtcDateTime(DateOnly? d) => d.HasValue
+                ? DateTime.SpecifyKind(d.Value.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
+                : (DateTime?)null;
+
             var ok = await _mediator.Send(new UpdateBeneficioCommand
             {
                 Id = Vm.Id,
                 Tipo = Vm.Tipo,
                 Nombre = Vm.Nombre,
                 Descripcion = Vm.Descripcion,
-                VigenciaInicio = Vm.VigenciaInicio,
-                VigenciaFin = Vm.VigenciaFin,
+                VigenciaInicio = ToUtcDateTime(Vm.VigenciaInicio),
+                VigenciaFin = ToUtcDateTime(Vm.VigenciaFin),
                 CupoTotal = Vm.CupoTotal,
                 CupoPorUsuario = Vm.CupoPorUsuario,
                 RequiereBiometria = Vm.RequiereBiometria,
@@ -82,8 +89,8 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Beneficios
             public Espectaculos.Domain.Enums.BeneficioTipo? Tipo { get; set; }
             [Required] public string? Nombre { get; set; }
             public string? Descripcion { get; set; }
-            [DataType(DataType.Date)] public DateTime? VigenciaInicio { get; set; }
-            [DataType(DataType.Date)] public DateTime? VigenciaFin { get; set; }
+            [DataType(DataType.Date)] public DateOnly? VigenciaInicio { get; set; }
+            [DataType(DataType.Date)] public DateOnly? VigenciaFin { get; set; }
             [Range(0, int.MaxValue)] public int? CupoTotal { get; set; }
             [Range(0, int.MaxValue)] public int? CupoPorUsuario { get; set; }
             public bool? RequiereBiometria { get; set; }
