@@ -1,11 +1,15 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: espectaculos-service
+  name: backend-service
+  labels:
+    app: espectaculos
 spec:
-  type: LoadBalancer
-  ports:
-    - port: 80
-      targetPort: 8080
+  type: NodePort
   selector:
     app: espectaculos
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080  # 👈 el contenedor escucha aquí
+      nodePort: 30080

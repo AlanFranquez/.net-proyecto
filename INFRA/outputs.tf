@@ -16,8 +16,14 @@ output "redis_endpoint" {
 output "rds_endpoint" {
   value = aws_db_instance.postgres.endpoint
 }
+output "alb_dns_name" {
+  value = aws_lb.eks_alb.dns_name
+}
 
 # Frontend
 output "s3_bucket_name" {
   value = aws_s3_bucket.frontend.bucket
+}
+output "website_url" {
+  value = aws_s3_bucket_website_configuration.frontend_website.website_endpoint
 }
