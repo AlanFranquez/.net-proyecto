@@ -31,7 +31,7 @@ public partial class AccesoPerfilView : ContentPage
         if (acceso != null)
         {
             // ensure Espacio is loaded for the UI
-            if (acceso.Espacio == null && acceso.EspacioId != 0)
+            if (acceso.Espacio == null && acceso.EspacioIdApi != null)
             {
                 acceso.Espacio = await _db.GetEspacioByIdAsync(acceso.EspacioId);
             }

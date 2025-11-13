@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 
 namespace AppNetCredenciales.models
 {
-
     public enum AccesoTipo
     {
         Permitir,
@@ -23,28 +22,36 @@ namespace AppNetCredenciales.models
     [SQLite.Table("EventoAccesos")]
     public class EventoAcceso
     {
-
         [PrimaryKey]
         [AutoIncrement]
         [SQLite.Column("id")]
         public int EventoId { get; set; }
+
         public DateTime MomentoDeAcceso { get; set; }
-        
+
+        // ID local de la credencial (para relaciones locales)
         public int CredencialId { get; set; }
 
-        public string CredencialIdApi { get; set; }
+        // ID de API de la credencial (GUID para API)
+        [SQLite.Column("credencial_id_api")]
+        public string? CredencialIdApi { get; set; }
 
         [SQLite.Column("idApi")]
-        public string idApi { get; set; }
+        public string? idApi { get; set; }
 
-        [Ignore]        
-        public Credencial Credencial { get; set; } = default!;
+        [Ignore]
+        public Credencial? Credencial { get; set; }
+
+        // ID local del espacio (entero para relaciones locales)
+        [SQLite.Column("espacio_id")]
         public int EspacioId { get; set; }
 
+        // ID de API del espacio (GUID para API)
+        [SQLite.Column("espacio_id_api")]
         public string? EspacioIdApi { get; set; }
 
         [Ignore]
-        public Espacio Espacio { get; set; } = default!;
+        public Espacio? Espacio { get; set; }
 
         [Ignore]
         public AccesoTipo Resultado { get; set; }

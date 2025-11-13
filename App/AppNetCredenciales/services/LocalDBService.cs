@@ -56,38 +56,62 @@ namespace AppNetCredenciales.Data
                     return evento;
                 }
 
+                string? credencialApiId = evento.CredencialIdApi;
+                string? espacioApiId = evento.EspacioIdApi;
+
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Preparing to push evento:");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - CredencialIdApi: '{credencialApiId}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - EspacioIdApi: '{espacioApiId}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - Resultado: {evento.Resultado}");
+
+                // Verificar que tenemos los IDs necesarios antes de enviar al API
+                if (string.IsNullOrEmpty(credencialApiId))
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ⚠️ Cannot push evento: missing CredencialIdApi");
+                    return evento;
+                }
+
+                if (string.IsNullOrEmpty(espacioApiId))
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ⚠️ Cannot push evento: missing EspacioIdApi");
+                    return evento;
+                }
+
                 var dto = new ApiService.EventoAccesoDto
                 {
                     EventoAccesoId = evento.idApi,
                     MomentoDeAcceso = evento.MomentoDeAcceso,
-                    CredencialId = evento.Credencial?.idApi ?? evento.CredencialIdApi,
-                    EspacioId = evento.Espacio?.idApi ?? evento.EspacioIdApi,
+                    CredencialId = credencialApiId, 
+                    EspacioId = espacioApiId, 
                     Resultado = evento.ResultadoStr,
                     Motivo = evento.Motivo,
                     Modo = evento.ModoStr,
                     Firma = evento.Firma
                 };
 
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Sending DTO to API:");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - CredencialId: '{dto.CredencialId}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - EspacioId: '{dto.EspacioId}'");
+
                 var created = await apiService.CreateEventoAccesoAsync(dto);
                 if (created != null)
                 {
-                 
                     if (!string.IsNullOrWhiteSpace(created.EventoAccesoId))
                     {
                         evento.idApi = created.EventoAccesoId;
                         await SaveEventoAccesoAsync(evento);
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Evento pushed to API, id={evento.idApi}");
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Evento pushed successfully, id={evento.idApi}");
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine("[LocalDBService] API did not return a created EventoAcceso.");
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ❌ API did not return a created EventoAcceso.");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Push evento error: {ex}");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Push evento error: {ex}");
                 // keep local record; will try again on next sync
             }
 

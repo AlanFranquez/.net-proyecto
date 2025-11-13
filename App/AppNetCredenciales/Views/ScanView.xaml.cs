@@ -1,4 +1,4 @@
-using AppNetCredenciales.Data;
+﻿using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
 using AppNetCredenciales.Services;
 using CommunityToolkit.Maui.Views;
@@ -219,7 +219,7 @@ namespace AppNetCredenciales.Views
 
             if (cred == null || evento == null)
             {
-                await DisplayAlert("Credencial no reconocida", $"No se encontr� la credencial para '{cryptoId}'.", "Cerrar");
+                await DisplayAlert("Credencial no reconocida", $"No se encontró la credencial para '{cryptoId}'.", "Cerrar");
 
                 var evNegado = new EventoAcceso
                 {
@@ -227,8 +227,13 @@ namespace AppNetCredenciales.Views
                     CredencialId = usuario.CredencialId,
                     Credencial = usuario.Credencial,
                     Espacio = evento,
+<<<<<<< Updated upstream
                     EspacioId = evento?.EspacioId ?? 0,
                     EspacioIdApi = evento?.idApi,
+=======
+                    EspacioId = evento.EspacioId,
+                    EspacioIdApi = evento.idApi,
+>>>>>>> Stashed changes
                     Resultado = AccesoTipo.Denegar
                 };
 
