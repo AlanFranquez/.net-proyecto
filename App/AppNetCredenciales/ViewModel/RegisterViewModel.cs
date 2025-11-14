@@ -3,6 +3,8 @@ using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using AppNetCredenciales.Services;
 using AppNetCredenciales.Views;
+using CommunityToolkit.Maui.Converters;
+using Microsoft.Maui.ApplicationModel;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Data;
@@ -131,6 +133,7 @@ namespace AppNetCredenciales.ViewModel
                 Password = Password
             };
 
+            // Guardar usuario localmente primero
             var saved = await _db.SaveUsuarioAsync(usuario);
             if (saved <= 0)
             {
@@ -140,16 +143,15 @@ namespace AppNetCredenciales.ViewModel
             }
             if (usuario.UsuarioId == 0) usuario.UsuarioId = saved;
 
+            System.Diagnostics.Debug.WriteLine($"[Register] Usuario guardado localmente con ID: {usuario.UsuarioId}");
+
+            // Intentar crear usuario en API
             if (_connectivityService.IsConnected)
             {
                 try
                 {
                     var seleccionadasRoles = Roles.Where(r => r.IsSelected).ToList();
 
-                    foreach (var r in seleccionadasRoles)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"[Register] Selected role: {r.Role.Tipo} (ID API: {r.Role.idApi})");
-                    }
                     var nuevoDto = new ApiService.NewUsuarioDto
                     {
                         Nombre = usuario.Nombre,
@@ -163,32 +165,50 @@ namespace AppNetCredenciales.ViewModel
                                     .ToArray()
                     };
 
-                    if(_connectivityService.IsConnected)
-                    {
+                    System.Diagnostics.Debug.WriteLine($"[Register] Creando usuario en API...");
 
-                        var apiResult = await _api_service_create_usuario_safe(nuevoDto);
-                    } else
+                    var apiUsuarioId = await _api_service_create_usuario_safe(nuevoDto);
+                    if (!string.IsNullOrWhiteSpace(apiUsuarioId))
                     {
+                        // ✅ Solo actualizar el idApi del usuario existente
+                        usuario.idApi = apiUsuarioId;
+                        await _db.SaveUsuarioAsync(usuario); // Guardar con el idApi del API
+
+                        System.Diagnostics.Debug.WriteLine($"[Register] ✅ Usuario creado en API con ID: {usuario.idApi}");
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine("[Register] ⚠️ No se pudo crear usuario en API, generando GUID local");
                         usuario.idApi = Guid.NewGuid().ToString();
-                        
                         await _db.SaveUsuarioAsync(usuario);
                     }
-
-
-                    
                 }
                 catch (Exception ex)
                 {
-                    // network error or server error — continue but mark for sync
                     System.Diagnostics.Debug.WriteLine($"[Register] Error creating user on API: {ex.Message}");
+                    // Si hay error, generar GUID local como fallback
+                    usuario.idApi = Guid.NewGuid().ToString();
+                    await _db.SaveUsuarioAsync(usuario);
                 }
             }
             else
             {
                 usuario.FaltaCargar = true;
+                usuario.idApi = Guid.NewGuid().ToString();
                 await _db.SaveUsuarioAsync(usuario);
             }
 
+            // Verificar que tenemos idApi antes de crear credencial
+            if (string.IsNullOrWhiteSpace(usuario.idApi))
+            {
+                System.Diagnostics.Debug.WriteLine("[Register] ❌ ERROR: Usuario sin idApi después de todos los intentos");
+                usuario.idApi = Guid.NewGuid().ToString(); // Fallback final
+                await _db.SaveUsuarioAsync(usuario);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[Register] Creando credencial para usuario con idApi: '{usuario.idApi}'");
+
+            // Crear credencial
             var credencial = new Credencial
             {
                 Tipo = CredencialTipo.Campus,
@@ -196,25 +216,21 @@ namespace AppNetCredenciales.ViewModel
                 IdCriptografico = Guid.NewGuid().ToString("N"),
                 FechaEmision = DateTime.UtcNow,
                 FechaExpiracion = DateTime.UtcNow.AddYears(1),
-                FaltaCarga = true, 
-                usuarioIdApi = usuario.idApi
+                FaltaCarga = true,
+                usuarioIdApi = usuario.idApi // ✅ Ahora siempre tenemos un idApi válido
             };
 
+            System.Diagnostics.Debug.WriteLine($"[Register] Credencial con usuarioIdApi: '{credencial.usuarioIdApi}'");
+
+            // Guardar credencial (esto ya maneja la creación en API internamente)
             var createdCredId = await _db.SaveCredencialAsync(credencial);
 
             if (createdCredId > 0)
             {
                 usuario.CredencialId = createdCredId;
                 await _db.SaveUsuarioAsync(usuario);
+                System.Diagnostics.Debug.WriteLine($"[Register] ✅ Credencial guardada con ID local: {createdCredId}");
             }
-            else
-            {
-                // fallback: mark credential for sync later and ensure saved locally
-                credencial.FaltaCarga = true;
-                await _db.SaveCredencialAsync(credencial);
-            }
-
-            
 
             await view.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
             await view.Navigation.PopAsync();
@@ -223,29 +239,46 @@ namespace AppNetCredenciales.ViewModel
             return true;
         }
 
- 
-        private async Task<ApiService.UsuarioDto?> _api_service_create_usuario_safe(ApiService.NewUsuarioDto dto)
+        // Cambiar el método helper para que solo devuelva el usuarioId (string)
+        private async Task<string?> _api_service_create_usuario_safe(ApiService.NewUsuarioDto dto)
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("[Register] Intentando crear usuario en API...");
 
                 var apiResult = await _apiService.CreateUsuarioAsync(dto);
                 if (apiResult != null && !string.IsNullOrWhiteSpace(apiResult.UsuarioId))
-                    return apiResult;
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Register] ✅ Usuario creado directamente, ID: {apiResult.UsuarioId}");
+                    return apiResult.UsuarioId;
+                }
 
-                // fallback: try to find created user by email
+                System.Diagnostics.Debug.WriteLine("[Register] No se pudo crear directamente, buscando por email...");
+
+                // Fallback: buscar usuario creado por email
                 var usuarios = await _apiService.GetUsuariosAsync();
-                var matched = usuarios.FirstOrDefault(u => string.Equals(u.Email?.Trim(), dto.Email?.Trim(), StringComparison.OrdinalIgnoreCase));
-                return matched;
+                var matched = usuarios.FirstOrDefault(u =>
+                    string.Equals(u.Email?.Trim(), dto.Email?.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (matched != null && !string.IsNullOrWhiteSpace(matched.UsuarioId))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Register] ✅ Usuario encontrado en API, ID: {matched.UsuarioId}");
+                    return matched.UsuarioId;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[Register] ❌ Usuario no encontrado en API");
+                    return null;
+                }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Register helper] API create/find error: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[Register] ❌ Error en _api_service_create_usuario_safe: {ex.Message}");
                 return null;
             }
         }
 
-   
+
 
         public class SelectableRole : INotifyPropertyChanged
         {

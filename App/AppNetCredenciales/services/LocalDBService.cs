@@ -46,6 +46,12 @@ namespace AppNetCredenciales.Data
         {
             if (evento == null) throw new ArgumentNullException(nameof(evento));
 
+            // ✅ Asegurar que la fecha esté en UTC
+            if (evento.MomentoDeAcceso.Kind != DateTimeKind.Utc)
+            {
+                evento.MomentoDeAcceso = evento.MomentoDeAcceso.ToUniversalTime();
+            }
+
             await SaveEventoAccesoAsync(evento);
 
             try
@@ -59,12 +65,12 @@ namespace AppNetCredenciales.Data
                 string? credencialApiId = evento.CredencialIdApi;
                 string? espacioApiId = evento.EspacioIdApi;
 
-                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Preparing to push evento:");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] === PREPARING TO PUSH EVENTO ===");
                 System.Diagnostics.Debug.WriteLine($"[LocalDBService] - CredencialIdApi: '{credencialApiId}'");
                 System.Diagnostics.Debug.WriteLine($"[LocalDBService] - EspacioIdApi: '{espacioApiId}'");
                 System.Diagnostics.Debug.WriteLine($"[LocalDBService] - Resultado: {evento.Resultado}");
 
-                // Verificar que tenemos los IDs necesarios antes de enviar al API
+                // Verificar que tenemos los IDs necesarios
                 if (string.IsNullOrEmpty(credencialApiId))
                 {
                     System.Diagnostics.Debug.WriteLine("[LocalDBService] ⚠️ Cannot push evento: missing CredencialIdApi");
@@ -77,28 +83,36 @@ namespace AppNetCredenciales.Data
                     return evento;
                 }
 
+                // ✅ Crear DTO con la estructura correcta
                 var dto = new ApiService.EventoAccesoDto
                 {
-                    EventoAccesoId = evento.idApi,
-                    MomentoDeAcceso = evento.MomentoDeAcceso,
-                    CredencialId = credencialApiId, 
-                    EspacioId = espacioApiId, 
-                    Resultado = evento.ResultadoStr,
-                    Motivo = evento.Motivo,
-                    Modo = evento.ModoStr,
-                    Firma = evento.Firma
+                    // ❌ NO enviar EventoAccesoId en la creación
+                    MomentoDeAcceso = evento.MomentoDeAcceso, // Ya está en UTC
+                    CredencialId = credencialApiId,
+                    EspacioId = espacioApiId,
+                    Resultado = evento.ResultadoStr, // "Permitir" o "Denegar"
+                    Motivo = evento.Motivo ?? "Acceso procesado",
+                    Modo = evento.ModoStr ?? "Online", // "Online" u "Offline"
+                    Firma = evento.Firma ?? ""
                 };
 
-                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Sending DTO to API:");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] === SENDING DTO TO API ===");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - MomentoDeAcceso: {dto.MomentoDeAcceso:yyyy-MM-ddTHH:mm:ss.fffZ}");
                 System.Diagnostics.Debug.WriteLine($"[LocalDBService] - CredencialId: '{dto.CredencialId}'");
                 System.Diagnostics.Debug.WriteLine($"[LocalDBService] - EspacioId: '{dto.EspacioId}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - Resultado: '{dto.Resultado}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - Motivo: '{dto.Motivo}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - Modo: '{dto.Modo}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] - Firma: '{dto.Firma}'");
 
                 var created = await apiService.CreateEventoAccesoAsync(dto);
                 if (created != null)
                 {
-                    if (!string.IsNullOrWhiteSpace(created.EventoAccesoId))
+                    // ✅ Usar el ID devuelto por el API
+                    string? apiId = created.EventoAccesoId ?? created.Id;
+                    if (!string.IsNullOrWhiteSpace(apiId))
                     {
-                        evento.idApi = created.EventoAccesoId;
+                        evento.idApi = apiId;
                         await SaveEventoAccesoAsync(evento);
                     }
 
@@ -112,7 +126,7 @@ namespace AppNetCredenciales.Data
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Push evento error: {ex}");
-                // keep local record; will try again on next sync
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Exception details: {ex}");
             }
 
             return evento;

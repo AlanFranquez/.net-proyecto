@@ -46,32 +46,32 @@ namespace AppNetCredenciales.Views
         {
             base.OnAppearing();
 
-            // Resetear autenticaciÛn biomÈtrica cada vez que aparece la vista
+            // Resetear autenticaciÔøΩn biomÔøΩtrica cada vez que aparece la vista
             _biometricAuthenticated = false;
 
-            // Solicitar autenticaciÛn biomÈtrica PRIMERO usando DisplayAlert
+            // Solicitar autenticaciÔøΩn biomÔøΩtrica PRIMERO usando DisplayAlert
             bool userWantsToAuthenticate = await DisplayAlert(
-                "AutenticaciÛn Requerida",
-                "Debes verificar tu identidad con huella digital antes de escanear credenciales.\n\nøDeseas continuar?",
+                "AutenticaciÔøΩn Requerida",
+                "Debes verificar tu identidad con huella digital antes de escanear credenciales.\n\nÔøΩDeseas continuar?",
                 "Autenticar",
                 "Cancelar");
 
             if (!userWantsToAuthenticate)
             {
-                await DisplayAlert("AutenticaciÛn Cancelada", 
-                    "Debes autenticarte con tu huella digital para usar el esc·ner.", 
+                await DisplayAlert("AutenticaciÔøΩn Cancelada", 
+                    "Debes autenticarte con tu huella digital para usar el escÔøΩner.", 
                     "OK");
                 await Shell.Current.GoToAsync("..");
                 return;
             }
 
-            // Realizar autenticaciÛn biomÈtrica real
+            // Realizar autenticaciÔøΩn biomÔøΩtrica real
             var biometricResult = await _biometricService.AuthenticateAsync(
                 "Verificar tu identidad para escanear credenciales");
 
             if (!biometricResult.Success)
             {
-                await DisplayAlert("AutenticaciÛn Fallida", 
+                await DisplayAlert("AutenticaciÔøΩn Fallida", 
                     biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.", 
                     "OK");
                 await Shell.Current.GoToAsync("..");
@@ -80,7 +80,7 @@ namespace AppNetCredenciales.Views
 
             _biometricAuthenticated = true;
 
-            // Ahora sÌ, solicitar permisos de c·mara
+            // Ahora sÔøΩ, solicitar permisos de cÔøΩmara
             var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.Camera>();
@@ -147,10 +147,10 @@ namespace AppNetCredenciales.Views
 
         protected async void BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
         {
-            // Verificar que el usuario estÈ autenticado biomÈtricamente
+            // Verificar que el usuario estÔøΩ autenticado biomÔøΩtricamente
             if (!_biometricAuthenticated)
             {
-                System.Diagnostics.Debug.WriteLine("[Scan] Intento de escaneo sin autenticaciÛn biomÈtrica");
+                System.Diagnostics.Debug.WriteLine("[Scan] Intento de escaneo sin autenticaciÔøΩn biomÔøΩtrica");
                 return;
             }
 
@@ -180,82 +180,157 @@ namespace AppNetCredenciales.Views
 
         private async Task HandleScannedPayloadAsync(string payload)
         {
-            var cryptoId = payload?.Split('|')[0].Trim();
-
-            var eventoId = payload?.Split('|').Length > 1
-                ? payload.Split('|')[1].Trim()
-                : string.Empty;
-
-            var usuario = await _db.GetLoggedUserAsync();
-            if (usuario == null) return;
-
-            
-
-            var eventos = await _db.GetEspaciosAsync();
-            Espacio evento = null;
-            foreach (var e in eventos)
+            try
             {
-                if(e == null) continue;
-                if (e.idApi == eventoId)
+                System.Diagnostics.Debug.WriteLine($"[Scan] === PROCESSING SCANNED PAYLOAD ===");
+                System.Diagnostics.Debug.WriteLine($"[Scan] Payload: '{payload}'");
+
+                var parts = payload?.Split('|');
+                if (parts == null || parts.Length < 2)
                 {
-                    evento = e;
+                    await DisplayAlert("QR Inv√°lido", "El c√≥digo QR no tiene el formato correcto.", "OK");
+                    return;
                 }
-            }
 
+                var cryptoId = parts[0].Trim();
+                var eventoId = parts[1].Trim();
 
-            var credenciales = await _db.GetCredencialesAsync();
+                System.Diagnostics.Debug.WriteLine($"[Scan] CryptoId: '{cryptoId}'");
+                System.Diagnostics.Debug.WriteLine($"[Scan] EventoId: '{eventoId}'");
 
-            Credencial cred = null;
-
-            foreach(var c in credenciales)
-            {
-
-                if (c == null) continue;
-                if(c.IdCriptografico == cryptoId)
+                var usuario = await _db.GetLoggedUserAsync();
+                if (usuario == null)
                 {
-                    cred = c;
+                    await DisplayAlert("Error", "Usuario no encontrado.", "OK");
+                    return;
                 }
-            }
 
-            if (cred == null || evento == null)
-            {
-                await DisplayAlert("Credencial no reconocida", $"No se encontr√≥ la credencial para '{cryptoId}'.", "Cerrar");
+                // Buscar credencial por IdCriptografico
+                var credenciales = await _db.GetCredencialesAsync();
+                Credencial cred = null;
 
-                var evNegado = new EventoAcceso
+                foreach (var c in credenciales)
                 {
-                    MomentoDeAcceso = DateTime.Now,
-                    CredencialId = usuario.CredencialId,
-                    Credencial = usuario.Credencial,
-                    Espacio = evento,
-<<<<<<< Updated upstream
-                    EspacioId = evento?.EspacioId ?? 0,
-                    EspacioIdApi = evento?.idApi,
-=======
-                    EspacioId = evento.EspacioId,
-                    EspacioIdApi = evento.idApi,
->>>>>>> Stashed changes
-                    Resultado = AccesoTipo.Denegar
+                    if (c == null) continue;
+                    if (c.IdCriptografico == cryptoId)
+                    {
+                        cred = c;
+                        break;
+                    }
+                }
+
+                // Buscar espacio por idApi
+                Espacio espacio = null;
+                var espacios = await _db.GetEspaciosAsync();
+
+                foreach (var esp in espacios)
+                {
+                    if (esp == null) continue;
+                    if (esp.idApi == eventoId)
+                    {
+                        espacio = esp;
+                        break;
+                    }
+                }
+
+                // Debug informaci√≥n encontrada
+                System.Diagnostics.Debug.WriteLine($"[Scan] === RESULTS ===");
+                if (cred != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Scan] ‚úÖ Credencial found: ID={cred.CredencialId}, idApi='{cred.idApi}', IdCriptografico='{cred.IdCriptografico}'");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Scan] ‚ùå No credencial found for cryptoId: '{cryptoId}'");
+                }
+
+                if (espacio != null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Scan] ‚úÖ Espacio found: ID={espacio.EspacioId}, idApi='{espacio.idApi}', Nombre='{espacio.Nombre}'");
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Scan] ‚ùå No espacio found for eventoId: '{eventoId}'");
+                }
+
+                // Validaciones
+                if (cred == null && espacio == null)
+                {
+                    await DisplayAlert("Credencial y Espacio no reconocidos",
+                        $"No se encontr√≥ la credencial para '{cryptoId}' ni el espacio para '{eventoId}'.", "Cerrar");
+                    return;
+                }
+
+                if (cred == null || espacio == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Scan] ‚ùå Access denied - Missing: {(cred == null ? "Credencial" : "Espacio")}");
+
+                    await DisplayAlert("Acceso Denegado",
+                        $"No se encontr√≥ {(cred == null ? "la credencial" : "el espacio")}.", "Cerrar");
+
+                    // Solo crear evento denegado si tenemos al menos el espacio
+                    if (espacio != null)
+                    {
+                        // Para evento denegado:
+                        var evNegado = new EventoAcceso
+                        {
+                            MomentoDeAcceso = DateTime.UtcNow,
+                            CredencialIdApi = cred?.idApi, // Puede ser null
+                            EspacioIdApi = espacio.idApi,
+                            Espacio = espacio,
+                            Resultado = AccesoTipo.Denegar, // ‚úÖ Esto se convierte en "Denegar"
+                            Motivo = cred == null ? "Credencial no encontrada" : "Credencial inv√°lida"
+                        };
+
+                        await _db.SaveAndPushEventoAccesoAsync(evNegado);
+                    }
+                    return;
+                }
+
+                // Validar que la credencial tiene idApi
+                if (string.IsNullOrEmpty(cred.idApi))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Scan] ‚ö†Ô∏è Credencial sin idApi - ID: {cred.CredencialId}");
+                    await DisplayAlert("Error de Credencial",
+                        "La credencial no tiene ID de API v√°lido. Contacte al administrador.", "OK");
+                    return;
+                }
+
+                // ‚úÖ Todo correcto - Permitir acceso
+                System.Diagnostics.Debug.WriteLine($"[Scan] ‚úÖ Access granted!");
+
+                var popupOk = new ScanResultPopup("Credencial reconocida",
+                    $"El usuario tiene permiso para acceder al espacio '{espacio.Nombre}'.", true);
+                await this.ShowPopupAsync(popupOk);
+
+                var ev = new EventoAcceso
+                {
+                    MomentoDeAcceso = DateTime.UtcNow, // ‚úÖ UTC
+
+                    CredencialId = cred.CredencialId,
+                    EspacioId = espacio.EspacioId,
+
+                    CredencialIdApi = cred.idApi,
+                    EspacioIdApi = espacio.idApi,
+
+                    Credencial = cred,
+                    Espacio = espacio,
+
+                    Resultado = AccesoTipo.Permitir, 
+                    Motivo = "Acceso autorizado"     
                 };
 
-                await _db.SaveAndPushEventoAccesoAsync(evNegado);
-                return;
+                
+
+                await _db.SaveAndPushEventoAccesoAsync(ev);
+
+                System.Diagnostics.Debug.WriteLine($"[Scan] ‚úÖ Event created successfully");
             }
-
-            var popupOk = new ScanResultPopup("Credencial reconocida", $"El usuario tiene permiso para acceder al espacio.", true);
-            await this.ShowPopupAsync(popupOk);
-
-            var ev = new EventoAcceso
+            catch (Exception ex)
             {
-                MomentoDeAcceso = DateTime.Now,
-                CredencialId = usuario.CredencialId,
-                Credencial = usuario.Credencial,
-                Espacio = evento,
-                EspacioId = evento.EspacioId,
-                EspacioIdApi = evento.idApi,
-                Resultado = AccesoTipo.Permitir
-            };
-
-            await _db.SaveAndPushEventoAccesoAsync(ev);
+                System.Diagnostics.Debug.WriteLine($"[Scan] ‚ùå HandleScannedPayloadAsync error: {ex}");
+                await DisplayAlert("Error", $"Error procesando el c√≥digo QR: {ex.Message}", "OK");
+            }
         }
     }   
 }

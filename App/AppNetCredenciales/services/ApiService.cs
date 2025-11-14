@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -21,7 +22,7 @@ namespace AppNetCredenciales.Services
         {
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri("https://b8264f05e4fb.ngrok-free.app/api/")
+                BaseAddress = new Uri("http://localhost:8080/api/")
             };
         }
 
@@ -47,15 +48,80 @@ namespace AppNetCredenciales.Services
         {
             try
             {
-                var resp = await _httpClient.PostAsJsonAsync("eventos", nuevo, _jsonOptions);
+                // ✅ Asegurar que la fecha esté en UTC antes de enviar
+                if (nuevo.MomentoDeAcceso.Kind != DateTimeKind.Utc)
+                {
+                    nuevo.MomentoDeAcceso = nuevo.MomentoDeAcceso.ToUniversalTime();
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] Converted MomentoDeAcceso to UTC: {nuevo.MomentoDeAcceso:yyyy-MM-dd HH:mm:ss} UTC");
+                }
+
+                // ✅ Crear DTO solo con los campos requeridos para envío
+                var requestDto = new
+                {
+                    momentoDeAcceso = nuevo.MomentoDeAcceso,
+                    credencialId = nuevo.CredencialId,
+                    espacioId = nuevo.EspacioId,
+                    resultado = nuevo.Resultado,
+                    motivo = nuevo.Motivo ?? "Acceso procesado",
+                    modo = nuevo.Modo ?? "Online",
+                    firma = nuevo.Firma ?? ""
+                };
+
+                // Debug del objeto que se va a enviar
+                var requestJson = JsonSerializer.Serialize(requestDto, _jsonOptions);
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Sending request JSON: {requestJson}");
+
+                var resp = await _httpClient.PostAsJsonAsync("eventos", requestDto, _jsonOptions);
                 var content = await resp.Content.ReadAsStringAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Response status: {(int)resp.StatusCode} {resp.ReasonPhrase}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Response content: {content}");
+
                 if (!resp.IsSuccessStatusCode)
                 {
                     System.Diagnostics.Debug.WriteLine($"[ApiService] CreateEventoAccesoAsync failed: {resp.StatusCode} content={content}");
                     return null;
                 }
-                var dto = JsonSerializer.Deserialize<EventoAccesoDto>(content, _jsonOptions);
-                return dto;
+
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    System.Diagnostics.Debug.WriteLine("[ApiService] Empty response content");
+                    return null;
+                }
+
+                // ✅ Intentar deserializar la respuesta
+                try
+                {
+                    var responseDto = JsonSerializer.Deserialize<EventoAccesoDto>(content, _jsonOptions);
+                    if (responseDto != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] ✅ Successfully deserialized response");
+                        return responseDto;
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] Deserialization failed: {ex.Message}");
+                }
+
+                // ✅ Fallback: Si el API devuelve solo un ID como string
+                var trimmed = content.Trim();
+                if (trimmed.StartsWith("\"") && trimmed.EndsWith("\""))
+                    trimmed = trimmed.Substring(1, trimmed.Length - 2);
+
+                // Crear respuesta con los datos originales más el ID devuelto
+                return new EventoAccesoDto
+                {
+                    EventoAccesoId = trimmed,
+                    Id = trimmed,
+                    MomentoDeAcceso = nuevo.MomentoDeAcceso,
+                    CredencialId = nuevo.CredencialId,
+                    EspacioId = nuevo.EspacioId,
+                    Resultado = nuevo.Resultado,
+                    Motivo = nuevo.Motivo,
+                    Modo = nuevo.Modo,
+                    Firma = nuevo.Firma
+                };
             }
             catch (Exception ex)
             {
@@ -277,7 +343,10 @@ namespace AppNetCredenciales.Services
                         return new UsuarioDto { UsuarioId = root.GetRawText() };
                     }
                 }
-                catch (JsonException) { /* malformed or not-json -> fallback */ }
+                catch (JsonException e) { 
+                    Debug.WriteLine($" {e.ToString()} [ApiService] CreateUsuarioAsync: JSON parsing failed, falling back to raw content parsing.");
+
+                }
 
                 var trimmed = content.Trim();
                 if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.Length >= 2)
@@ -375,25 +444,37 @@ namespace AppNetCredenciales.Services
 
         public class EventoAccesoDto
         {
-            [JsonPropertyName("eventoAccesoId")]
-            public string? EventoAccesoId { get; set; }
+            // ❌ REMOVER: eventoAccesoId no está en la estructura requerida
+            // [JsonPropertyName("eventoAccesoId")]
+            // public string? EventoAccesoId { get; set; }
+
             [JsonPropertyName("momentoDeAcceso")]
             public DateTime MomentoDeAcceso { get; set; }
+
             [JsonPropertyName("credencialId")]
             public string? CredencialId { get; set; }
+
             [JsonPropertyName("espacioId")]
             public string? EspacioId { get; set; }
+
             [JsonPropertyName("resultado")]
             public string? Resultado { get; set; }
+
             [JsonPropertyName("motivo")]
             public string? Motivo { get; set; }
+
             [JsonPropertyName("modo")]
             public string? Modo { get; set; }
 
-
-
             [JsonPropertyName("firma")]
             public string? Firma { get; set; }
+
+            // ✅ AGREGAR: Propiedades que pueden venir en la respuesta del API
+            [JsonPropertyName("eventoAccesoId")]
+            public string? EventoAccesoId { get; set; } // Solo para respuesta
+
+            [JsonPropertyName("id")]
+            public string? Id { get; set; } // Alias para respuesta
         }
 
         public class NewUsuarioDto

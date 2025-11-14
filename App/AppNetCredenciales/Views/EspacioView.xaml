@@ -12,8 +12,7 @@
                        HorizontalOptions="Center"
                        Margin="0,6" />
 
-        <!-- Middle: CollectionView with EmptyView -->
-        <CollectionView Grid.Row="1"
+        <CollectionView 
                     ItemsSource="{Binding Espacios}"
                     SelectionChanged="OnEspacioSelected"
                     SelectionMode="Single"
@@ -50,6 +49,6 @@
         </CollectionView>
 
         <!-- Bottom: Navbar - Changed from Grid.Row="1" to Grid.Row="2" -->
-        <views:Navbar Grid.Row="2" />
+        <views:Navbar Grid.Row="1" />
     </Grid>
 </ContentPage>
