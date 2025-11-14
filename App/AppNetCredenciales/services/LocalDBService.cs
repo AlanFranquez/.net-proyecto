@@ -79,11 +79,9 @@ namespace AppNetCredenciales.Data
 
                 if (string.IsNullOrEmpty(espacioApiId))
                 {
-                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ⚠️ Cannot push evento: missing EspacioIdApi");
                     return evento;
                 }
 
-                // ✅ Crear DTO con la estructura correcta
                 var dto = new ApiService.EventoAccesoDto
                 {
                     // ❌ NO enviar EventoAccesoId en la creación
