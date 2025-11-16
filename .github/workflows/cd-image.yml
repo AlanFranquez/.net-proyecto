@@ -12,7 +12,7 @@ jobs:
   build-and-push:
     name: Build & Push to ECR
     runs-on: ubuntu-latest
-    environment: test   # <--- importante
+    environment: AWS_ACCOUNT_ID   # <--- importante
 
     permissions:
       contents: read
