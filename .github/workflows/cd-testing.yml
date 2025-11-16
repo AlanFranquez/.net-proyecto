@@ -33,7 +33,6 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    # environment removed to avoid environment lookup/permissions in this repo
     
     steps:
       - name: Checkout code
