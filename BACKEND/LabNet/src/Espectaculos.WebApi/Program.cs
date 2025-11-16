@@ -1,119 +1,132 @@
 using System.Reflection;
 using System.Text.Json.Serialization;
-using Espectaculos.Application;
+using Amazon.CognitoIdentityProvider;
+using DotNetEnv;
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
-using Espectaculos.Application.Espacios.Commands.CreateEspacio;
-using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
-using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
-using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
-using Espectaculos.Infrastructure.Persistence;
-using Espectaculos.Infrastructure.Persistence.Interceptors;
-using Espectaculos.Infrastructure.Persistence.Seed;
-using Espectaculos.Infrastructure.Repositories;
-using Espectaculos.WebApi.Endpoints;
-using Espectaculos.WebApi.Health;
-using Espectaculos.WebApi.Options;
-using Espectaculos.WebApi.Security;
-using Espectaculos.WebApi.SerilogConfig;
-using FluentValidation;
-// Notificaciones replaces Novedades; no legacy using required here.
-using Microsoft.AspNetCore.StaticFiles;
-using Microsoft.EntityFrameworkCore;
-using Npgsql.EntityFrameworkCore.PostgreSQL;
-using Serilog;
-using Espectaculos.WebApi.Security;
-using System.Text.Json.Serialization;
-using Espectaculos.Application.EventoAcceso.Commands.DeleteEvento;
-using Espectaculos.Application.EventoAcceso.Commands.CreateEvento;
-using Espectaculos.Application.EventoAcceso.Commands.UpdateEvento;
-using Espectaculos.Application.ReglaDeAcceso.Commands.CreateReglaDeAcceso;
-using Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
-using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
-using FluentValidation;
-using MediatR;
-using System.Reflection;
-using Amazon.CognitoIdentityProvider;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
 using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
 using Espectaculos.Application.Dispositivos.Commands.CreateDispositivo;
 using Espectaculos.Application.Dispositivos.Commands.DeleteDispositivo;
 using Espectaculos.Application.Dispositivos.Commands.UpdateDispositivo;
+using Espectaculos.Application.Espacios.Commands.CreateEspacio;
+using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
+using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
+using Espectaculos.Application.EventoAcceso.Commands.CreateEvento;
+using Espectaculos.Application.EventoAcceso.Commands.DeleteEvento;
+using Espectaculos.Application.EventoAcceso.Commands.UpdateEvento;
+using Espectaculos.Application.ReglaDeAcceso.Commands.CreateReglaDeAcceso;
+using Espectaculos.Application.ReglaDeAcceso.Commands.DeleteReglaDeAcceso;
+using Espectaculos.Application.ReglaDeAcceso.Commands.UpdateReglaDeAcceso;
 using Espectaculos.Application.Roles.Commands.CreateRol;
 using Espectaculos.Application.Roles.Commands.DeleteRol;
 using Espectaculos.Application.Roles.Commands.UpdateRol;
-using Espectaculos.Application.services;
 using Espectaculos.Application.Settings;
 using Espectaculos.Application.Sincronizaciones.Commands.CreateSincronizacion;
 using Espectaculos.Application.Sincronizaciones.Commands.DeleteSincronizacion;
 using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
+using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
-using Npgsql;
+using Espectaculos.Application.services;          // ICognitoService, CognitoService
+using Espectaculos.Application.Services;         // IAccesosRealtimeNotifier
+using Espectaculos.Infrastructure.Persistence;
+using Espectaculos.Infrastructure.Persistence.Interceptors;
+using Espectaculos.Infrastructure.Persistence.Seed;
+using Espectaculos.Infrastructure.RealTime;      // AccesosSignalRNotifier, AccesosHub
+using Espectaculos.Infrastructure.Repositories;
+using Espectaculos.WebApi.Endpoints;
+using Espectaculos.WebApi.Health;
+using Espectaculos.WebApi.Options;
+using Espectaculos.WebApi.Security;
+using Espectaculos.WebApi.SerilogConfig;
+using Espectaculos.WebApi.Utils;
+using FluentValidation;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using DotNetEnv;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.StaticFiles;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
-using Espectaculos.WebApi.Utils;
-
+using Serilog;
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
 Console.WriteLine($"[AWS DEBUG] Path: {envPath}");
 if (File.Exists(envPath))
 {
-    DotNetEnv.Env.Load(envPath);
+    Env.Load(envPath);
 }
 else
 {
-    DotNetEnv.Env.Load(); 
+    Env.Load();
 }
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---- Logging (Serilog)
+// ---------- Logging (Serilog) ----------
 builder.AddSerilogLogging();
 
-// ---- Configuración
+// ---------- Configuración base ----------
 var config = builder.Configuration;
 
-// Asegurar orden de configuración: JSON base -> JSON por entorno -> Variables de entorno
-// Nota: soportamos variables con y sin prefijo "APP__".
-// - Si usás docker-compose con APP__VALIDATION_TOKENS__SECRET, el proveedor con prefijo lo recorta a VALIDATION_TOKENS__SECRET.
-// - Si usás VALIDATION_TOKENS__SECRET directamente, el proveedor sin prefijo lo toma tal cual.
 builder.Configuration.Sources.Clear();
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    .AddEnvironmentVariables("APP__") // quita el prefijo "APP__" si existe
-    .AddEnvironmentVariables();       // sin prefijo (toma el resto)
+    .AddEnvironmentVariables("APP__")
+    .AddEnvironmentVariables();
 
-var awsSettings = builder.Configuration.GetSection("AWS:Cognito").Get<AwsCognitoSettings>();
+// ---------- Connection string ----------
+string connectionString =
+    config.GetConnectionString("Default")
+    ?? config["ConnectionStrings__Default"]
+    ?? "Host=localhost;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres";
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
+
+// ---------- AWS Cognito ----------
+builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
+var cognitoSection = builder.Configuration.GetSection("AWS:Cognito");
+var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>();
+
+if (cognitoSettings == null)
+    throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
+
+if (string.IsNullOrWhiteSpace(cognitoSettings.Region) ||
+    string.IsNullOrWhiteSpace(cognitoSettings.UserPoolId) ||
+    string.IsNullOrWhiteSpace(cognitoSettings.ClientId))
+{
+    throw new InvalidOperationException("AWS:Cognito Region, UserPoolId y ClientId deben estar configurados.");
+}
+
+var authority = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        options.Authority = $"https://cognito-idp.{builder.Configuration["AWS:Region"]}.amazonaws.com/{awsSettings.UserPoolId}";
+        options.Authority = authority;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = $"https://cognito-idp.{builder.Configuration["AWS:Region"]}.amazonaws.com/{awsSettings.UserPoolId}",
+            ValidIssuer = authority,
             ValidateAudience = true,
-            ValidAudience = awsSettings.ClientId,
+            ValidAudience = cognitoSettings.ClientId,
             ValidateLifetime = true
         };
 
-        // --- Leer token también desde cookie "espectaculos_session" ---
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = ctx =>
             {
-                // Si Authorization header no presente, intentar cookie
                 if (string.IsNullOrEmpty(ctx.Request.Headers["Authorization"]))
                 {
                     if (ctx.Request.Cookies.TryGetValue("espectaculos_session", out var tokenFromCookie))
@@ -121,6 +134,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                         ctx.Token = tokenFromCookie;
                     }
                 }
+
                 return Task.CompletedTask;
             }
         };
@@ -128,22 +142,17 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Log de diagnóstico en Development (no muestra el secreto)
+// Log de diagnóstico en Development
 if (builder.Environment.IsDevelopment())
 {
     var secretPresent = string.IsNullOrWhiteSpace(builder.Configuration["ValidationTokens:Secret"]) ? "absent" : "present";
-    Serilog.Log.Information("Startup diagnostic: ValidationTokens:Secret {Status} in configuration (Development).", secretPresent);
+    Log.Information("Startup diagnostic: ValidationTokens:Secret {Status} in configuration (Development).", secretPresent);
 }
 
-string connectionString =
-    config.GetConnectionString("Default")
-    ?? config["ConnectionStrings__Default"]
-    ?? "Host=localhost;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres";
-Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
-// ---- Servicios
+// ---------- Servicios básicos ----------
 builder.Services.AddEndpointsApiExplorer();
 
-// ==== OpenTelemetry: recursos, trazas y métricas ====
+// ---------- OpenTelemetry ----------
 var serviceName = "Espectaculos.WebApi";
 var serviceVersion = "1.0.0";
 
@@ -164,65 +173,71 @@ builder.Services.AddOpenTelemetry()
                     activity.SetTag("correlation.id", v.ToString());
                 }
             };
-            o.Filter = httpContext => !httpContext.Request.Path.StartsWithSegments("/health")
-                                       && !httpContext.Request.Path.StartsWithSegments("/swagger");
+            o.Filter = httpContext =>
+                !httpContext.Request.Path.StartsWithSegments("/health") &&
+                !httpContext.Request.Path.StartsWithSegments("/swagger");
         })
         .AddHttpClientInstrumentation()
-        .AddOtlpExporter()) // Usa OTEL_EXPORTER_OTLP_ENDPOINT si está definido
+        .AddOtlpExporter())
     .WithMetrics(m => m
         .AddAspNetCoreInstrumentation()
         .AddHttpClientInstrumentation()
         .AddRuntimeInstrumentation()
         .AddOtlpExporter());
 
-// ===== CONFIGURACIÓN CONSOLIDADA DE SWAGGER =====
+// ---------- Swagger ----------
 builder.Services.AddSwaggerGen(o =>
 {
     o.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "Espectáculos - Demo API",
         Version = "v1",
-        Description = "API pública para la demo. Incluye endpoints de eventos y órdenes. Endpoints de administración permanecen ocultos por defecto."
+        Description = "API pública para la demo."
     });
 
-    // Agrupar endpoints por categorías basadas en el primer segmento después de "api"
-    // Ejemplo: /api/espacios/{id} => categoría "Espacios"
     o.TagActionsBy(apiDesc =>
     {
         var relativePath = apiDesc.RelativePath ?? string.Empty;
         var segments = relativePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        
-        // Si la ruta empieza con "api", tomamos el siguiente segmento
+
         if (segments.Length >= 2 && segments[0].Equals("api", StringComparison.OrdinalIgnoreCase))
         {
-            // Capitalizar la primera letra para que se vea más prolijo
             var category = segments[1];
-            return new[] { char.ToUpper(category[0]) + category.Substring(1) };
+            return new[] { char.ToUpper(category[0]) + category[1..] };
         }
-        
+
         if (segments.Length >= 1)
             return new[] { segments[0] };
-            
+
         return new[] { "General" };
     });
 
-    // Mostrar enums como strings en lugar de números en Swagger UI
     o.UseInlineDefinitionsForEnums();
 });
 
-// Aceptar enums representados como strings en JSON (p.ej. "Comedor") y case-insensitive
+// ---------- JSON / enums ----------
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(opts =>
 {
-    opts.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    opts.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
     opts.SerializerOptions.Converters.Add(new Espectaculos.WebApi.Json.CaseInsensitiveEnumConverterFactory());
 });
 
-// Options: ValidationTokens (fail-fast)
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
+
+// ---------- ValidationTokens (options) ----------
 var validationSection = builder.Configuration.GetSection("ValidationTokens");
 builder.Services
     .AddOptions<ValidationTokenOptions>()
     .Bind(validationSection)
-    // Fallbacks robustos: primero IConfiguration con ":", luego variables de entorno crudas (con y sin prefijo APP__)
     .PostConfigure(o =>
     {
         if (string.IsNullOrWhiteSpace(o.Secret))
@@ -233,6 +248,7 @@ builder.Services
                 ?? Environment.GetEnvironmentVariable("APP__VALIDATION_TOKENS__SECRET");
             if (!string.IsNullOrWhiteSpace(envSecret)) o.Secret = envSecret;
         }
+
         if (o.DefaultExpiryMinutes <= 0)
         {
             var envExpStr =
@@ -247,11 +263,10 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IValidationTokenService, HmacValidationTokenService>();
-builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
 
-// EF Core + Npgsql (simple y robusto)
+// ---------- EF Core + Npgsql ----------
 builder.Services.AddSingleton<AuditableEntitySaveChangesInterceptor>();
-// Npgsql 8+: habilitar serialización JSON dinámica para columnas json/jsonb
+
 var npgsqlDataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
 npgsqlDataSourceBuilder.EnableDynamicJson();
 var npgsqlDataSource = npgsqlDataSourceBuilder.Build();
@@ -261,11 +276,11 @@ builder.Services.AddDbContext<EspectaculosDbContext>(options =>
     options.UseNpgsql(npgsqlDataSource);
 });
 
-// Health checks
+// ---------- Health checks ----------
 builder.Services.AddHealthChecks();
 builder.Services.AddPostgresHealthChecks(connectionString);
 
-// CORS (solo dev) — orígenes permitidos por config/env, con defaults sensatos
+// ---------- CORS (dev) ----------
 var isDev = builder.Environment.IsDevelopment();
 var devOrigins = (config["Cors:AllowedOrigins"]
                   ?? Environment.GetEnvironmentVariable("CORS_ORIGINS")
@@ -280,25 +295,14 @@ if (isDev)
             p.WithOrigins(devOrigins)
              .AllowAnyHeader()
              .AllowAnyMethod()
-             .AllowCredentials()
-        );
+             .AllowCredentials());
     });
 }
 
-// ===== CONFIGURACIÓN GLOBAL DE JSON PARA ENUMS =====
-// Permite enviar y recibir enums como strings en lugar de números
-builder.Services.ConfigureHttpJsonOptions(options =>
-{
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
-});
+// ---------- SignalR ----------
+builder.Services.AddSignalR();
 
-builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-    });
-
-// Validators (Application)
+// ---------- FluentValidation (validators explícitos) ----------
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
 builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
 builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
@@ -325,24 +329,15 @@ builder.Services.AddScoped<IValidator<UpdateDispositivoCommand>, UpdateDispositi
 builder.Services.AddScoped<IValidator<DeleteDispositivoCommand>, DeleteDispositivoValidator>();
 
 
+builder.Services.AddValidatorsFromAssembly(Assembly.Load("Espectaculos.Application"));
+
+// ---------- MediatR ----------
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(Assembly.Load("Espectaculos.Application"));
 });
 
-//builder.Services.AddValidatorsFromAssembly(Assembly.Load("Espectaculos.Application"));
-
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(CreateEspacioCommand).Assembly));
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(CreateReglaCommand).Assembly));
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(CreateEventoCommand).Assembly));
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(CreateUsuarioCommand).Assembly));
-
-
-// Repos + UoW: registrar repositorios primero, luego IUnitOfWork
+// ---------- Repositorios + UnitOfWork ----------
 builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
 builder.Services.AddScoped<IReglaDeAccesoRepository, ReglaDeAccesoRepository>();
 builder.Services.AddScoped<IBeneficioRepository, BeneficioRepository>();
@@ -356,56 +351,49 @@ builder.Services.AddScoped<INotificacionRepository, NotificacionRepository>();
 builder.Services.AddScoped<IRolRepository, RolRepository>();
 builder.Services.AddScoped<ISincronizacionRepository, SincronizacionRepository>();
 builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
+builder.Services.AddScoped<INovedadRepository, NovedadRepository>();
+
+// Notificador realtime de accesos (SignalR)
+builder.Services.AddSingleton<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
+
 builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.Notifications.LoggingNotificationSender>();
-builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
 
-var cognitoSection = builder.Configuration.GetSection("AWS:Cognito");
-var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>();
-if (cognitoSettings == null)
-    throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-if (string.IsNullOrWhiteSpace(cognitoSettings.UserPoolId) || string.IsNullOrWhiteSpace(cognitoSettings.ClientId))
-    throw new InvalidOperationException("AWS:Cognito UserPoolId y ClientId deben estar configurados.");
-
-// Registrar IAmazonCognitoIdentityProvider usando region desde settings
+// ---------- Amazon Cognito client + servicio ----------
 builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
 {
     var opts = sp.GetRequiredService<IOptions<AwsCognitoSettings>>().Value;
     var region = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
     var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region);
 
-    // Usa credential chain (env vars, profile, IAM role). Si querés forzar credenciales, ver más abajo.
     return new AmazonCognitoIdentityProviderClient(regionEndpoint);
 });
 
-// Registrar el servicio cognito (usa IAmazonCognitoIdentityProvider por DI)
 builder.Services.AddScoped<ICognitoService, CognitoService>();
 
-// Finalmente el UnitOfWork (depende de los repos registrados arriba)
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-// Seeder
+// ---------- Seeder, routing, métricas ----------
 builder.Services.AddScoped<DbSeeder>();
 builder.Services.AddRouting();
-
-// Métrica custom: backlog de sincronizaciones
 builder.Services.AddHostedService<SincronizacionesMetrics>();
 
 var app = builder.Build();
 
-// ---------- 1) Archivos estáticos (sirven la SPA publicada) ----------
+// ---------- Archivos estáticos ----------
 var provider = new FileExtensionContentTypeProvider();
-provider.Mappings[".dat"]  = "application/octet-stream"; // ICU/native data
+provider.Mappings[".dat"] = "application/octet-stream";
 provider.Mappings[".wasm"] = "application/wasm";
-provider.Mappings[".br"]   = "application/octet-stream";
+provider.Mappings[".br"] = "application/octet-stream";
 
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = provider });
 
-// ---------- 2) Logging, CORS, Swagger ----------
-// CorrelationId antes del logging para que aparezca en los logs de request
+// ---------- Middleware base ----------
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
-if (isDev) app.UseCors("DevCors");
+
+if (isDev)
+    app.UseCors("DevCors");
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -414,10 +402,13 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// ---------- 3) API bajo /api ----------
+// ---------- Auth ----------
+app.UseAuthentication();
+app.UseAuthorization();
+
+// ---------- API bajo /api ----------
 var api = app.MapGroup("/api");
 
-// Mapea tus endpoints SOBRE el grupo (usar rutas relativas en las extensiones)
 api.MapEspaciosEndpoints();
 api.MapReglasDeAccesoEndpoints();
 api.MapBeneficiosEndpoints();
@@ -430,18 +421,17 @@ api.MapUsuariosEndpoints();
 api.MapSincronizacionEndpoints();
 api.MapDispositivosEndpoints();
 
-// Health root para readiness checks fuera de /api
+// ---------- SignalR hubs ----------
+app.MapHub<AccesosHub>("/hubs/accesos");
+
+// ---------- Health ----------
 app.MapHealthChecks("/health");
 api.MapHealthChecks("/health");
 
-// Endpoint de métricas: si se utiliza Prometheus vía OTel Collector, configurar allí el scraping.
-
-// === ADMIN: quick seed para poblar datos desde curl ===
-// Uso: POST /admin/quick-seed?count=70&publish=true
+// ---------- Flags admin / seed ----------
 var enableAdmin = (Environment.GetEnvironmentVariable("DEMO_ENABLE_ADMIN") ?? config["DEMO_ENABLE_ADMIN"] ?? "false")
     .Equals("true", StringComparison.OrdinalIgnoreCase);
 
-// ---------- 5) Migrar SIEMPRE + (opcional) SEED ----------
 static bool GetFlag(IConfiguration cfg, string key, bool def = false)
     => (Environment.GetEnvironmentVariable(key)
         ?? cfg[key]
@@ -456,12 +446,10 @@ async Task ApplyMigrationsAndSeedAsync()
     {
         var db = scope.ServiceProvider.GetRequiredService<EspectaculosDbContext>();
 
-        // 1) Migraciones SIEMPRE
         logger.LogInformation("Aplicando migraciones...");
         await db.Database.MigrateAsync();
         logger.LogInformation("Migraciones aplicadas.");
 
-        // 2) Seed sólo si lo pediste explícitamente (AUTO_SEED=true)
         var doSeed = GetFlag(config, "AUTO_SEED", false);
         if (doSeed)
         {
@@ -483,6 +471,5 @@ async Task ApplyMigrationsAndSeedAsync()
 }
 
 await ApplyMigrationsAndSeedAsync();
-
 
 app.Run();

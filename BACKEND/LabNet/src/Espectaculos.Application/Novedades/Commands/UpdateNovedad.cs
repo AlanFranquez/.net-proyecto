@@ -23,6 +23,7 @@ public class UpdateNovedadValidator : AbstractValidator<UpdateNovedadCommand>
         RuleFor(x => x)
             .Must(x => !(x.PublicadoDesdeUtc.HasValue && x.PublicadoHastaUtc.HasValue && x.PublicadoDesdeUtc > x.PublicadoHastaUtc))
             .WithMessage("PublicadoDesde debe ser anterior o igual a PublicadoHasta");
+        
     }
 }
 
