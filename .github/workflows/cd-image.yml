@@ -8,7 +8,7 @@ on:
       - 'BACKEND/LabNet/docker/**'
       - '.github/workflows/cd-image.yml'
 
-      
+
 jobs:
   build-and-push:
     name: Build & Push to ECR
@@ -71,7 +71,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: BACKEND/LabNet
           file: BACKEND/LabNet/docker/Dockerfile.web
           push: true
           tags: |
@@ -81,8 +81,9 @@ jobs:
             BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
             VCS_REF=${{ github.sha }}
             VERSION=${{ steps.image.outputs.tag }}
-          cache-from: type=registry,ref=${{ steps.image.outputs.uri-latest }}
-          cache-to: type=inline
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
