@@ -3,16 +3,15 @@ name: CD - Deploy to Testing Environment
 on:
   workflow_run:
     workflows: ["CD - Build, Test & Push Image"]
-    types:
-      - completed
-    branches:
-      - main
+    types: [completed]
+    branches: [main, test]
+
   workflow_dispatch:
     inputs:
       image-tag:
-        description: 'Image tag to deploy (default: latest)'
+        description: "Image tag to deploy (default: latest)"
         required: false
-        default: 'latest'
+        default: "latest"
 
 env:
   AWS_REGION: us-east-1
@@ -20,200 +19,144 @@ env:
   ECS_CLUSTER: espectaculos-testing
   ECS_SERVICE: espectaculos-api-service
   CONTAINER_NAME: espectaculos-api
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
 
 jobs:
   deploy-testing:
     name: Deploy to Testing
+    environment: AWS_ACCOUNT_ID   # <-- MUY IMPORTANTE
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success')
+
     permissions:
       contents: read
       id-token: write
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Configure AWS credentials (access keys session)
+      - name: Configure AWS credentials (access keys + session token)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Get ECR login token
+      - name: Login to ECR
         run: |
-          aws ecr get-authorization-token --region ${{ env.AWS_REGION }} | \
-          docker login --username AWS --password-stdin ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-        shell: bash
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} |
+          docker login \
+            --username AWS \
+            --password-stdin \
+            ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
 
-      - name: Get image tag from workflow
-        id: image-tag
+      - name: Determine image tag
+        id: tag
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             TAG="${{ github.event.inputs.image-tag }}"
           else
             TAG="latest"
           fi
-          echo "tag=${TAG}" >> $GITHUB_OUTPUT
-        shell: bash
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Check container image exists in ECR
+      - name: Check image exists in ECR
         run: |
           aws ecr describe-images \
             --repository-name ${{ env.ECR_REPOSITORY }} \
-            --image-ids imageTag=${{ steps.image-tag.outputs.tag }} \
-            --region ${{ env.AWS_REGION }} || exit 1
-        shell: bash
+            --image-ids imageTag=${{ steps.tag.outputs.tag }} \
+            --region ${{ env.AWS_REGION }}
 
-      - name: Create ECS task definition
-        id: task-def
+      - name: Build new ECS task definition file
+        id: build-taskdef
         run: |
-          # Descargar task definition actual
-          TASK_DEF=$(aws ecs describe-task-definition \
+          CURRENT=$(aws ecs describe-task-definition \
             --task-definition espectaculos-api-task \
-            --region ${{ env.AWS_REGION }} \
-            --query 'taskDefinition' || echo '{}')
-          
-          # Actualizar imagen
-          UPDATED_TASK_DEF=$(echo "${TASK_DEF}" | jq \
-            --arg IMAGE "${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.image-tag.outputs.tag }}" \
-            '.containerDefinitions[0].image = $IMAGE | del(.taskDefinitionArn) | del(.revision) | del(.status) | del(.requiresAttributes)')
-          
-          echo "${UPDATED_TASK_DEF}" > task-definition.json
-          echo "task-def-arn=$(echo ${TASK_DEF} | jq -r '.taskDefinitionArn')" >> $GITHUB_OUTPUT
-        shell: bash
-        continue-on-error: true
+            --query 'taskDefinition')
 
-      - name: Register new ECS task definition
-        id: register-task
+          IMAGE="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.tag.outputs.tag }}"
+
+          echo "$CURRENT" |
+            jq --arg IMAGE "$IMAGE" \
+              '.containerDefinitions[0].image = $IMAGE
+               | del(.taskDefinitionArn)
+               | del(.revision)
+               | del(.status)
+               | del(.requiresAttributes)' \
+            > task-def.json
+
+      - name: Register new task definition
+        id: register
         run: |
-          TASK_ARN=$(aws ecs register-task-definition \
-            --cli-input-json file://task-definition.json \
-            --region ${{ env.AWS_REGION }} \
-            --query 'taskDefinition.taskDefinitionArn' \
+          ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://task-def.json \
+            --query "taskDefinition.taskDefinitionArn" \
             --output text)
-          
-          echo "task-arn=${TASK_ARN}" >> $GITHUB_OUTPUT
-        shell: bash
-        continue-on-error: true
 
-      - name: Update ECS service
-        if: steps.register-task.outcome == 'success'
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
+
+      - name: Update ECS Service
         run: |
           aws ecs update-service \
             --cluster ${{ env.ECS_CLUSTER }} \
             --service ${{ env.ECS_SERVICE }} \
-            --task-definition ${{ steps.register-task.outputs.task-arn }} \
-            --region ${{ env.AWS_REGION }} \
-            --force-new-deployment
-        shell: bash
+            --task-definition ${{ steps.register.outputs.arn }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
 
-      - name: Wait for service to stabilize
-        if: steps.register-task.outcome == 'success'
+      - name: Wait until service is stable
         run: |
           aws ecs wait services-stable \
             --cluster ${{ env.ECS_CLUSTER }} \
             --services ${{ env.ECS_SERVICE }} \
             --region ${{ env.AWS_REGION }}
-        shell: bash
-        continue-on-error: true
-
-      - name: Verify deployment
-        run: |
-          DEPLOYMENT=$(aws ecs describe-services \
-            --cluster ${{ env.ECS_CLUSTER }} \
-            --services ${{ env.ECS_SERVICE }} \
-            --region ${{ env.AWS_REGION }} \
-            --query 'services[0]' --output json)
-          
-          echo "Service Status:"
-          echo "${DEPLOYMENT}" | jq '.status'
-          echo ""
-          echo "Running Tasks:"
-          echo "${DEPLOYMENT}" | jq '.runningCount'
-          echo ""
-          echo "Desired Tasks:"
-          echo "${DEPLOYMENT}" | jq '.desiredCount'
-        shell: bash
-
-      - name: Post deployment summary
-        run: |
-          echo "## 🚀 Deployment Summary"
-          echo ""
-          echo "**Environment:** Testing"
-          echo "**Image:** ${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:${{ steps.image-tag.outputs.tag }}"
-          echo "**Cluster:** ${{ env.ECS_CLUSTER }}"
-          echo "**Service:** ${{ env.ECS_SERVICE }}"
-          echo ""
-          echo "The deployment has been initiated. Check CloudWatch logs for detailed deployment status."
-        shell: bash
 
   health-check:
     name: Health Check
     runs-on: ubuntu-latest
     needs: deploy-testing
-    if: success()
-    
-    steps:
-      - name: Wait for service to be ready
-        run: sleep 30
-        shell: bash
 
-      - name: Health check endpoint
+    steps:
+      - name: Wait 30 seconds
+        run: sleep 30
+
+      - name: Call /health endpoint
         run: |
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" https://api-testing.example.com/health)
-          if [ "$RESPONSE" == "200" ]; then
-            echo "✅ Health check passed"
-          else
-            echo "⚠️ Health check returned: $RESPONSE"
-          fi
-        shell: bash
-        continue-on-error: true
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api-testing.example.com/health)
+          echo "Status: $STATUS"
+          test "$STATUS" = "200"
 
   smoke-tests:
-    name: Run Smoke Tests
+    name: Smoke Tests
     runs-on: ubuntu-latest
     needs: health-check
-    if: success()
-    
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+      - uses: actions/setup-dotnet@v3
         with:
-          dotnet-version: '8.0.x'
+          dotnet-version: "8.0.x"
 
-      - name: Run smoke tests against testing environment
-        run: |
-          # Ejecutar pruebas de humo contra el entorno de testing
-          # Esto requeriría un proyecto de pruebas configurado
-          echo "Running smoke tests against testing environment..."
-          echo "API Endpoint: https://api-testing.example.com"
-        shell: bash
-        continue-on-error: true
+      - name: Run smoke tests
+        run: echo "Running smoke tests…"
 
   notify:
-    name: Send Notifications
+    name: Notify
     runs-on: ubuntu-latest
     needs: [deploy-testing, health-check, smoke-tests]
     if: always()
-    
+
     steps:
-      - name: Determine status
-        id: status
+      - name: Determine final status
         run: |
-          if [ "${{ needs.deploy-testing.result }}" == "success" ] && \
-             [ "${{ needs.health-check.result }}" == "success" ]; then
-            echo "status=✅ Deployment successful" >> $GITHUB_OUTPUT
+          if [ "${{ needs.deploy-testing.result }}" = "success" ] &&
+             [ "${{ needs.health-check.result }}" = "success" ]; then
+            echo "Deployment OK"
           else
-            echo "status=❌ Deployment failed" >> $GITHUB_OUTPUT
+            echo "Deployment FAILED"
           fi
-        shell: bash
