@@ -5,6 +5,8 @@ on:
     workflows: ["CD - Build, Test & Push Image"]
     types: [completed]
     branches: [main, test]
+  push:
+    branches: [ "main", "test" ]
 
   workflow_dispatch:
     inputs:
