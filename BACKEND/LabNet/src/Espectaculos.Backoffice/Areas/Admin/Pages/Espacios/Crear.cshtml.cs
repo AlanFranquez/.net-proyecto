@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Espectaculos.Domain.Enums;
 using Espectaculos.Application.Espacios.Commands.CreateEspacio;
+using Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso;
+using Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 using ValidationException = FluentValidation.ValidationException;
 
 namespace Espectaculos.Backoffice.Areas.Admin.Pages.Espacios;
@@ -19,18 +21,19 @@ public class CrearModel : PageModel
 
     public IEnumerable<SelectListItem> Tipos { get; private set; } = default!;
     public IEnumerable<SelectListItem> Modos { get; private set; } = default!;
+    public IEnumerable<SelectListItem> ReglaOptions { get; private set; } = new List<SelectListItem>();
+    public IEnumerable<SelectListItem> BeneficioOptions { get; private set; } = new List<SelectListItem>();
 
-    public void OnGet()
+    public async Task OnGetAsync(CancellationToken ct)
     {
-        Tipos = GetEnumItems<EspacioTipo>();
-        Modos = GetEnumItems<Modo>();
+        await LoadCombosAsync(ct);
     }
 
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
-        Tipos = GetEnumItems<EspacioTipo>();
-        Modos = GetEnumItems<Modo>();
+        await LoadCombosAsync(ct);
+
         if (!ModelState.IsValid) return Page();
 
         try
@@ -40,10 +43,14 @@ public class CrearModel : PageModel
                 Nombre = Vm.Nombre!.Trim(),
                 Activo = Vm.Activo,
                 Tipo   = Vm.Tipo,
-                Modo   = Vm.Modo
-            });
+                Modo   = Vm.Modo,
+
+                ReglaIds     = Vm.ReglaIds,
+                BeneficioIds = Vm.BeneficioIds
+            }, ct);
+
             TempData["Ok"] = "Espacio creado.";
-            return RedirectToPage("/Espacios/Index");
+            return RedirectToPage("/Espacios/Index", new { area = "Admin" });
         }
         catch (ValidationException vex)
         {
@@ -58,6 +65,32 @@ public class CrearModel : PageModel
         }
     }
 
+    private async Task LoadCombosAsync(CancellationToken ct)
+    {
+        Tipos = GetEnumItems<EspacioTipo>();
+        Modos = GetEnumItems<Modo>();
+
+        var reglas = await _mediator.Send(new ListarReglasQuery(), ct);
+        ReglaOptions = reglas
+            .Select(r => new SelectListItem
+            {
+                Value = r.ReglaId.ToString(),
+                Text  = !string.IsNullOrEmpty(r.VentanaHoraria)
+                        ? $"{r.Politica} ({r.VentanaHoraria}, prio {r.Prioridad})"
+                        : $"{r.Politica} (prio {r.Prioridad})"
+            })
+            .ToList();
+
+        var beneficios = await _mediator.Send(new ListBeneficiosQuery(), ct);
+        BeneficioOptions = beneficios
+            .Select(b => new SelectListItem
+            {
+                Value = b.Id.ToString(),
+                Text  = string.IsNullOrWhiteSpace(b.Nombre) ? $"Beneficio {b.Id}" : b.Nombre
+            })
+            .ToList();
+    }
+
     private static IEnumerable<SelectListItem> GetEnumItems<TEnum>() where TEnum : Enum =>
         Enum.GetValues(typeof(TEnum)).Cast<TEnum>()
             .Select(v => new SelectListItem { Value = v.ToString(), Text = v.ToString() });
@@ -68,5 +101,8 @@ public class CrearModel : PageModel
         public bool Activo { get; set; } = true;
         [Required] public EspacioTipo Tipo { get; set; }
         [Required] public Modo Modo { get; set; }
+
+        public List<Guid> ReglaIds { get; set; } = new();
+        public List<Guid> BeneficioIds { get; set; } = new();
     }
 }

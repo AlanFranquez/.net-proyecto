@@ -1,71 +1,82 @@
 using System.ComponentModel.DataAnnotations;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
+using Espectaculos.Application.Roles.Queries.ListarRoles; // NEW
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios
+namespace Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios;
+
+public class CrearModel : PageModel
 {
-    public class CrearModel : PageModel
+    private readonly IMediator _mediator;
+    public CrearModel(IMediator mediator) => _mediator = mediator;
+
+    [BindProperty] public Vm ModelVm { get; set; } = new();
+
+    public IEnumerable<SelectListItem> RolesOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+
+    public async Task OnGetAsync(CancellationToken ct)
     {
-        private readonly IMediator _mediator;
-        public CrearModel(IMediator mediator) => _mediator = mediator;
+        await LoadRolesAsync(ct);
+    }
 
-        [BindProperty] public Vm ModelVm { get; set; } = new();
+    private async Task LoadRolesAsync(CancellationToken ct)
+    {
+        var roles = await _mediator.Send(new ListarRolesQuery(), ct);
 
-        public void OnGet() { }
-
-        public async Task<IActionResult> OnPostAsync()
+        RolesOptions = roles.Select(r => new SelectListItem
         {
-            if (!ModelState.IsValid) return Page();
+            Value = r.RolId.ToString(),
+            Text = $"{r.Tipo} (prio {r.Prioridad})"
+        })
+        .ToList();
+    }
 
-            try
-            {
-                await _mediator.Send(new CreateUsuarioCommand
-                {
-                    Nombre    = ModelVm.Nombre!.Trim(),
-                    Apellido  = ModelVm.Apellido!.Trim(),
-                    Email     = ModelVm.Email!.Trim(),
-                    Documento = ModelVm.Documento!.Trim(),
-                    Password  = ModelVm.Password!.Trim(),
-                    RolesIDs  = ParseGuids(ModelVm.RolesComma)
-                });
+    public async Task<IActionResult> OnPostAsync(CancellationToken ct)
+    {
+        await LoadRolesAsync(ct);
+        if (!ModelState.IsValid) return Page();
 
-                TempData["Ok"] = "Usuario creado.";
-                return RedirectToPage("/Usuarios/Index");
-            }
-            catch (FluentValidation.ValidationException vex)
-            {
-                foreach (var failure in vex.Errors)
-                    ModelState.AddModelError(failure.PropertyName ?? string.Empty, failure.ErrorMessage);
-
-                return Page();
-            }
-            catch (Exception ex)
-            {
-                // opcional: loguea completo para ver stack y constraint exacta
-                // _logger.LogError(ex, "Error creando usuario");
-                ModelState.AddModelError(string.Empty, ex.Message);
-                return Page();
-            }
-        }
-        private static IEnumerable<Guid>? ParseGuids(string? raw)
+        try
         {
-            if (string.IsNullOrWhiteSpace(raw)) return null;
-            var list = new List<Guid>();
-            foreach (var s in raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-                if (Guid.TryParse(s, out var g)) list.Add(g);
-            return list.Count > 0 ? list : null;
-        }
+            await _mediator.Send(new CreateUsuarioCommand
+            {
+                Nombre    = ModelVm.Nombre!.Trim(),
+                Apellido  = ModelVm.Apellido!.Trim(),
+                Email     = ModelVm.Email!.Trim(),
+                Documento = ModelVm.Documento!.Trim(),
+                Password  = ModelVm.Password!.Trim(),
+                RolesIDs  = ModelVm.RolesIDs ?? new List<Guid>()
+            }, ct);
 
-        public class Vm
-        {
-            [Required, MaxLength(100)] public string? Nombre { get; set; }
-            [Required] public string? Apellido { get; set; }
-            [Required, EmailAddress] public string? Email { get; set; }
-            [Required] public string? Documento { get; set; }
-            [Required, MinLength(6)] public string? Password { get; set; }
-            public string? RolesComma { get; set; }
+            TempData["Ok"] = "Usuario creado.";
+            return RedirectToPage("/Usuarios/Index", new { area = "Admin" });
         }
+        catch (FluentValidation.ValidationException vex)
+        {
+            foreach (var e in vex.Errors)
+                ModelState.AddModelError(e.PropertyName ?? string.Empty, e.ErrorMessage);
+
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            ModelState.AddModelError(string.Empty, ex.Message);
+            return Page();
+        }
+    }
+
+    public class Vm
+    {
+        [Required, MaxLength(100)] public string? Nombre { get; set; }
+        [Required] public string? Apellido { get; set; }
+        [Required, EmailAddress] public string? Email { get; set; }
+        [Required] public string? Documento { get; set; }
+        [Required, MinLength(6)] public string? Password { get; set; }
+
+        // NEW - no more comma text!
+        public List<Guid>? RolesIDs { get; set; } = new();
     }
 }

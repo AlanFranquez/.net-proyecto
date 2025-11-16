@@ -68,7 +68,17 @@ namespace Espectaculos.Infrastructure.Repositories
 
     
         public async Task<Usuario?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => await _db.Set<Usuario>().FirstOrDefaultAsync(e => e.UsuarioId == id, ct);
+        {
+            return await _db.Usuario
+                .AsNoTracking()
+                .Include(u => u.UsuarioRoles)
+                .Include(u => u.Beneficios)
+                .Include(u => u.Dispositivos)
+                .Include(u => u.Canjes)
+                .Include(u => u.Credencial)
+                .Include(u => u.Notificaciones)
+                .FirstOrDefaultAsync(u => u.UsuarioId == id, ct);
+        }
 
         
         public async Task UpdateAsync(Usuario usuario, CancellationToken ct = default)

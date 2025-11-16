@@ -27,7 +27,6 @@ public static class BeneficiosEndpoints
 
         api.MapPost("/beneficios", async (Espectaculos.WebApi.Endpoints.Dtos.CreateBeneficioDto dto, IMediator mediator) =>
         {
-            // parse Tipo (string or numeric)
             if (!TryParseTipo(dto.Tipo, out Espectaculos.Domain.Enums.BeneficioTipo tipo))
                 return Results.BadRequest("Tipo inválido");
 
@@ -38,25 +37,24 @@ public static class BeneficiosEndpoints
 
         api.MapPut("/beneficios/{id:guid}", async (Guid id, UpdateBeneficioCommand cmd, IMediator mediator) =>
         {
-            if (!id.Equals(null)) 
-                cmd.Id = id;
+            cmd.Id = id;
 
             try
             {
                 var ok = await mediator.Send(cmd);
                 if (!ok) return Results.NotFound();
 
-                // fetch updated entity to return current rowVersion and fields
-                var updated = await mediator.Send(new Espectaculos.Application.Beneficios.Queries.GetBeneficioById.GetBeneficioByIdQuery(id));
+                var updated = await mediator.Send(new GetBeneficioByIdQuery(id));
                 if (updated is null) return Results.NotFound();
 
-                return Results.Ok(new { id = updated.BeneficioId, nombre = updated.Nombre, message = "Beneficio actualizado" });
+                return Results.Ok(new { id = updated.Id, nombre = updated.Nombre, message = "Beneficio actualizado" });
             }
             catch (Espectaculos.Application.Common.Exceptions.ConcurrencyException)
             {
                 return Results.Conflict("Conflicto de concurrencia");
             }
         });
+
 
         api.MapPost("/beneficios/{id:guid}/canjear", async (Guid id, CanjearBeneficioCommand cmd, IMediator mediator) =>
         {

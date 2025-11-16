@@ -50,6 +50,17 @@
         <button class="btn btn-primary" type="submit"><i class="bi bi-save"></i> Guardar</button>
         <a asp-area="Admin" asp-page="/Usuarios/Index" class="btn btn-outline-secondary">Cancelar</a>
       </div>
+      <div class="col-12">
+        <label class="form-label">Roles</label>
+        <select asp-for="ModelVm.RolesIDs"
+                class="form-select"
+                asp-items="Model.RolesOptions"
+                multiple>
+        </select>
+        <span class="form-text">Use Ctrl/Cmd + click para seleccionar múltiples roles.</span>
+        <span asp-validation-for="ModelVm.RolesIDs" class="text-danger small"></span>
+      </div>
+
     </form>
   </div>
 </div>

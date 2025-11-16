@@ -35,4 +35,5 @@ public class EspectaculosDbContext : DbContext
         optionsBuilder.AddInterceptors(new AvailabilityRecomputeInterceptor());
         base.OnConfiguring(optionsBuilder);
     }
+    
 }

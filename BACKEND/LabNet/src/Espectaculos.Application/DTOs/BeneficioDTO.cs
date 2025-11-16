@@ -14,6 +14,6 @@ public class BeneficioDTO
     public int? CupoPorUsuario { get; set; } = null;
     public bool? RequiereBiometria { get; set; } = null;
     public string? CriterioElegibilidad { get; set; } = null;
-    public ICollection<Guid>? EspaciosIDs { get; set; } = null;
+    public List<Guid> EspaciosIDs { get; set; } = new();
     public ICollection<Guid>? UsuariosIDs { get; set; } = null;
 }

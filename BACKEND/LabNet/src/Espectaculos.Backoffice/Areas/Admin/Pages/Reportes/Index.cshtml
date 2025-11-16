@@ -3,9 +3,37 @@
 @{
     ViewData["Title"] = "Reportes y auditoría";
 }
-<h1>Reportes / Auditoría</h1>
-<p>Placeholder: filtros por rango de fechas, exportación.</p>
+
+<h1>Accesos en vivo</h1>
+
+<p>Listado de los últimos accesos recibidos en tiempo real.</p>
+
 <div class="card">
-    <strong>Listado de eventos (placeholder)</strong>
-    <div style="height:260px; border:1px dashed #cbd5e1; margin-top:8px;"></div>
+    <strong>Tablero de accesos en vivo</strong>
+
+    <p id="realtime-status" class="text-muted" style="margin-top:10px;">
+        Conectando al servidor de eventos...
+    </p>
+
+    <div class="table-responsive" style="margin-top:10px;">
+        <table class="table table-sm">
+            <thead>
+            <tr>
+                <th>Momento</th>
+                <th>Espacio</th>
+                <th>Usuario</th>
+                <th>Resultado</th>
+                <th>Modo</th>
+                <th>Motivo</th>
+            </tr>
+            </thead>
+            <tbody id="realtime-body">
+            </tbody>
+        </table>
+    </div>
 </div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <script src="~/js/reportes-realtime.js"></script>
+}

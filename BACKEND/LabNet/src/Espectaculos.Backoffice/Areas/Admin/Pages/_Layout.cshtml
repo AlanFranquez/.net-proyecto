@@ -1,7 +1,5 @@
-﻿@using Microsoft.AspNetCore.Identity
-@using Microsoft.AspNetCore.Mvc.RazorPages
-@inject SignInManager<IdentityUser> SignInManager
-@inject UserManager<IdentityUser> UserManager
+﻿@using Microsoft.AspNetCore.Mvc.RazorPages
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -9,16 +7,16 @@
     <title>Backoffice - @ViewData["Title"]</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="/css/site.css" asp-append-version="true" />
-    <!-- (Opcional, si usás íconos bi-*) -->
+    <!-- Iconos de Bootstrap (opcional) -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 </head>
 <body>
 @{
-    // Página actual (para marcar item activo en la sidebar)
-    var pad = ViewContext.ActionDescriptor as PageActionDescriptor;
-    string? currentPage = pad?.ViewEnginePath; // ej: "/Areas/Admin/Pages/Novedades/Index.cshtml" → ViewEnginePath: "/Admin/Novedades/Index"
-    string Active(string prefix)
-        => (currentPage?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?? false) ? "active" : "";
+// Página actual (para marcar item activo en la sidebar)
+var pad = ViewContext.ActionDescriptor as PageActionDescriptor;
+string? currentPage = pad?.ViewEnginePath;
+string Active(string prefix)
+=> (currentPage?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?? false) ? "active" : "";
 }
 
 <div class="shell">
@@ -26,46 +24,64 @@
         <div class="brand">Backoffice</div>
 
         <nav class="nav">
-            <a class="@Active("/Index")" asp-page="/Index"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a asp-area="Admin" asp-page="/Dashboard/Index">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
 
             <a class="@Active("/Admin/Usuarios")"
-               asp-area="Admin" asp-page="/Usuarios/Index"><i class="bi bi-people"></i> Gestión de usuarios</a>
+               asp-area="Admin" asp-page="/Usuarios/Index">
+                <i class="bi bi-people"></i> Gestión de usuarios
+            </a>
 
             <a class="@Active("/Admin/Roles")"
-               asp-area="Admin" asp-page="/Roles/Index"><i class="bi bi-shield-lock"></i> Roles</a>
+               asp-area="Admin" asp-page="/Roles/Index">
+                <i class="bi bi-shield-lock"></i> Roles
+            </a>
 
             <a class="@Active("/Admin/Espacios")"
-               asp-area="Admin" asp-page="/Espacios/Index"><i class="bi bi-grid-3x3-gap"></i> Espacios</a>
+               asp-area="Admin" asp-page="/Espacios/Index">
+                <i class="bi bi-grid-3x3-gap"></i> Espacios
+            </a>
 
             <a class="@Active("/Admin/Reglas")"
-               asp-area="Admin" asp-page="/Reglas/Index"><i class="bi bi-diagram-3"></i> Reglas de acceso</a>
+               asp-area="Admin" asp-page="/Reglas/Index">
+                <i class="bi bi-diagram-3"></i> Reglas de acceso
+            </a>
 
             <a class="@Active("/Admin/Beneficios")"
-               asp-area="Admin" asp-page="/Beneficios/Index"><i class="bi bi-gift"></i> Beneficios</a>
+               asp-area="Admin" asp-page="/Beneficios/Index">
+                <i class="bi bi-gift"></i> Beneficios
+            </a>
 
-            <!-- Novedades: ya queda integrado y con activo cuando estás en /Admin/Novedades/* -->
+            <!-- 🔑 Nuevo menú: Credenciales -->
+            <a class="@Active("/Admin/Credenciales")"
+               asp-area="Admin" asp-page="/Credenciales/Index">
+                <i class="bi bi-key"></i> Credenciales
+            </a>
+
             <a class="@Active("/Admin/Novedades")"
-               asp-area="Admin" asp-page="/Novedades/Index"><i class="bi bi-megaphone"></i> Novedades</a>
+               asp-area="Admin" asp-page="/Novedades/Index">
+                <i class="bi bi-megaphone"></i> Novedades
+            </a>
 
             <a class="@Active("/Admin/Reportes")"
-               asp-area="Admin" asp-page="/Reportes/Index"><i class="bi bi-graph-up"></i> Reportes</a>
+               asp-area="Admin" asp-page="/Reportes/Index">
+                <i class="bi bi-graph-up"></i> Reportes
+            </a>
+
+            <a class="@Active("/Admin/TestEventos")"
+               asp-area="Admin" asp-page="/TestEventos/Index">
+                <i class="bi bi-bug"></i> Test eventos
+            </a>
         </nav>
     </aside>
 
     <main class="content">
-        <!-- Topbar simple con usuario (opcional) -->
+        <!-- Topbar simple sin Identity -->
         <div class="topbar">
-            @if (SignInManager.IsSignedIn(User))
-            {
-                <div class="text-end small text-muted">
-                    <i class="bi bi-person-circle"></i>
-                    @User.Identity!.Name
-                    <form method="post" asp-area="" asp-page="/Logout" class="d-inline">
-                        @Html.AntiForgeryToken()
-                        <button class="btn btn-sm btn-outline-secondary ms-2">Salir</button>
-                    </form>
-                </div>
-            }
+            <div class="text-end small text-muted">
+                <i class="bi bi-person-circle"></i> Modo demo (sin autenticación)
+            </div>
         </div>
 
         @RenderBody()
@@ -77,7 +93,7 @@
 <style>
     .nav a { display:block; padding:.5rem .75rem; border-radius:.5rem; text-decoration:none; color:inherit; }
     .nav a.active { background:rgba(13,110,253,.1); color:#0d6efd; font-weight:600; }
-    .topbar { padding: .75rem 0; }
+    .topbar { padding:.75rem 0; }
 </style>
 </body>
 </html>

@@ -30,7 +30,7 @@
         </div>
 
         <div class="col-md-3">
-          <label class="form-label">Vigencia fin</label>
+          <label class="form-label">Vigencia fin (opcional)</label>
           <input asp-for="Vm.VigenciaFin" type="date" class="form-control" />
           <span asp-validation-for="Vm.VigenciaFin" class="text-danger small"></span>
         </div>
@@ -55,9 +55,14 @@
         </div>
 
         <div class="col-12">
-          <label class="form-label">Espacios (opcional, IDs separados por coma)</label>
-          <input asp-for="Vm.EspaciosIDsComma" class="form-control" placeholder="GUID1, GUID2, ..." />
-          <span asp-validation-for="Vm.EspaciosIDsComma" class="text-danger small"></span>
+          <label class="form-label">Espacios</label>
+          <select asp-for="Vm.EspaciosIDs"
+                  class="form-select"
+                  asp-items="Model.EspaciosOptions"
+                  multiple>
+          </select>
+          <span class="form-text"></span>
+          <span asp-validation-for="Vm.EspaciosIDs" class="text-danger small"></span>
         </div>
       </div>
 
