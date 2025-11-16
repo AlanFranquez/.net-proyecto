@@ -87,7 +87,7 @@ resource "aws_eks_node_group" "default" {
 
 # Stable Attachment: ASG → Target Group
 resource "aws_autoscaling_attachment" "eks_asg_attachment" {
-  autoscaling_group_name = aws_eks_node_group.default.resources[0].autoscaling_groups[0]
+  autoscaling_group_name = aws_eks_node_group.default.autoscaling_group_names[0]
   lb_target_group_arn    = aws_lb_target_group.eks_tg.arn
 
   depends_on = [
