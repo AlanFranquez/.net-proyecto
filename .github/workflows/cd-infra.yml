@@ -82,7 +82,7 @@ jobs:
 
   terraform-apply:
     name: Terraform Apply
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: terraform-plan
     runs-on: ubuntu-latest
     environment: AWS_ACCOUNT_ID   # <-- igual que el anterior
