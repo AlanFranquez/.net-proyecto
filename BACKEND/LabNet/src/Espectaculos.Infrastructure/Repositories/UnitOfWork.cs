@@ -21,8 +21,8 @@ public class UnitOfWork : IUnitOfWork
                       INotificacionRepository notificaciones,
                       IRolRepository roles,
                       IDispositivoRepository dispositivos,
-                      ISincronizacionRepository sincronizaciones
-    )
+                      ISincronizacionRepository sincronizaciones,
+                      INovedadRepository novedades) 
     {
         _db = db;
         Usuarios = usuarios;
@@ -38,7 +38,9 @@ public class UnitOfWork : IUnitOfWork
         Roles = roles;
         Dispositivos = dispositivos;
         Sincronizaciones = sincronizaciones;
+        Novedades = novedades;
     }
+
     public IUsuarioRepository Usuarios { get; }
     public IEspacioRepository Espacios { get; }
     public IReglaDeAccesoRepository Reglas { get; }
@@ -52,17 +54,16 @@ public class UnitOfWork : IUnitOfWork
     public IRolRepository Roles { get; }
     public IDispositivoRepository Dispositivos { get; }
     public ISincronizacionRepository Sincronizaciones { get; }
+    public INovedadRepository Novedades { get; }
 
+    
     public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
-        try
-        {
-            return _db.SaveChangesAsync(cancellationToken);
-        }
+        try { return _db.SaveChangesAsync(cancellationToken); }
         catch (Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException ex)
         {
-            // map to application-level concurrency exception
-            throw new Espectaculos.Application.Common.Exceptions.ConcurrencyException("Concurrency conflict during SaveChanges", ex);
+            throw new Espectaculos.Application.Common.Exceptions.ConcurrencyException(
+                "Concurrency conflict during SaveChanges", ex);
         }
     }
 }

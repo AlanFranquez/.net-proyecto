@@ -70,6 +70,17 @@
           <label class="form-label">Criterio de elegibilidad</label>
           <textarea asp-for="Vm.CriterioElegibilidad" class="form-control" rows="2"></textarea>
         </div>
+
+        <!-- Espacios -->
+        <div class="col-12">
+          <label class="form-label">Espacios donde aplica</label>
+          <select asp-for="Vm.EspaciosIDs"
+                  class="form-select"
+                  asp-items="Model.EspaciosOptions"
+                  multiple>
+          </select>
+          <span asp-validation-for="Vm.EspaciosIDs" class="text-danger small"></span>
+        </div>
       </div>
 
       <div class="mt-3 d-flex gap-2">

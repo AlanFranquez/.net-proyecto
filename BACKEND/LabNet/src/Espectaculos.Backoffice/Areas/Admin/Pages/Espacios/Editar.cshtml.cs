@@ -6,8 +6,11 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Espectaculos.Application.Espacios.Queries.GetEspacioById;
 using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
+using Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso;
+using Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 using Espectaculos.Domain.Enums;
 using ValidationException = FluentValidation.ValidationException;
+
 namespace Espectaculos.Backoffice.Areas.Admin.Pages.Espacios;
 
 public class EditarModel : PageModel
@@ -19,50 +22,57 @@ public class EditarModel : PageModel
 
     public IEnumerable<SelectListItem> Tipos { get; private set; } = default!;
     public IEnumerable<SelectListItem> Modos { get; private set; } = default!;
+    public IEnumerable<SelectListItem> ReglaOptions { get; private set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> BeneficioOptions { get; private set; } = Enumerable.Empty<SelectListItem>();
 
-    public async Task<IActionResult> OnGet(Guid id)
+    public async Task<IActionResult> OnGet(Guid id, CancellationToken ct)
     {
-        Tipos = GetEnumItems<EspacioTipo>();
-        Modos = GetEnumItems<Modo>();
+        await LoadCombosAsync(ct);
 
-        var dto = await _mediator.Send(new GetEspacioByIdQuery(id));
-        if (dto is null) return RedirectToPage("/Espacios/Index");
+        var dto = await _mediator.Send(new GetEspacioByIdQuery(id), ct);
+        if (dto is null)
+        {
+            TempData["Error"] = "Espacio no encontrado.";
+            return RedirectToPage("/Espacios/Index", new { area = "Admin" });
+        }
 
-        Vm.Id = dto.Id;
-        Vm.Nombre = dto.Nombre;
-        Vm.Activo = dto.Activo;
-        Vm.Tipo = Enum.Parse<EspacioTipo>(dto.Tipo);
-        Vm.Modo = Enum.Parse<Modo>(dto.Modo);
-        Vm.ReglaIdsComma     = dto.ReglaIds?.Count > 0     ? string.Join(", ", dto.ReglaIds) : null;
-        Vm.BeneficioIdsComma = dto.BeneficioIds?.Count > 0 ? string.Join(", ", dto.BeneficioIds) : null;
-        Vm.EventoIdsComma    = dto.EventoIds?.Count > 0    ? string.Join(", ", dto.EventoIds) : null;
+        Vm.Id      = dto.Id;
+        Vm.Nombre  = dto.Nombre;
+        Vm.Activo  = dto.Activo;
+        Vm.Tipo    = Enum.Parse<EspacioTipo>(dto.Tipo);
+        Vm.Modo    = Enum.Parse<Modo>(dto.Modo);
+
+        Vm.ReglaIds     = dto.ReglaIds ?? new List<Guid>();
+        Vm.BeneficioIds = dto.BeneficioIds ?? new List<Guid>();
+        // 👇 EventoIds ya no se editan en el backoffice
 
         return Page();
     }
 
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
-        Tipos = GetEnumItems<EspacioTipo>();
-        Modos = GetEnumItems<Modo>();
+        await LoadCombosAsync(ct);
         if (!ModelState.IsValid) return Page();
 
         try
         {
             await _mediator.Send(new UpdateEspacioCommand
             {
-                Id = Vm.Id,
+                Id     = Vm.Id,
                 Nombre = Vm.Nombre?.Trim(),
                 Activo = Vm.Activo,
-                Tipo = Vm.Tipo,
-                Modo = Vm.Modo,
-                ReglaIds = ParseGuids(Vm.ReglaIdsComma),
-                BeneficioIds = ParseGuids(Vm.BeneficioIdsComma),
-                EventoAccesoIds = ParseGuids(Vm.EventoIdsComma)
-            });
+                Tipo   = Vm.Tipo,
+                Modo   = Vm.Modo,
+
+                // Many-to-many:
+                ReglaIds      = Vm.ReglaIds,
+                BeneficioIds  = Vm.BeneficioIds,
+                // EventoAccesoIds = null; // se dejan para la lógica de eventos, no desde el UI
+            }, ct);
 
             TempData["Ok"] = "Espacio actualizado.";
-            return RedirectToPage("/Espacios/Index");
+            return RedirectToPage("/Espacios/Index", new { area = "Admin" });
         }
         catch (ValidationException vex)
         {
@@ -77,18 +87,39 @@ public class EditarModel : PageModel
         }
     }
 
+    private async Task LoadCombosAsync(CancellationToken ct)
+    {
+        Tipos = GetEnumItems<EspacioTipo>();
+        Modos = GetEnumItems<Modo>();
+
+        // Reglas de acceso para el multiselect
+        var reglas = await _mediator.Send(new ListarReglasQuery(), ct);
+        ReglaOptions = reglas
+            .Select(r => new SelectListItem
+            {
+                Value = r.ReglaId.ToString(),
+                Text  = !string.IsNullOrWhiteSpace(r.VentanaHoraria)
+                        ? $"{r.Politica} ({r.VentanaHoraria}, prio {r.Prioridad})"
+                        : $"{r.Politica} (prio {r.Prioridad})"
+            })
+            .ToList();
+
+        // Beneficios para el multiselect
+        var beneficios = await _mediator.Send(new ListBeneficiosQuery(), ct);
+        BeneficioOptions = beneficios
+            .Select(b => new SelectListItem
+            {
+                Value = b.Id.ToString(),
+                Text  = string.IsNullOrWhiteSpace(b.Nombre)
+                        ? $"Beneficio {b.Id}"
+                        : b.Nombre
+            })
+            .ToList();
+    }
+
     private static IEnumerable<SelectListItem> GetEnumItems<TEnum>() where TEnum : Enum =>
         Enum.GetValues(typeof(TEnum)).Cast<TEnum>()
             .Select(v => new SelectListItem { Value = v.ToString(), Text = v.ToString() });
-
-    private static IEnumerable<Guid>? ParseGuids(string? raw)
-    {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var list = new List<Guid>();
-        foreach (var s in raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-            if (Guid.TryParse(s, out var g)) list.Add(g);
-        return list.Count > 0 ? list : null;
-    }
 
     public class VmEspacio
     {
@@ -97,8 +128,8 @@ public class EditarModel : PageModel
         public bool Activo { get; set; }
         [Required] public EspacioTipo Tipo { get; set; }
         [Required] public Modo Modo { get; set; }
-        public string? ReglaIdsComma { get; set; }
-        public string? BeneficioIdsComma { get; set; }
-        public string? EventoIdsComma { get; set; }
+        public List<Guid> ReglaIds { get; set; } = new();
+        public List<Guid> BeneficioIds { get; set; } = new();
+
     }
 }

@@ -4,8 +4,10 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Espectaculos.Application.Roles.Commands.UpdateRol;
 using Espectaculos.Application.Roles.Queries.GetRolById;
+using Espectaculos.Application.Usuarios.Queries.ListarUsuarios;
 using ValidationException = FluentValidation.ValidationException;
 
 namespace Espectaculos.Backoffice.Areas.Admin.Pages.Roles;
@@ -17,37 +19,42 @@ public class EditarModel : PageModel
 
     [BindProperty] public VmRole Vm { get; set; } = new();
 
-    public async Task<IActionResult> OnGet(Guid id)
+    public IEnumerable<SelectListItem> UsuarioOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+
+    public async Task<IActionResult> OnGetAsync(Guid id, CancellationToken ct)
     {
-        var dto = await _mediator.Send(new GetRolByIdQuery(id));
-        if (dto is null) return RedirectToPage("/Roles/Index");
+        var dto = await _mediator.Send(new GetRolByIdQuery(id), ct);
+        if (dto is null) return RedirectToPage("/Roles/Index", new { area = "Admin" });
 
         Vm.RolId = dto.RolId;
         Vm.Tipo = dto.Tipo;
         Vm.Prioridad = dto.Prioridad;
-        // dto.FechaAsignado viene como DateTime (UTC en DB). Lo mostramos como fecha local (solo fecha):
-// OnGet
+
         if (dto.FechaAsignado.HasValue)
         {
             var dt = dto.FechaAsignado.Value;
             if (dt.Kind == DateTimeKind.Unspecified)
                 dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-            Vm.FechaAsignado = DateOnly.FromDateTime(dt.ToLocalTime());
-        }        Vm.UsuariosIDsComma = (dto.UsuariosIDs != null && dto.UsuariosIDs.Any())
-            ? string.Join(", ", dto.UsuariosIDs)
-            : null;
 
+            Vm.FechaAsignado = DateOnly.FromDateTime(dt.ToLocalTime());
+        }
+
+        Vm.UsuariosIDs = dto.UsuariosIDs?.ToList() ?? new List<Guid>();
+
+        await LoadUsuarioOptionsAsync(ct);
         return Page();
     }
 
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
-        if (!ModelState.IsValid) return Page();
+        await LoadUsuarioOptionsAsync(ct);
+
+        if (!ModelState.IsValid) 
+            return Page();
 
         try
         {
-            // Convertimos DateOnly a DateTime UTC (00:00:00)
             DateTime? fechaUtc = null;
             if (Vm.FechaAsignado.HasValue)
             {
@@ -61,11 +68,11 @@ public class EditarModel : PageModel
                 Tipo          = Vm.Tipo?.Trim(),
                 Prioridad     = Vm.Prioridad,
                 FechaAsignado = fechaUtc,
-                UsuariosIDs   = ParseGuids(Vm.UsuariosIDsComma)
-            });
+                UsuariosIDs   = Vm.UsuariosIDs ?? new List<Guid>()
+            }, ct);
 
             TempData["Ok"] = "Rol actualizado.";
-            return RedirectToPage("/Roles/Index");
+            return RedirectToPage("/Roles/Index", new { area = "Admin" });
         }
         catch (ValidationException vex)
         {
@@ -80,24 +87,32 @@ public class EditarModel : PageModel
         }
     }
 
-    private static IEnumerable<Guid>? ParseGuids(string? raw)
+    private async Task LoadUsuarioOptionsAsync(CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return null;
-        var list = new List<Guid>();
-        foreach (var s in raw.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
-            if (Guid.TryParse(s, out var g)) list.Add(g);
-        return list.Count > 0 ? list : null;
+        var usuarios = await _mediator.Send(new ListarUsuariosQuery(), ct);
+
+        UsuarioOptions = usuarios
+            .Select(u => new SelectListItem
+            {
+                Value = u.UsuarioId.ToString(),
+                Text  = $"{u.Nombre} {u.Apellido} ({u.Email})"
+            })
+            .ToList();
     }
 
     public class VmRole
     {
         [Required] public Guid RolId { get; set; }
-        [Required, MaxLength(100)] public string? Tipo { get; set; }
-        [Required] public int? Prioridad { get; set; }
 
-        // DateOnly para bind limpio desde <input type="date">
-        [Required] public DateOnly? FechaAsignado { get; set; }
+        [Required, MaxLength(100)]
+        public string? Tipo { get; set; }
 
-        public string? UsuariosIDsComma { get; set; }
+        [Required]
+        public int? Prioridad { get; set; }
+
+        [Required]
+        public DateOnly? FechaAsignado { get; set; }
+
+        public List<Guid>? UsuariosIDs { get; set; } = new();
     }
 }

@@ -9,5 +9,7 @@ namespace Espectaculos.Application.Espacios.Commands.CreateEspacio
         public bool Activo { get; set; }
         public EspacioTipo Tipo { get; set; }
         public Modo Modo { get; set; }
+        public List<Guid> ReglaIds { get; set; } = new();
+        public List<Guid> BeneficioIds { get; set; } = new();
     }
 }

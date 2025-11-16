@@ -23,20 +23,30 @@
           <input asp-for="Vm.Tipo" class="form-control"/>
           <span asp-validation-for="Vm.Tipo" class="text-danger small"></span>
         </div>
+
         <div class="col-md-3">
           <label class="form-label">Prioridad</label>
           <input asp-for="Vm.Prioridad" type="number" class="form-control"/>
           <span asp-validation-for="Vm.Prioridad" class="text-danger small"></span>
         </div>
+
         <div class="col-md-3">
           <label class="form-label">Fecha asignado</label>
           <input asp-for="Vm.FechaAsignado" type="date" class="form-control"/>
           <span asp-validation-for="Vm.FechaAsignado" class="text-danger small"></span>
         </div>
+
         <div class="col-12">
-          <label class="form-label">Usuarios (opcional, IDs separados por coma)</label>
-          <input asp-for="Vm.UsuariosIDsComma" class="form-control" placeholder="GUID1, GUID2, ..." />
-          <div class="form-text">Si lo dejas vacío, no se modifica la relación.</div>
+          <label class="form-label">Usuarios</label>
+          <select asp-for="Vm.UsuariosIDs"
+                  class="form-select"
+                  asp-items="Model.UsuarioOptions"
+                  multiple>
+          </select>
+          <span class="form-text">
+            Use Ctrl/Cmd + click para seleccionar múltiples usuarios.
+          </span>
+          <span asp-validation-for="Vm.UsuariosIDs" class="text-danger small"></span>
         </div>
       </div>
 

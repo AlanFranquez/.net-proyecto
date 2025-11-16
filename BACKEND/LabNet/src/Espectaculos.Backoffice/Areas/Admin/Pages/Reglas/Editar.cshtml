@@ -56,9 +56,14 @@
         </div>
 
         <div class="col-12">
-          <label class="form-label">Espacios (opcional, IDs separados por coma)</label>
-          <input asp-for="Vm.EspaciosIDsComma" class="form-control" placeholder="GUID1, GUID2, ..." />
-          <span asp-validation-for="Vm.EspaciosIDsComma" class="text-danger small"></span>
+          <label class="form-label">Espacios</label>
+          <select asp-for="Vm.EspaciosIDs"
+                  class="form-select"
+                  asp-items="Model.EspaciosOptions"
+                  multiple>
+          </select>
+          <span class="form-text"></span>
+          <span asp-validation-for="Vm.EspaciosIDs" class="text-danger small"></span>
         </div>
       </div>
 
