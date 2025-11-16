@@ -2,9 +2,23 @@ name: CodeQL
 
 on:
   push:
-    branches: ["test", "main"]
+    branches: [ main, test ]
+    paths:
+      - "BACKEND/**"
+    paths-ignore:
+      - App/**
+      - "**/*.Android.csproj"
+      - "**/*.iOS.csproj"
+      - "**/*.Maccatalyst.csproj"
   pull_request:
-    branches: ["test", "main"]
+    branches: [ main, test ]
+    paths:
+      - "BACKEND/**"
+    paths-ignore:
+      - App/**
+      - "**/*.Android.csproj"
+      - "**/*.iOS.csproj"
+      - "**/*.Maccatalyst.csproj"
 
 jobs:
   analyze:
