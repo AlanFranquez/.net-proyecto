@@ -85,38 +85,3 @@ resource "aws_eks_node_group" "default" {
   instance_types = ["t3.medium"]
 }
 
-#  Obtener instancias del Node Group
-data "aws_autoscaling_groups" "eks_asgs" {
-  filter {
-    name   = "tag:eks:cluster-name"
-    values = [aws_eks_cluster.main.name]
-  }
-}
-
-data "aws_autoscaling_group" "eks_group" {
-  name = element(data.aws_autoscaling_groups.eks_asgs.names, 0)
-}
-
-data "aws_instances" "eks_nodes" {
-  filter {
-    name   = "instance-state-name"
-    values = ["running"]
-  }
-
-  filter {
-    name   = "tag:aws:autoscaling:groupName"
-    values = [data.aws_autoscaling_group.eks_group.name]
-  }
-}
-
-#  Vincular instancias al Target Group
-resource "aws_lb_target_group_attachment" "nodes" {
-  count            = length(data.aws_instances.eks_nodes.ids)
-  target_group_arn = aws_lb_target_group.eks_tg.arn
-  target_id        = data.aws_instances.eks_nodes.ids[count.index]
-  port             = 30080
-
-  depends_on = [
-    data.aws_instances.eks_nodes
-  ]
-}
