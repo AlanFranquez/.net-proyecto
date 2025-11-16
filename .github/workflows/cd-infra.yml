@@ -1,0 +1,145 @@
+name: CD - Terraform Infrastructure
+
+on:
+  pull_request:
+    branches: [ "main", "develop", "test" ]
+    paths:
+      - 'INFRA/**'
+      - '.github/workflows/cd-infra.yml'
+  push:
+    branches: [ "main", "test" ]
+    paths:
+      - 'INFRA/**'
+      - '.github/workflows/cd-infra.yml'
+
+env:
+  AWS_REGION: us-east-1
+  TF_VERSION: '1.6.x'
+  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan & Validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    
+    outputs:
+      plan-exists: ${{ steps.plan.outputs.exitcode }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials (access keys session)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Format Check
+        id: fmt
+        run: terraform -chdir=INFRA fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Initialization
+        id: init
+        run: |
+          terraform -chdir=INFRA init \
+            -input=false \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="dynamodb_table=terraform-locks"
+
+      - name: Terraform Validation
+        id: validate
+        run: terraform -chdir=INFRA validate
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          terraform -chdir=INFRA plan \
+            -input=false \
+            -out=tfplan \
+            -lock=true
+        continue-on-error: true
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: INFRA/tfplan
+          retention-days: 7
+
+  terraform-apply:
+    name: Terraform Apply
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: terraform-plan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Configure AWS credentials (access keys session)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Terraform Initialization
+        run: |
+          terraform -chdir=INFRA init \
+            -input=false \
+            -backend-config="region=${{ env.AWS_REGION }}" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="dynamodb_table=terraform-locks"
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: INFRA/
+
+      - name: Terraform Apply
+        run: |
+          terraform -chdir=INFRA apply \
+            -input=false \
+            -lock=true \
+            -lock-timeout=10m \
+            tfplan
+
+      - name: Export Terraform outputs
+        id: tf-outputs
+        run: |
+          terraform -chdir=INFRA output -json > tf-outputs.json
+          cat tf-outputs.json
+
+      - name: Upload outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: tf-outputs
+          path: tf-outputs.json
+          retention-days: 30
