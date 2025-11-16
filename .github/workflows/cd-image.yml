@@ -8,16 +8,16 @@ on:
       - 'BACKEND/LabNet/docker/**'
       - '.github/workflows/cd-image.yml'
 
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
 
 jobs:
   build-and-push:
     name: Build & Push to ECR
     runs-on: ubuntu-latest
     environment: AWS_ACCOUNT_ID
-
-    permissions:
-      contents: read
-      id-token: write
 
     env:
       AWS_REGION: us-east-1
@@ -66,7 +66,6 @@ jobs:
         run: |
           aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} || \
           aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --image-tag-mutability MUTABLE || true
-        shell: bash
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -84,7 +83,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
         with:
@@ -93,9 +91,10 @@ jobs:
           output: 'trivy-image-results.sarif'
           severity: 'CRITICAL'
 
+
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-image-results.sarif'
           category: 'docker-image-scan'
@@ -105,7 +104,6 @@ jobs:
           echo "✅ Docker image built and pushed successfully"
           echo "Image URI: ${{ steps.image.outputs.uri }}"
           echo "Image Tag: ${{ steps.image.outputs.tag }}"
-        shell: bash
 
   notify-deployment:
     name: Notify Deployment Ready
@@ -120,4 +118,3 @@ jobs:
           echo "✅ Image ready for deployment"
           echo "Image: ${{ needs.build-and-push.outputs.image-uri }}"
           echo "Tag: ${{ needs.build-and-push.outputs.image-tag }}"
-        shell: bash
