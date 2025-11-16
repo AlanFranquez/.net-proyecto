@@ -12,12 +12,12 @@ jobs:
   build-and-push:
     name: Build & Push to ECR
     runs-on: ubuntu-latest
-    environment: AWS_ACCOUNT_ID   # <--- importante
+    environment: AWS_ACCOUNT_ID
 
     permissions:
       contents: read
       id-token: write
-    
+
     env:
       AWS_REGION: us-east-1
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
@@ -28,8 +28,13 @@ jobs:
       ECR_REPOSITORY: espectaculos-api
       DOCKER_BUILDKIT: 1
 
+    outputs:
+      image-tag: ${{ steps.image.outputs.tag }}
+      image-uri: ${{ steps.image.outputs.uri }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Generate image metadata
         id: image
@@ -38,15 +43,79 @@ jobs:
           echo "tag=${TAG}" >> $GITHUB_OUTPUT
           echo "uri=${ECR_REGISTRY}/${ECR_REPOSITORY}:${TAG}" >> $GITHUB_OUTPUT
           echo "uri-latest=${ECR_REGISTRY}/${ECR_REPOSITORY}:latest" >> $GITHUB_OUTPUT
+        shell: bash
 
-      - uses: docker/setup-buildx-action@v2
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Configure AWS credentials (access keys session)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: aws-actions/amazon-ecr-login@v2
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
         id: login-ecr
+
+      - name: Check if ECR repository exists
+        id: ecr-check
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} || \
+          aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --image-tag-mutability MUTABLE || true
+        shell: bash
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: BACKEND/LabNet/docker/Dockerfile.web
+          push: true
+          tags: |
+            ${{ steps.image.outputs.uri }}
+            ${{ steps.image.outputs.uri-latest }}
+          build-args: |
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.image.outputs.tag }}
+          cache-from: type=registry,ref=${{ steps.image.outputs.uri-latest }}
+          cache-to: type=inline
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.image.outputs.uri }}
+          format: 'sarif'
+          output: 'trivy-image-results.sarif'
+          severity: 'CRITICAL'
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-image-results.sarif'
+          category: 'docker-image-scan'
+
+      - name: Create deployment annotation
+        run: |
+          echo "✅ Docker image built and pushed successfully"
+          echo "Image URI: ${{ steps.image.outputs.uri }}"
+          echo "Image Tag: ${{ steps.image.outputs.tag }}"
+        shell: bash
+
+  notify-deployment:
+    name: Notify Deployment Ready
+    runs-on: ubuntu-latest
+    environment: AWS_ACCOUNT_ID
+    needs: build-and-push
+    if: success()
+
+    steps:
+      - name: Create deployment status
+        run: |
+          echo "✅ Image ready for deployment"
+          echo "Image: ${{ needs.build-and-push.outputs.image-uri }}"
+          echo "Tag: ${{ needs.build-and-push.outputs.image-tag }}"
+        shell: bash
