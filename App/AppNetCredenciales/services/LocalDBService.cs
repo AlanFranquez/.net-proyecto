@@ -1166,41 +1166,34 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
         public async Task<models.Credencial> GetCredencialByUser(string email)
         {
             var usuario = await GetUsuarioByEmailAsync(email);
-
-            if (usuario.CredencialId != null)
-            {
-                return await GetCredencialByIdAsync(usuario.CredencialId);
-            }
-            else
+            
+            if (usuario == null)
             {
                 return null;
-
             }
+
+            // ✅ CORRECTO: Buscar credencial donde usuarioIdApi == usuario.idApi
+            var credenciales = await GetCredencialesAsync();
+            
+            foreach (var c in credenciales)
+            {
+                if (c.usuarioIdApi == usuario.idApi)
+                {
+                    return c;
+                }
+            }
+
+            return null;
         }
 
-        public async Task<models.Credencial?> GetCredencialByCryptoIdAsync(string idCriptografico)
+        /// <summary>
+        /// Busca la credencial de un usuario por su idApi
+        /// </summary>
+        public async Task<models.Credencial?> GetCredencialByUsuarioIdApiAsync(string usuarioIdApi)
         {
-            if (string.IsNullOrWhiteSpace(idCriptografico))
-                return null;
-
-            idCriptografico = idCriptografico.Trim();
-
-            var exact = await _connection.Table<models.Credencial>()
-                                         .Where(c => c.IdCriptografico == idCriptografico)
-                                         .FirstOrDefaultAsync();
-            if (exact != null)
-                return exact;
-
-            // Fallback: load all and match in-memory using trimmed, case-insensitive comparison
-            var all = await GetCredencialesAsync();
-            var found = all.FirstOrDefault(c => string.Equals(c.IdCriptografico?.Trim(),
-                                                             idCriptografico,
-                                                             StringComparison.OrdinalIgnoreCase));
-            if (found != null)
-                return found;
-
-            System.Diagnostics.Debug.WriteLine($"[LocalDBService] GetCredencialByCryptoIdAsync: '{idCriptografico}' not found. DB Creds: {string.Join(", ", all.Select(c => c.IdCriptografico ?? "<null>"))}");
-            return null;
+            var credenciales = await GetCredencialesAsync();
+            
+            return credenciales.FirstOrDefault(c => c.usuarioIdApi == usuarioIdApi);
         }
 
         public async Task<bool> LoggedUserHasCredential()
