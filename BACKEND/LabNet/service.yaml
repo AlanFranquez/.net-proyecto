@@ -11,5 +11,5 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8080  # 👈 el contenedor escucha aquí
+      targetPort: 80  # 👈 el contenedor escucha aquí
       nodePort: 30080

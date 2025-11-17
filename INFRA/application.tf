@@ -1,4 +1,4 @@
-#  ECR Repository
+# ECR Repository
 resource "aws_ecr_repository" "app_repo" {
   name         = "espectaculos-web"
   force_delete = true
@@ -12,7 +12,7 @@ resource "aws_ecr_repository" "app_repo" {
   }
 }
 
-#  Application Load Balancer
+# Application Load Balancer
 resource "aws_lb" "eks_alb" {
   name               = "eks-external-alb"
   internal           = false
@@ -25,10 +25,10 @@ resource "aws_lb" "eks_alb" {
   }
 }
 
-#  Target Group (NodePort)
+# Target Group
 resource "aws_lb_target_group" "eks_tg" {
   name     = "eks-node-tg"
-  port     = 30080 # NodePort del servicio de Kubernetes
+  port     = 30080
   protocol = "HTTP"
   vpc_id   = aws_vpc.main.id
 
@@ -40,11 +40,11 @@ resource "aws_lb_target_group" "eks_tg" {
     unhealthy_threshold = 2
     timeout             = 5
     interval            = 15
-    matcher             = "200-399" 
+    matcher             = "200-399"
   }
 }
 
-#  Listener HTTP (Puerto 80)
+# Listener
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.eks_alb.arn
   port              = 80
@@ -56,7 +56,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-#  EKS Cluster
+# EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = "eks-lab-cluster"
   role_arn = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060-LabEksClusterRole-UAoaMXxwnHCl"
@@ -68,7 +68,7 @@ resource "aws_eks_cluster" "main" {
   version = "1.29"
 }
 
-#  EKS Node Group
+# EKS Node Group
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "eks-lab-nodes"
@@ -85,38 +85,14 @@ resource "aws_eks_node_group" "default" {
   instance_types = ["t3.medium"]
 }
 
-#  Obtener instancias del Node Group
-data "aws_autoscaling_groups" "eks_asgs" {
-  filter {
-    name   = "tag:eks:cluster-name"
-    values = [aws_eks_cluster.main.name]
-  }
-}
-
-data "aws_autoscaling_group" "eks_group" {
-  name = element(data.aws_autoscaling_groups.eks_asgs.names, 0)
-}
-
-data "aws_instances" "eks_nodes" {
-  filter {
-    name   = "instance-state-name"
-    values = ["running"]
-  }
-
-  filter {
-    name   = "tag:aws:autoscaling:groupName"
-    values = [data.aws_autoscaling_group.eks_group.name]
-  }
-}
-
-#  Vincular instancias al Target Group
-resource "aws_lb_target_group_attachment" "nodes" {
-  count            = length(data.aws_instances.eks_nodes.ids)
-  target_group_arn = aws_lb_target_group.eks_tg.arn
-  target_id        = data.aws_instances.eks_nodes.ids[count.index]
-  port             = 30080
+# Stable Attachment: ASG → Target Group
+resource "aws_autoscaling_attachment" "eks_asg_attachment" {
+  autoscaling_group_name = aws_eks_node_group.default.resources[0].autoscaling_groups[0].name
+  lb_target_group_arn    = aws_lb_target_group.eks_tg.arn
 
   depends_on = [
-    data.aws_instances.eks_nodes
+    aws_eks_node_group.default,
+    aws_lb_target_group.eks_tg
   ]
 }
+
