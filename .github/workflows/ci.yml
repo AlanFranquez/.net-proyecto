@@ -68,7 +68,7 @@ jobs:
           SONAR_ORG: ${{ secrets.SONAR_ORG }}
         run: |
           dotnet sonarscanner begin \
-            /k:".net-proyecto" \
+            /k:"fabdiangelo_.net-proyecto" \
             /o:"${SONAR_ORG}" \
             /d:sonar.host.url="${SONAR_HOST_URL}" \
             /d:sonar.login="${SONAR_TOKEN}" \
