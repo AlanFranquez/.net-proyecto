@@ -337,7 +337,7 @@ namespace AppNetCredenciales.Views
                 }
 
                 // Por ahora, permitir acceso si la credencial está activa
-                // TODO: Implementar verificación de reglas de acceso
+                // TODO: Implementar verificación completa de reglas de acceso
                 bool accesoPermitido = true;
                 string razonDenegacion = "";
 
@@ -348,13 +348,16 @@ namespace AppNetCredenciales.Views
                     CredencialIdApi = credencial.idApi,
                     EspacioId = espacio.EspacioId,
                     EspacioIdApi = espacio.idApi,
-                    MomentoDeAcceso = DateTime.Now,
+                    MomentoDeAcceso = DateTime.UtcNow,  // ? Cambiar a UTC para consistencia
                     Resultado = accesoPermitido ? AccesoTipo.Permitir : AccesoTipo.Denegar,
                     Motivo = accesoPermitido ? "Acceso mediante NFC" : $"Denegado: {razonDenegacion}",
-                    Modo = Modo.Online
+                    Modo = Modo.Online,
+                    Credencial = credencial,
+                    Espacio = espacio
                 };
 
-                await _db.SaveEventoAccesoAsync(eventoAcceso);
+                // ? Cambiar a SaveAndPushEventoAccesoAsync para consistencia con QR
+                await _db.SaveAndPushEventoAccesoAsync(eventoAcceso);
 
                 // Mostrar resultado
                 if (accesoPermitido)
