@@ -8,4 +8,9 @@
 	<!-- Permisos NFC -->
 	<uses-permission android:name="android.permission.NFC" />
 	<uses-feature android:name="android.hardware.nfc" android:required="false" />
+	
+	<!-- Permisos para Autenticación Biométrica -->
+	<uses-permission android:name="android.permission.USE_BIOMETRIC" />
+	<uses-permission android:name="android.permission.USE_FINGERPRINT" />
+	<uses-feature android:name="android.hardware.fingerprint" android:required="false" />
 </manifest>
