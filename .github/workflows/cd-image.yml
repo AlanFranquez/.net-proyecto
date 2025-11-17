@@ -26,7 +26,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
-      ECR_REPOSITORY: espectaculos-api
+      ECR_REPOSITORY: espectaculos-web
       DOCKER_BUILDKIT: 1
 
     outputs:

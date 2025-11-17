@@ -466,7 +466,7 @@ async Task ApplyMigrationsAndSeedAsync()
     catch (Exception ex)
     {
         Log.Error(ex, "Error durante migración/seed");
-        throw;
+        //throw;
     }
 }
 

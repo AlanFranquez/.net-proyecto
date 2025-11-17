@@ -83,6 +83,17 @@ resource "aws_eks_node_group" "default" {
   }
 
   instance_types = ["t3.medium"]
+
+  #remote_access {
+  # ec2_ssh_key = "mykey"
+  #  source_security_group_ids = [aws_security_group.nodes_sg.id]
+  #}
+
+  # ASIGNAR EL SG
+  launch_template {
+    id      = aws_launch_template.eks_nodes.id
+    version = "$Latest"
+  }
 }
 
 # Stable Attachment: ASG → Target Group
@@ -93,6 +104,14 @@ resource "aws_autoscaling_attachment" "eks_asg_attachment" {
   depends_on = [
     aws_eks_node_group.default,
     aws_lb_target_group.eks_tg
+  ]
+}
+
+resource "aws_launch_template" "eks_nodes" {
+  name = "eks-node-template"
+
+  vpc_security_group_ids = [
+    aws_security_group.nodes_sg.id,
   ]
 }
 
