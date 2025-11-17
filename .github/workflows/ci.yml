@@ -2,13 +2,15 @@ name: CI - Build, Test, Quality & Security
 
 on:
   push:
-    branches: ["main", "develop"]
+    branches: ["main", "test"]
     paths:
       - "BACKEND/**"
+      - '.github/workflows/ci.yml'
   pull_request:
-    branches: ["main", "develop"]
+    branches: ["main", "test"]
     paths:
       - "BACKEND/**"
+      - '.github/workflows/ci.yml'
 
 env:
   DOTNET_VERSION: "8.0.x"
