@@ -60,6 +60,23 @@
                         VerticalOptions="Center"
                         Spacing="8">
                 
+                <!-- Botón para lector NFC -->
+                <ImageButton x:Name="NfcButton"
+                            Style="{StaticResource NavIconButton}"
+                            Command="{Binding NavigateCommand}"
+                            CommandParameter="nfcReader"
+                            AutomationId="nfcButton"
+                            ToolTipProperties.Text="Lector NFC">
+                    <ImageButton.Source>
+                        <FontImageSource 
+                            FontFamily="MaterialIcons"
+                            Glyph="📡"
+                            Size="36"
+                            Color="#4CAF50"/>
+                    </ImageButton.Source>
+                </ImageButton>
+
+                <!-- Botón para escanear QR -->
                 <ImageButton Source="qrcode.png"
                             Style="{StaticResource NavIconButton}"
                             Command="{Binding NavigateCommand}"

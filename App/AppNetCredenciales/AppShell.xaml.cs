@@ -19,6 +19,7 @@ namespace AppNetCredenciales
             Routing.RegisterRoute("scan", typeof(AppNetCredenciales.Views.ScanView));
             Routing.RegisterRoute("historial", typeof(AppNetCredenciales.Views.HistorialView));
             Routing.RegisterRoute("accesoPerfil", typeof(AppNetCredenciales.Views.AccesoPerfilView));
+            Routing.RegisterRoute("nfcReader", typeof(AppNetCredenciales.Views.NFCReaderView));
 
 
             _connectivityService = App.Services.GetRequiredService<ConnectivityService>();

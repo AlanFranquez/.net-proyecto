@@ -46,16 +46,7 @@
 
                 <BoxView HeightRequest="24" Color="Transparent" />
 
-                <!-- New Access Button with Biometric Authentication -->
-                <Button Text="Acceder a este Espacio"
-                        BackgroundColor="#8E6FF7"
-                        TextColor="White"
-                        FontSize="18"
-                        FontAttributes="Bold"
-                        CornerRadius="10"
-                        HeightRequest="60"
-                        Margin="0,10,0,10"
-                        Clicked="OnAccessSpaceClicked" />
+
 
                 <Button Text="Mostrar QR" 
                         Clicked="OnShowQRClicked" />

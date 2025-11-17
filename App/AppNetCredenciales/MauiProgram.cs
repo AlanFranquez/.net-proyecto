@@ -57,6 +57,9 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<BiometricService>();
             builder.Services.AddSingleton<NFCService>();
             
+            // Vista del lector NFC
+            builder.Services.AddSingleton<NFCReaderView>();
+            
 #if DEBUG
             builder.Logging.AddDebug();
 #endif 
