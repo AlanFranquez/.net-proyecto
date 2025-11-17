@@ -9,10 +9,8 @@ using Espectaculos.Infrastructure;
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.RealTime;
 using Espectaculos.Application.Services;
-
 var builder = WebApplication.CreateBuilder(args);
 
-// Razor Pages y ruta inicial al dashboard admin
 builder.Services.AddRazorPages()
     .AddRazorPagesOptions(o =>
     {
@@ -21,8 +19,6 @@ builder.Services.AddRazorPages()
 
 builder.Services.AddSignalR();
 
-
-// Infraestructura (DbContext, repos, etc.)
 builder.Services.AddInfrastructure(
     builder.Configuration.GetConnectionString("Default")
 );

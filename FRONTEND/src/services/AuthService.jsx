@@ -1,35 +1,44 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+// src/services/AuthService.jsx
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 
 const AuthContext = createContext(null);
 
-export default function AuthProvider({ children }) {
-  // You don't need API_URL when using Vite proxy; leaving it in case you switch to direct calls.
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8080/api";
+// Base de la API (cambiable por env)
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
+// Convierte "/usuarios/login" → "http://localhost:8080/api/usuarios/login"
+const toApi = (p = "") => {
+  const clean = p.startsWith("/") ? p : `/${p}`;
+  const apiPath = clean.startsWith("/api/") ? clean : `/api${clean}`;
+  return `${API_BASE_URL}${apiPath}`;
+};
+
+export default function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const setErrorFromCatch = (err) => {
-    console.log(err);
+    console.error(err);
     const msg = err?.message || String(err) || "Error desconocido";
     setError(msg.replace('{"error":"', "").replace('"}', ""));
   };
 
-  // Ensure any incoming path becomes /api/...
-  const toApi = (p = "") => {
-    const clean = p.startsWith("/") ? p : `/${p}`;
-    return clean.startsWith("/api/") ? clean : `/api${clean}`;
-  };
-
-  // Fetch /me and update state
+  // GET /api/usuarios/me
   const fetchMe = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(API_URL + "/usuarios/me", {
+      const res = await fetch(toApi("/usuarios/me"), {
         method: "GET",
-        credentials: "include",
+        credentials: "include", // envía cookie espectaculos_session
         headers: { Accept: "application/json" },
       });
 
@@ -50,7 +59,6 @@ export default function AuthProvider({ children }) {
       return data;
     } catch (err) {
       console.error("fetchMe error:", err);
-      // setErrorFromCatch(err);
       setUser(null);
       setLoading(false);
       return null;
@@ -61,16 +69,19 @@ export default function AuthProvider({ children }) {
     fetchMe();
   }, [fetchMe]);
 
+  // POST /api/usuarios/registro
   const register = useCallback(
-    async (path = API_URL + "/usuarios/registro", body = {}) => {
+    async (body = {}) => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(path, {
+        const res = await fetch(toApi("/usuarios/registro"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({...body}),
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
         });
 
         if (!res.ok) {
@@ -90,15 +101,18 @@ export default function AuthProvider({ children }) {
     [fetchMe]
   );
 
+  // POST /api/usuarios/login
   const login = useCallback(
-    async (path = API_URL + "/usuarios/login", body = {}) => {
+    async (body = {}) => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(path, {
+        const res = await fetch(toApi("/usuarios/login"), {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify(body),
         });
 
@@ -119,12 +133,13 @@ export default function AuthProvider({ children }) {
     [fetchMe]
   );
 
+  // POST /api/usuarios/logout
   const logout = useCallback(
-    async (path = "/auth/logout") => {
+    async () => {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(toApi(path), {
+        const res = await fetch(toApi("/usuarios/logout"), {
           method: "POST",
           credentials: "include",
         });
@@ -136,14 +151,14 @@ export default function AuthProvider({ children }) {
 
         setUser(null);
         await fetchMe();
-        setLoading(false);
 
         return true;
       } catch (err) {
         console.error("logout error:", err);
         setErrorFromCatch(err);
-        setLoading(false);
         return false;
+      } finally {
+        setLoading(false);
       }
     },
     [fetchMe]
@@ -170,35 +185,10 @@ export function useAuth() {
   return ctx;
 }
 
+// Ruta protegida simple
 export function ProtectedRoute({ children, fallback = null }) {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return fallback;
   return children;
-}
-
-// Role-aware protected route
-// Props:
-// - children: node to render when allowed
-// - requiredRoles: string or array of strings with allowed roles (e.g. 'administrador' or ['federado', 'administrador'])
-// - fallback: element to render when not authenticated
-// - unauthorizedFallback: element to render when authenticated but lacking role
-export function RoleProtectedRoute({ children, requiredRoles, fallback = null, unauthorizedFallback = null }) {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-
-  // not authenticated
-  if (!user) return fallback;
-
-  if (!requiredRoles) return children;
-
-  const roles = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles];
-  const userRole = user?.rol || user?.role || null;
-
-  if (!userRole) return unauthorizedFallback;
-
-  // allow if user's role matches any required role
-  if (roles.includes(userRole)) return children;
-
-  return unauthorizedFallback;
 }

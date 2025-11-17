@@ -29,12 +29,11 @@ using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
-using Espectaculos.Application.services;          // ICognitoService, CognitoService
-using Espectaculos.Application.Services;         // IAccesosRealtimeNotifier
+using Espectaculos.Application.Services;      
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
 using Espectaculos.Infrastructure.Persistence.Seed;
-using Espectaculos.Infrastructure.RealTime;      // AccesosSignalRNotifier, AccesosHub
+using Espectaculos.Infrastructure.RealTime;    
 using Espectaculos.Infrastructure.Repositories;
 using Espectaculos.WebApi.Endpoints;
 using Espectaculos.WebApi.Health;

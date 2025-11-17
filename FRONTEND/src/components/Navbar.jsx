@@ -1,17 +1,20 @@
+// src/components/Navbar.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../services/AuthService.jsx";
 import "../styles/Navbar.css";
 import logo2 from "../assets/logo2.png";
 
-export default function Navbar({ isLoggedIn, onToggle }) {
+export default function Navbar() {
   const { pathname } = useLocation();
+  const { user, logout } = useAuth(); // <<--- AUTENTICACIÓN REAL
+  const isLoggedIn = !!user;
+
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Close the mobile menu when the route changes
   useEffect(() => setOpen(false), [pathname]);
 
-  // Close on Escape
   useEffect(() => {
     function onKeyDown(e) {
       if (e.key === "Escape") setOpen(false);
@@ -29,29 +32,23 @@ export default function Navbar({ isLoggedIn, onToggle }) {
     { label: "Dispositivos", to: "/dispositivos" },
   ];
 
-  const anonMenu = [];
-  const menu = isLoggedIn ? authedMenu : anonMenu;
+  const menu = isLoggedIn ? authedMenu : [];
 
   return (
     <header className="nav">
       <div className="nav-inner">
-        {/* Logo -> Home */}
-        <Link to="/" className="logo" aria-label="Inicio">
+        <Link to="/" className="logo">
           <img src={logo2} alt="Logo" className="logo-img" />
         </Link>
 
-        {/* Mobile hamburger */}
         <button
           className="hamburger"
-          aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
-          aria-controls="primary-menu"
           onClick={() => setOpen((v) => !v)}
         >
           <span className="hamburger-box" aria-hidden />
         </button>
 
-        {/* Menu */}
         <nav
           id="primary-menu"
           className={`menu ${open ? "is-open" : ""}`}
@@ -64,38 +61,59 @@ export default function Navbar({ isLoggedIn, onToggle }) {
             </MenuBtn>
           ))}
 
-          {/* Optional: put auth controls inside the slideout on small screens */}
           <div className="menu-mobile-cta">
             {!isLoggedIn ? (
-              <Link to="/login" className="login-pill" onClick={() => setOpen(false)}>
+              <Link
+                to="/login"
+                className="login-pill"
+                onClick={() => setOpen(false)}
+              >
                 Login
               </Link>
             ) : (
-              <div className="icons" aria-hidden>
+              <div className="icons">
                 <span className="bell">
                   🔔<span className="badge">1</span>
                 </span>
-                <Link to="/perfil" className="avatar" onClick={() => setOpen(false)}>
+                <Link
+                  to="/perfil"
+                  className="avatar"
+                  onClick={() => setOpen(false)}
+                >
                   👤
                 </Link>
+                <button
+                  className="logout-btn"
+                  onClick={() => {
+                    logout();
+                    setOpen(false);
+                  }}
+                >
+                  Salir
+                </button>
               </div>
             )}
           </div>
         </nav>
 
-        {/* Right side (shown on desktop) */}
         <div className="right">
           {!isLoggedIn ? (
-            <Link to="/login" className="login-pill">Login</Link>
+            <Link to="/login" className="login-pill">
+              Login
+            </Link>
           ) : (
-            <div className="icons" aria-hidden>
+            <div className="icons">
               <span className="bell">
                 🔔<span className="badge">1</span>
               </span>
-              <Link to="/perfil" className="avatar">👤</Link>
+              <Link to="/perfil" className="avatar">
+                👤
+              </Link>
+              <button className="logout-btn" onClick={logout}>
+                Salir
+              </button>
             </div>
           )}
-          <button className="toggle" onClick={onToggle}>Toggle User</button>
         </div>
       </div>
     </header>

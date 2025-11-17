@@ -6,7 +6,7 @@ using Espectaculos.Application.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace Espectaculos.Application.services;
+namespace Espectaculos.Application.Services;
 public interface ICognitoService
 {
     Task<string> RegisterUserAsync(string email, string password, CancellationToken ct = default);

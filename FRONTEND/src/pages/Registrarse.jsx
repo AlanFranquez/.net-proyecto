@@ -1,6 +1,7 @@
+// src/pages/Registrarse.jsx
 import React, { useState } from "react";
 import { useAuth } from "../services/AuthService.jsx";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import "../styles/Registrarse.css";
 
@@ -11,58 +12,61 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
     documento: "",
     email: "",
     password: "",
-    confirm: ""
+    confirm: "",
   });
-  const { register, error } = useAuth()
-    const navigate = useNavigate()
+
+  const [localError, setLocalError] = useState(null);
+
+  const { register, error: authError } = useAuth();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setLocalError(null);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // setLoading(true);
-    //setError("");
-    // setSuccess("");
 
-    if(form.password != form.confirm){
-      throw new Error("las contraseñas no coinciden")
+    if (form.password !== form.confirm) {
+      setLocalError("Las contraseñas no coinciden");
+      return;
     }
 
     const obj = {
-      "Nombre": form.nombre, 
-      "Apellido": form.apellido,
-      "Documento": form.documento,
-      "Email": form.email,
-      "Password": form.password
-    }
+      nombre: form.nombre,
+      apellido: form.apellido,
+      documento: form.documento,
+      email: form.email,
+      password: form.password,
+    };
 
     console.log("Registrando usuario:", obj);
 
     try {
-      await fetch("http://localhost:8080/api/usuarios")
-      const ok = await register("http://localhost:8080/api/usuarios/registro", obj)
-      if(!ok){
-        throw new Error(ok || "Error en el registro");
+      const ok = await register(obj);
+      if (!ok) {
+        setLocalError("Error en el registro");
+        return;
       }
-      // setSuccess("Usuario registrado con éxito ✅");
-      setForm({ 
+
+      setForm({
         nombre: "",
         apellido: "",
         documento: "",
         email: "",
         password: "",
-        confirm: ""
+        confirm: "",
       });
+
       navigate("/");
     } catch (err) {
       console.log(err);
-      //setError(err.message);
-    } finally {
-      // setLoading(false);
+      setLocalError(err.message || "Error en el registro");
     }
   };
+
+  const combinedError = localError || authError;
 
   return (
     <>
@@ -71,6 +75,10 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
       <main className="page">
         <section className="register-card">
           <h1 className="register-title">Registrarse</h1>
+
+          {combinedError && (
+            <p className="register-error">{combinedError}</p>
+          )}
 
           <form onSubmit={handleSubmit} className="register-form">
             <label className="field">
@@ -82,18 +90,20 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
                 onChange={handleChange}
                 className="input"
                 placeholder="Tu nombre"
+                autoComplete="name"
                 required
               />
             </label>
 
             <label className="field">
-              <span className="label">Apelldio</span>
+              <span className="label">Apellido</span>
               <input
                 name="apellido"
                 value={form.apellido}
                 onChange={handleChange}
                 className="input"
-                placeholder="Tu Aplellido"
+                placeholder="Tu apellido"
+                autoComplete="family-name"
                 required
               />
             </label>
@@ -107,6 +117,7 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
                 onChange={handleChange}
                 className="input"
                 placeholder="you@example.com"
+                autoComplete="email"
                 required
               />
             </label>
@@ -119,6 +130,7 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
                 onChange={handleChange}
                 className="input"
                 placeholder="Tu CI"
+                autoComplete="off"
                 required
               />
             </label>
@@ -132,6 +144,7 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
                 onChange={handleChange}
                 className="input"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 required
               />
             </label>
@@ -145,6 +158,7 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
                 onChange={handleChange}
                 className="input"
                 placeholder="••••••••"
+                autoComplete="new-password"
                 required
               />
             </label>
@@ -155,7 +169,7 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
           </form>
 
           <p className="signin">
-            ¿Ya tienes cuenta? <a href="/login">Inicia sesión.</a>
+            ¿Ya tienes cuenta? <Link to="/login">Inicia sesión.</Link>
           </p>
         </section>
       </main>

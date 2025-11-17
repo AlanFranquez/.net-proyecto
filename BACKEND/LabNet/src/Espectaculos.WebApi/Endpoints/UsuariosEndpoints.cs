@@ -5,7 +5,7 @@ using Espectaculos.Application.Espacios.Commands.CreateEspacio;
 using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
 using Espectaculos.Application.Espacios.Commands.UpdateEspacio;
 using Espectaculos.Application.Espacios.Queries.ListarEspacios;
-using Espectaculos.Application.services;
+using Espectaculos.Application.Services;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.LoginUsuario;
@@ -149,7 +149,14 @@ public static class UsuariosEndpoints
         })
         .WithName("EditarUsuario")
         .WithTags("Usuarios");
-        
+        group.MapPost("/logout", (HttpContext http) =>
+    {
+        http.Response.Cookies.Delete("espectaculos_session");
+        return Results.Ok(new { message = "logged_out" });
+    })
+    .WithName("LogoutUsuario")
+    .WithTags("Usuarios");
+
 
 #if DEMO_ENABLE_ADMIN
         group.MapPost("", async (CreateEventoCommand command, IUnitOfWork uow, IValidator<CreateEventoCommand> validator) =>
