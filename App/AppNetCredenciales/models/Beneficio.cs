@@ -5,15 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace AppNetCredenciales.models
 {
-    public enum BeneficioTipo
-    {
-        Descuento = 0,
-        Promocion = 1,
-        Regalo = 2,
-        Puntos = 3,
-        Acceso = 4,
-        Otro = 5
-    }
+    
 
     [SQLite.Table("Beneficios")]
     public class Beneficio
@@ -39,10 +31,11 @@ namespace AppNetCredenciales.models
         public DateTime VigenciaFin { get; set; }
 
         [SQLite.Column("cupo_total")]
-        public int CupoTotal { get; set; }
+        public int? CupoTotal { get; set; }
 
-        [SQLite.Column("cupo_usado")]
-        public int CupoUsado { get; set; } = 0;
+        [SQLite.Column("requiere_biometria")]
+        public bool? RequiereBiometria { get; set; }
+
 
         [SQLite.Column("activo")]
         public bool Activo { get; set; } = true;
@@ -50,16 +43,9 @@ namespace AppNetCredenciales.models
         [SQLite.Column("falta_carga")]
         public bool FaltaCarga { get; set; } = false;
 
-        // Enum handling
-        [Ignore]
-        public BeneficioTipo Tipo { get; set; }
+        public int? CupoPorUsuario { get; set; }
 
-        [Column("tipo")]
-        public string TipoStr
-        {
-            get => Tipo.ToString();
-            set => Tipo = Enum.TryParse<BeneficioTipo>(value, true, out var result) ? result : BeneficioTipo.Otro;
-        }
+        public string Tipo { get; set; }
 
         // Fix: Convert string arrays to JSON for SQLite storage
         [SQLite.Column("espacios_ids_json")]
@@ -112,9 +98,7 @@ namespace AppNetCredenciales.models
             }
         }
 
-        // Computed properties
-        [Ignore]
-        public int CupoDisponible => CupoTotal - CupoUsado;
+        
 
         [Ignore]
         public bool EstaVigente
@@ -126,10 +110,7 @@ namespace AppNetCredenciales.models
             }
         }
 
-        [Ignore]
-        public bool TieneCupo => CupoDisponible > 0 || CupoTotal == 0;
+   
 
-        [Ignore]
-        public bool EstaDisponible => EstaVigente && TieneCupo;
     }
 }

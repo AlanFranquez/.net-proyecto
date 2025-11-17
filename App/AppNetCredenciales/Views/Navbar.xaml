@@ -28,14 +28,7 @@
               VerticalOptions="Center"
               HorizontalOptions="Fill">
 
-            <!-- QR button for Funcionario -->
-            <ImageButton Grid.Column="0"
-                        Source="qrcode.png"
-                        Style="{StaticResource NavIconButton}"
-                        IsVisible="{Binding IsFuncionario}"
-                        Command="{Binding NavigateCommand}"
-                        CommandParameter="scan"
-                        HorizontalOptions="Start" />
+           
 
             <!-- Regular user navigation icons -->
             <StackLayout Grid.Column="2"
@@ -44,18 +37,19 @@
                          VerticalOptions="Center"
                          Spacing="8">
 
-                <!-- NFC Access Button -->
-                <ImageButton Source="nfc.png"
-                             Style="{StaticResource NavIconButton}"
-                             Command="{Binding NavigateCommand}"
-                             CommandParameter="nfcAccess"
-                             ToolTipProperties.Text="NFC Access"/>
-                
+              
+       
+                <!-- Credential Button -->
+                <ImageButton Source="qrcode.png"
+     Style="{StaticResource NavIconButton}"
+     Command="{Binding NavigateCommand}"
+     CommandParameter="scan" IsVisible="{Binding isFuncionario}"/>
+
                 <!-- Credential Button -->
                 <ImageButton Source="idcard.png"
-                             Style="{StaticResource NavIconButton}"
-                             Command="{Binding NavigateCommand}"
-                             CommandParameter="credencial"/>
+              Style="{StaticResource NavIconButton}"
+              Command="{Binding NavigateCommand}"
+              CommandParameter="credencial"/>
 
                 <!-- Spaces Button -->
                 <ImageButton Source="calendarevents.png"

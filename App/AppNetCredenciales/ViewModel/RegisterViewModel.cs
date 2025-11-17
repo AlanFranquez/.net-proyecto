@@ -124,16 +124,20 @@ namespace AppNetCredenciales.ViewModel
                 return false;
             }
 
+            var seleccionadasRoles = Roles.Where(r => r.IsSelected).ToList();
             var usuario = new Usuario
             {
                 Nombre = Nombre,
                 Apellido = Apellido,
                 Documento = Documento,
                 Email = Email,
-                Password = Password
+                Password = Password,
+                RolesIDs = seleccionadasRoles
+                                .Select(r => r.Role.idApi)
+                                .Where(id => !string.IsNullOrWhiteSpace(id))
+                                .ToArray()
             };
 
-            // Guardar usuario localmente primero
             var saved = await _db.SaveUsuarioAsync(usuario);
             if (saved <= 0)
             {
@@ -143,14 +147,28 @@ namespace AppNetCredenciales.ViewModel
             }
             if (usuario.UsuarioId == 0) usuario.UsuarioId = saved;
 
-            System.Diagnostics.Debug.WriteLine($"[Register] Usuario guardado localmente con ID: {usuario.UsuarioId}");
-
-            // Intentar crear usuario en API
+            
+            
             if (_connectivityService.IsConnected)
             {
                 try
                 {
-                    var seleccionadasRoles = Roles.Where(r => r.IsSelected).ToList();
+
+                    foreach(var r in seleccionadasRoles)
+                    {
+                        Debug.WriteLine($"[Register] Rol seleccionado: {r.Role.Tipo} (ID API: {r.Role.idApi}) ");
+                    }
+
+                    if (seleccionadasRoles.Count > 0)
+                    {
+                        usuario.RolesIDs = seleccionadasRoles
+                            .Select(r => r.Role.idApi)
+                            .Where(id => !string.IsNullOrWhiteSpace(id))
+                            .ToArray();
+
+                        
+                        await _db.SaveUsuarioAsync(usuario);
+                    }
 
                     var nuevoDto = new ApiService.NewUsuarioDto
                     {
@@ -172,7 +190,7 @@ namespace AppNetCredenciales.ViewModel
                     {
                         // ✅ Solo actualizar el idApi del usuario existente
                         usuario.idApi = apiUsuarioId;
-                        await _db.SaveUsuarioAsync(usuario); // Guardar con el idApi del API
+                        await _db.SaveUsuarioAsync(usuario);
 
                         System.Diagnostics.Debug.WriteLine($"[Register] ✅ Usuario creado en API con ID: {usuario.idApi}");
                     }
@@ -185,8 +203,7 @@ namespace AppNetCredenciales.ViewModel
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Register] Error creating user on API: {ex.Message}");
-                    // Si hay error, generar GUID local como fallback
+                    
                     usuario.idApi = Guid.NewGuid().ToString();
                     await _db.SaveUsuarioAsync(usuario);
                 }
@@ -198,17 +215,14 @@ namespace AppNetCredenciales.ViewModel
                 await _db.SaveUsuarioAsync(usuario);
             }
 
-            // Verificar que tenemos idApi antes de crear credencial
+            
             if (string.IsNullOrWhiteSpace(usuario.idApi))
             {
-                System.Diagnostics.Debug.WriteLine("[Register] ❌ ERROR: Usuario sin idApi después de todos los intentos");
-                usuario.idApi = Guid.NewGuid().ToString(); // Fallback final
+                usuario.idApi = Guid.NewGuid().ToString();
                 await _db.SaveUsuarioAsync(usuario);
             }
 
-            System.Diagnostics.Debug.WriteLine($"[Register] Creando credencial para usuario con idApi: '{usuario.idApi}'");
-
-            // Crear credencial
+            
             var credencial = new Credencial
             {
                 Tipo = CredencialTipo.Campus,
@@ -217,12 +231,9 @@ namespace AppNetCredenciales.ViewModel
                 FechaEmision = DateTime.UtcNow,
                 FechaExpiracion = DateTime.UtcNow.AddYears(1),
                 FaltaCarga = true,
-                usuarioIdApi = usuario.idApi // ✅ Ahora siempre tenemos un idApi válido
+                usuarioIdApi = usuario.idApi
             };
 
-            System.Diagnostics.Debug.WriteLine($"[Register] Credencial con usuarioIdApi: '{credencial.usuarioIdApi}'");
-
-            // Guardar credencial (esto ya maneja la creación en API internamente)
             var createdCredId = await _db.SaveCredencialAsync(credencial);
 
             if (createdCredId > 0)

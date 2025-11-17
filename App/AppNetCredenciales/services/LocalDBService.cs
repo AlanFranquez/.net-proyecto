@@ -7,6 +7,7 @@ using SQLite;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Data.Common;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -39,14 +40,96 @@ namespace AppNetCredenciales.Data
             _connection.CreateTableAsync<EventoAcceso>().GetAwaiter().GetResult();
             _connection.CreateTableAsync<EspacioReglaDeAcceso>().GetAwaiter().GetResult();
             _connection.CreateTableAsync<ReglaDeAcceso>().GetAwaiter().GetResult();
+            _connection.CreateTableAsync<Beneficio>().GetAwaiter().GetResult();
+
 
         }
+
+        
+
+public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBeneficio)
+    {
+            var beneficios = await apiService.GetBeneficiosAsync();
+            var beneficio = new Beneficio();
+
+            foreach(var b in beneficios)
+            {
+                if (b.Id == idBeneficio)
+                {
+                    beneficio = await _connection.Table<Beneficio>()
+                        .Where(ben => ben.idApi == b.Id)
+                        .FirstOrDefaultAsync();
+                }
+            }
+
+            var lista = string.IsNullOrWhiteSpace(beneficio.UsuariosIDsJson)
+            ? new List<string>()
+            : JsonSerializer.Deserialize<List<string>>(beneficio.UsuariosIDsJson);
+
+        if (!lista.Contains(idUsuario))
+            lista.Add(idUsuario);
+
+        beneficio.UsuariosIDsJson = JsonSerializer.Serialize(lista);
+
+        
+
+        // 5. llamar al API
+        if (connectivityService.IsConnected)
+        {
+            var canje = new ApiService.CanjeDto
+            {
+                beneficioId = idBeneficio,
+                usuarioId = idUsuario
+            };
+
+            await apiService.CanjearBeneficio(canje);
+        } else
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] Offline: beneficio canjeado locally, will sync later.");
+                beneficio.FaltaCarga = true;
+            }
+
+                await _connection.UpdateAsync(beneficio);
+
+        return beneficio;
+    }
+
+
+    public async Task<Beneficio> updateBeneficio(ApiService.BeneficioDto beneficio)
+        {
+            var ben = new Beneficio
+            {
+                idApi = beneficio.Id,
+                Descripcion = beneficio.Descripcion,
+                Tipo = beneficio.Tipo,
+                Nombre = beneficio.Nombre,
+                VigenciaInicio = beneficio.VigenciaInicio,
+                VigenciaFin = beneficio.VigenciaFin,
+                CupoTotal = beneficio.CupoTotal,
+                CupoPorUsuario = beneficio.CupoPorUsuario,
+                RequiereBiometria = beneficio.RequiereBiometria,
+                EspaciosIDsJson = JsonSerializer.Serialize(beneficio.EspaciosIDs)
+            };
+         
+
+            if(connectivityService.IsConnected)
+            {
+                await apiService.UpdateBeneficioAsync(beneficio);
+            } else
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] Offline: beneficio updated locally, will sync later.");
+                ben.FaltaCarga = true;
+            }
+
+                await _connection.UpdateAsync(ben);
+
+            return ben;
+        } 
 
         public async Task<EventoAcceso> SaveAndPushEventoAccesoAsync(EventoAcceso evento)
         {
             if (evento == null) throw new ArgumentNullException(nameof(evento));
 
-            // ✅ Asegurar que la fecha esté en UTC
             if (evento.MomentoDeAcceso.Kind != DateTimeKind.Utc)
             {
                 evento.MomentoDeAcceso = evento.MomentoDeAcceso.ToUniversalTime();
@@ -130,6 +213,105 @@ namespace AppNetCredenciales.Data
             return evento;
         }
 
+        public async Task<List<Beneficio>> GetBeneficiosAsyncApi()
+        {
+            var dtos =  await apiService.GetBeneficiosAsync();
+
+            var beneficios = new List<Beneficio>();
+
+            foreach(var dto in dtos)
+            {
+                var beneficio = new Beneficio
+                {
+                    idApi = dto.Id,
+                    Descripcion = dto.Descripcion,
+                    Tipo = dto.Tipo,
+                    Nombre = dto.Nombre,
+                    VigenciaInicio = dto.VigenciaInicio,
+                    VigenciaFin = dto.VigenciaFin,
+                    CupoTotal = dto.CupoTotal,
+                    CupoPorUsuario = dto.CupoPorUsuario,
+                    RequiereBiometria = dto.RequiereBiometria,
+                    EspaciosIDsJson = JsonSerializer.Serialize(dto.EspaciosIDs),
+                    UsuariosIDsJson = JsonSerializer.Serialize(dto.UsuariosIDs)
+                };
+                beneficios.Add(beneficio);
+            }
+
+
+            return beneficios;
+        }
+
+
+        public async Task<List<Beneficio>> GetBeneficiosAsync()
+        {
+            return await _connection.Table<models.Beneficio>().ToListAsync();
+        }
+
+        public async Task<List<Beneficio>> SincronizarBeneficiosFromBack(bool removeMissing = false)
+        {
+            // 1) Pedir datos al backend
+            var apiBeneficios = await apiService.GetBeneficiosAsync();
+
+            if (apiBeneficios == null)
+            {
+                // Si falla el API → devolver lo que haya localmente
+                return await GetBeneficiosLocalAsync();
+            }
+
+            // 2) Obtener lista local actual
+            var localList = await GetBeneficiosLocalAsync();
+
+         
+            foreach (var local in localList)
+                await DeleteBeneficioAsync(local);
+
+
+            foreach (var api in apiBeneficios)
+            {
+                var nuevo = new Beneficio
+                {
+                    idApi = api.Id,
+                    Descripcion = api.Descripcion,
+                    Tipo = api.Tipo,
+                    Nombre = api.Nombre,
+                    VigenciaInicio = api.VigenciaInicio,
+                    VigenciaFin = api.VigenciaFin,
+                    CupoTotal = api.CupoTotal,
+                    CupoPorUsuario = api.CupoPorUsuario,
+                    RequiereBiometria = api.RequiereBiometria,
+                    EspaciosIDsJson = JsonSerializer.Serialize(api.EspaciosIDs),
+                    UsuariosIDsJson = JsonSerializer.Serialize(api.UsuariosIDs)
+                };
+
+                await SaveBeneficioAsync(nuevo);
+            }
+
+
+
+            return await GetBeneficiosLocalAsync();
+        }
+
+
+        public async Task<int> SaveBeneficioAsync(Beneficio beneficio)
+        {
+            if (beneficio.BeneficioId == 0)
+                return await _connection.InsertAsync(beneficio);
+
+            return await _connection.UpdateAsync(beneficio);
+        }
+
+        public async Task<int> DeleteBeneficioAsync(Beneficio beneficio)
+        {
+            return await _connection.DeleteAsync(beneficio);
+        }
+
+        public async Task<List<Beneficio>> GetBeneficiosLocalAsync()
+        {
+            return await _connection.Table<Beneficio>().ToListAsync();
+        }
+
+
 
         public async Task<List<EventoAcceso>> SincronizarEventosFromBack(bool removeMissing = false)
         {
@@ -163,28 +345,43 @@ namespace AppNetCredenciales.Data
 
         public async Task<List<Rol>> SincronizarRolesFromBack(bool removeMissing = false)
         {
-            var apiRoles = await apiService.GetRolesAsync();
-            if (apiRoles == null)
+            try
             {
-                return await GetRolesAsync();
-            }
-            var localList = await GetRolesAsync();
-            foreach (var a in localList)
-            {
-                await DeleteRolAsync(a);
-            }
-            foreach (var a in apiRoles)
-            {
-                var nuevo = new Rol
+                var apiRoles = await apiService.GetRolesAsync();
+                if (apiRoles == null || apiRoles.Count == 0)
                 {
-                    idApi = a.RolId,
-                    Tipo = a.Tipo,
-                    Prioridad = a.Prioridad,
-                    FechaAsignado = a.fechaAsignado,
-                };
-                await SaveRolAsync(nuevo);
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] No se obtuvieron roles del API");
+                    return await _connection.Table<models.Rol>().ToListAsync();
+                }
+
+                var localList = await _connection.Table<models.Rol>().ToListAsync();
+                foreach (var local in localList)
+                {
+                    await _connection.DeleteAsync(local);
+                }
+                int insertados = 0;
+                foreach (var apiRol in apiRoles)
+                {
+                    var nuevo = new Rol
+                    {
+                        idApi = apiRol.RolId,
+                        Tipo = apiRol.Tipo,
+                        Prioridad = apiRol.Prioridad,
+                        FechaAsignado = apiRol.fechaAsignado,
+                    };
+                    await _connection.InsertAsync(nuevo);
+                    insertados++;
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Rol sincronizado: {nuevo.Tipo} (API ID: {nuevo.idApi})");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Sincronización completada: {insertados} roles insertados");
+                return await _connection.Table<models.Rol>().ToListAsync();
             }
-            return await GetRolesAsync();
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Error en SincronizarRolesFromBack: {ex.Message}");
+                return await _connection.Table<models.Rol>().ToListAsync();
+            }
         }
 
         // Credencial
@@ -297,7 +494,6 @@ namespace AppNetCredenciales.Data
 
             foreach (var a in apiEspacios)
             {
-                Debug.WriteLine($"ESPACIO A GENERAR => {a.EspacioId}");
                 var nuevo = new Espacio
                 {
                     idApi = a.EspacioId,
@@ -421,6 +617,11 @@ namespace AppNetCredenciales.Data
             return await _connection.DeleteAsync(evento);
         }
 
+        public async Task<int> DeleteEventoBeneficioAsync(models.Beneficio evento)
+        {
+            return await _connection.DeleteAsync(evento);
+        }
+
         public async Task<models.EventoAcceso> GetEventoAccesoByIdAsync(int id)
         {
             return await _connection.Table<models.EventoAcceso>()
@@ -517,29 +718,9 @@ namespace AppNetCredenciales.Data
 
         public async Task<List<models.Rol>> GetRolesAsync()
         {
-
-             if(connectivityService.IsConnected)
-            {
-                List<Rol> listaRoles = new List<Rol>();
-
-                var listApi = await apiService.GetRolesAsync();
-                foreach (var a in listApi)
-                {
-                    var rol = new Rol
-                    {
-                        idApi = a.RolId,
-                        Tipo = a.Tipo,
-                        Prioridad = a.Prioridad,
-                        FechaAsignado = a.fechaAsignado,
-                    };
-                    listaRoles.Add(rol);
-                }
-
-                return listaRoles;
-            }
-
             return await _connection.Table<models.Rol>().ToListAsync();
         }
+
 
         public async Task<int> SaveRolAsync(models.Rol rol)
         {
@@ -592,10 +773,10 @@ namespace AppNetCredenciales.Data
             return await _connection.DeleteAsync(espacio);
         }
 
-        public async Task<models.Espacio> GetEspacioByIdAsync(int id)
+        public async Task<models.Espacio> GetEspacioByIdAsync(string id)
         {
             return await _connection.Table<models.Espacio>()
-                .Where(e => e.EspacioId == id)
+                .Where(e => e.idApi == id)
                 .FirstOrDefaultAsync();
         }
 
@@ -680,11 +861,28 @@ namespace AppNetCredenciales.Data
             return await _connection.InsertAsync(credencial);
         }
 
-     
+
         public async Task<string?> CreateUsuarioRemoteAsync(models.Usuario usuario)
         {
-            if (usuario == null) return null;
-            if (!connectivityService.IsConnected) return null;
+            if (usuario == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] ❌ CreateUsuarioRemoteAsync: usuario es null");
+                return null;
+            }
+
+            if (!connectivityService.IsConnected)
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] ❌ CreateUsuarioRemoteAsync: sin conexión");
+                return null;
+            }
+
+            System.Diagnostics.Debug.WriteLine("[LocalDBService] === INICIANDO CREACIÓN DE USUARIO EN API ===");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario a crear:");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService]   - Nombre: '{usuario.Nombre}'");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService]   - Apellido: '{usuario.Apellido}'");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService]   - Email: '{usuario.Email}'");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService]   - Documento: '{usuario.Documento}'");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService]   - Password: '{usuario.Password}'");
 
             var newUserDto = new ApiService.NewUsuarioDto
             {
@@ -692,28 +890,165 @@ namespace AppNetCredenciales.Data
                 Apellido = usuario.Apellido ?? string.Empty,
                 Email = usuario.Email ?? string.Empty,
                 Documento = usuario.Documento ?? string.Empty,
-                Password = usuario.Password ?? string.Empty
+                Password = usuario.Password ?? string.Empty,
+                RolesIDs = usuario.RolesIDs // ✅ Agregar RolesIDs
             };
 
-            var created = await apiService.CreateUsuarioAsync(newUserDto);
-            if (created != null && !string.IsNullOrWhiteSpace(created.UsuarioId))
-            {
-                usuario.idApi = created.UsuarioId;
-                await SaveUsuarioAsync(usuario);
-                return usuario.idApi;
-            }
+            System.Diagnostics.Debug.WriteLine("[LocalDBService] === DTO CREADO ===");
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService] DTO RolesIDs: [{string.Join(", ", newUserDto.RolesIDs ?? new string[0])}]");
 
-            return null;
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] Llamando a apiService.CreateUsuarioAsync...");
+
+                var created = await apiService.CreateUsuarioAsync(newUserDto);
+
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] === RESPUESTA DEL API ===");
+
+                if (created == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ❌ API devolvió NULL");
+                    return null;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] created.UsuarioId: '{created.UsuarioId}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] created.Nombre: '{created.Nombre}'");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] created.Email: '{created.Email}'");
+
+                if (!string.IsNullOrWhiteSpace(created.UsuarioId))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Usuario creado exitosamente con ID: {created.UsuarioId}");
+
+                    // Actualizar el usuario local
+                    usuario.idApi = created.UsuarioId;
+                    usuario.FaltaCargar = false; // ✅ Marcar como sincronizado
+                    await SaveUsuarioAsync(usuario);
+
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario local actualizado: idApi = {usuario.idApi}, FaltaCargar = {usuario.FaltaCargar}");
+
+                    return usuario.idApi;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ❌ UsuarioId está vacío o null");
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ EXCEPCIÓN en CreateUsuarioRemoteAsync:");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Mensaje: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] StackTrace: {ex.StackTrace}");
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] InnerException: {ex.InnerException?.Message}");
+                return null;
+            }
+        }
+
+        public async Task AgregarUsuarioARol(string rolIdApi, string usuarioIdApi)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(rolIdApi) || string.IsNullOrWhiteSpace(usuarioIdApi))
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] ❌ AgregarUsuarioARol: IDs inválidos");
+                    return;
+                }
+
+                if (!connectivityService.IsConnected)
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Sin conexión, no se puede actualizar rol en API");
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Agregando usuario {usuarioIdApi} al rol {rolIdApi}");
+
+                // 1. Obtener el rol actual de la API
+                var rolesApi = await apiService.GetRolesAsync();
+                var rolEncontrado = rolesApi?.FirstOrDefault(r => r.RolId == rolIdApi);
+
+                if (rolEncontrado == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Rol no encontrado en API: {rolIdApi}");
+                    return;
+                }
+
+                // 2. Agregar el usuario a la lista si no está ya incluido
+                var usuariosActuales = rolEncontrado.usuariosIDs?.ToList() ?? new List<string>();
+
+                if (!usuariosActuales.Contains(usuarioIdApi))
+                {
+                    usuariosActuales.Add(usuarioIdApi);
+
+                    // 3. Crear DTO para actualizar el rol
+                    var rolActualizado = new ApiService.UpdateRolDto
+                    {
+                        RolId = rolIdApi,
+                        Tipo = rolEncontrado.Tipo,
+                        Prioridad = rolEncontrado.Prioridad,
+                        FechaAsignado = rolEncontrado.fechaAsignado,
+                        UsuariosIDs = usuariosActuales.ToArray()
+                    };
+
+                    // 4. Enviar actualización a la API
+                    var resultado = await apiService.UpdateRolAsync(rolActualizado);
+
+                    if (resultado != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Rol actualizado exitosamente: {rolIdApi}");
+
+                        // 5. Actualizar también en la base de datos local
+                        var rolLocal = await _connection.Table<Rol>()
+                            .Where(r => r.idApi == rolIdApi)
+                            .FirstOrDefaultAsync();
+
+                        if (rolLocal != null)
+                        {
+                            
+                            rolLocal.UsuariosIDsJson = JsonSerializer.Serialize(usuariosActuales.ToArray());
+                            await _connection.UpdateAsync(rolLocal);
+                        }
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Error actualizando rol en API: {rolIdApi}");
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario {usuarioIdApi} ya está en el rol {rolIdApi}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Error en AgregarUsuarioARol: {ex.Message}");
+            }
+        }
+
+        public async Task<string> SaveCredencialAsyncApi(models.Credencial credencial)
+        {
+            ApiService.CredentialDto crdDto = new ApiService.CredentialDto
+            {
+                CredencialId = credencial.idApi,
+                Tipo = credencial.Tipo.ToString(),
+                Estado = credencial.Estado.ToString(),
+                IdCriptografico = credencial.IdCriptografico,
+                FechaEmision = credencial.FechaEmision,
+                FechaExpiracion = credencial.FechaExpiracion,
+                usuarioIdApi = credencial.usuarioIdApi
+            };
+
+            var res = await apiService.crearCredencial(crdDto);
+
+            return res;
         }
 
         public async Task<int> SaveCredencialAsync(models.Credencial credencial)
         {
             if (credencial == null) return 0;
 
-            // Try remote creation only when connected
             if (connectivityService.IsConnected)
             {
-                // Ensure we have a valid usuarioIdApi (GUID). If not, try to get/create it.
+                
                 if (string.IsNullOrWhiteSpace(credencial.usuarioIdApi) || !Guid.TryParse(credencial.usuarioIdApi, out _))
                 {
                     try
@@ -931,52 +1266,7 @@ namespace AppNetCredenciales.Data
 
         public async Task InitializeAsync()
         {
-            var usuarios = await GetUsuariosAsync();
-            if (usuarios.Count == 0)
-            {
-                var admin = new models.Usuario
-                {
-                    Email = "admin@test.com",
-                    Password = "1234",
-                    Nombre = "Administrador"
-                };
-
-                var user = new models.Usuario
-                {
-                    Email = "user@test.com",
-                    Password = "abcd",
-                    Nombre = "Usuario"
-                };
-
-                await SaveUsuarioAsync(admin);
-                await SaveUsuarioAsync(user);
-            }
-
-            var roles = await GetRolesAsync();
-            if(roles.Count == 0)
-            {
-                var rolAdmin = new models.Rol
-                {
-                    Tipo = "Administrador",
-                    Prioridad = 1,
-                    FechaAsignado = DateTime.Now
-                };
-                var rolUser = new models.Rol
-                {
-                    Tipo = "Usuario",
-                    Prioridad = 1,
-                    FechaAsignado = DateTime.Now
-                };
-                var rolFuncionario = new models.Rol
-                {
-                    Tipo = "Funcionario",
-                    Prioridad = 1,
-                    FechaAsignado = DateTime.Now
-                };
-                await SaveRolAsync(rolAdmin);
-                await SaveRolAsync(rolUser);
-                await SaveRolAsync(rolFuncionario);
-            }
+            
         }
 
        
@@ -1062,6 +1352,79 @@ namespace AppNetCredenciales.Data
             {
                 System.Diagnostics.Debug.WriteLine("[LocalDBService] DumpDatabaseAsync error: " + ex);
                 return $"ERROR: {ex.Message}";
+            }
+        }
+
+        public async Task<List<Usuario>> GetUsuariosPendientesSyncAsync()
+        {
+            return await _connection.Table<Usuario>()
+                .Where(u => u.FaltaCargar == true)
+                .ToListAsync();
+        }
+
+        public async Task<List<EventoAcceso>> GetEventosAccesoPendientesSyncAsync()
+        {
+            return await _connection.Table<EventoAcceso>()
+                .Where(e => string.IsNullOrEmpty(e.idApi) && 
+                           !string.IsNullOrEmpty(e.CredencialIdApi) && 
+                           !string.IsNullOrEmpty(e.EspacioIdApi))
+                .ToListAsync();
+        }
+
+    
+        public async Task<List<Beneficio>> GetBeneficiosPendientesSyncAsync()
+        {
+            return await _connection.Table<Beneficio>()
+                .Where(b => b.FaltaCarga == true)
+                .ToListAsync();
+        }
+
+        public async Task<bool> CrearBeneficioEnApiAsync(Beneficio beneficio)
+        {
+            try
+            {
+                if (!connectivityService.IsConnected)
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] Sin conexión, no se puede crear beneficio en API");
+                    return false;
+                }
+
+                var nuevoBeneficioDto = new ApiService.BeneficioDto
+                {
+                    Id = beneficio.idApi,
+                    Descripcion = beneficio.Descripcion,
+                    Tipo = beneficio.Tipo,
+                    Nombre = beneficio.Nombre,
+                    VigenciaInicio = beneficio.VigenciaInicio,
+                    VigenciaFin = beneficio.VigenciaFin,
+                    CupoTotal = beneficio.CupoTotal,
+                    CupoPorUsuario = beneficio.CupoPorUsuario,
+                    RequiereBiometria = beneficio.RequiereBiometria,
+                    EspaciosIDs = beneficio.EspaciosIDs,
+                    UsuariosIDs = beneficio.UsuariosIDs
+                };
+
+                var resultado = await apiService.CreateBeneficioAsync(nuevoBeneficioDto);
+
+                if (resultado != null)
+                {
+                    // Marcar como sincronizado
+                    beneficio.FaltaCarga = false;
+                    await SaveBeneficioAsync(beneficio);
+
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Beneficio creado en API: {beneficio.idApi}");
+                    return true;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Error creando beneficio en API: {beneficio.idApi}");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Excepción creando beneficio en API: {ex.Message}");
+                return false;
             }
         }
     }

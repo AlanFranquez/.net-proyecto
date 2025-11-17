@@ -88,9 +88,22 @@ namespace AppNetCredenciales.Views
                     return;
                 }
 
+                Debug.WriteLine("[Navbar] Checking roles for user ID: " + usuario.idApi);
+                Debug.WriteLine($"[Navbar] User RolesIDs: {string.Join(", ", usuario.RolesIDs ?? Array.Empty<string>())}");
+                Debug.WriteLine($"[Navbar] User RolesIDs: {usuario.RolesIDsJson}");
+
+
+
 
                 var userRoleIds = usuario.RolesIDs ?? Array.Empty<string>();
                 bool hasFuncionarioFromArray = false;
+
+                Debug.WriteLine($"USUARIOS ROLES {userRoleIds.ToString()}");
+
+                foreach(var roleId in userRoleIds)
+                {
+                    Debug.WriteLine($"[Navbar] User Role ID: {roleId}");
+                }
 
                 if (userRoleIds.Length > 0)
                 {
