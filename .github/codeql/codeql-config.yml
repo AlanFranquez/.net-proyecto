@@ -1,0 +1,12 @@
+name: "Backend Only Analysis"
+
+paths:
+  - BACKEND/LabNet/src
+
+paths-ignore:
+  - App/**
+  - "**/*.Android.csproj"
+  - "**/*.iOS.csproj"
+  - "**/*.Maccatalyst.csproj"
+  - "**/bin/**"
+  - "**/obj/**"

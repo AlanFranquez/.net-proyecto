@@ -127,31 +127,3 @@ resource "aws_security_group" "nodes_sg" {
     Name = "eks-nodes-sg"
   }
 }
-
-
-# 1) leer cada instancia
-data "aws_instance" "eks_node_instances" {
-  for_each   = toset(data.aws_instances.eks_nodes.ids)
-  instance_id = each.value
-}
-
-# 2) compilar lista única de SGs de nodos
-locals {
-  node_sg_ids = distinct(flatten([
-    for inst in data.aws_instance.eks_node_instances :
-      inst.vpc_security_group_ids
-  ]))
-}
-
-# 3) crear regla de ingreso por cada SG de nodo permitiendo tráfico desde el ALB SG (puerto nodePort)
-resource "aws_security_group_rule" "allow_alb_to_nodes_nodeport" {
-  for_each = toset(local.node_sg_ids)
-
-  type                     = "ingress"
-  from_port                = 30080
-  to_port                  = 30080
-  protocol                 = "tcp"
-  security_group_id        = each.key                      # target: SG del nodo
-  source_security_group_id = aws_security_group.alb_sg.id   # origen: SG del ALB
-  description              = "Allow ALB to reach NodePort 30080"
-}

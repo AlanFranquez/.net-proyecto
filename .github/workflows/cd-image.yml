@@ -8,28 +8,31 @@ on:
       - 'BACKEND/LabNet/docker/**'
       - '.github/workflows/cd-image.yml'
 
-env:
-  AWS_REGION: us-east-1
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
-  ECR_REPOSITORY: espectaculos-api
-  DOCKER_BUILDKIT: 1
+permissions:
+  contents: read
+  id-token: write
+  security-events: write
 
 jobs:
   build-and-push:
     name: Build & Push to ECR
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    
+    environment: AWS_ACCOUNT_ID
+
+    env:
+      AWS_REGION: us-east-1
+      AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+      ECR_REPOSITORY: espectaculos-api
+      DOCKER_BUILDKIT: 1
+
     outputs:
       image-tag: ${{ steps.image.outputs.tag }}
       image-uri: ${{ steps.image.outputs.uri }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -49,9 +52,9 @@ jobs:
       - name: Configure AWS credentials (access keys session)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
@@ -63,12 +66,11 @@ jobs:
         run: |
           aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} || \
           aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --image-tag-mutability MUTABLE || true
-        shell: bash
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: BACKEND/LabNet
           file: BACKEND/LabNet/docker/Dockerfile.web
           push: true
           tags: |
@@ -78,8 +80,8 @@ jobs:
             BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
             VCS_REF=${{ github.sha }}
             VERSION=${{ steps.image.outputs.tag }}
-          cache-from: type=registry,ref=${{ steps.image.outputs.uri-latest }}
-          cache-to: type=inline
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Scan image with Trivy
         uses: aquasecurity/trivy-action@master
@@ -89,9 +91,10 @@ jobs:
           output: 'trivy-image-results.sarif'
           severity: 'CRITICAL'
 
+
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-image-results.sarif'
           category: 'docker-image-scan'
@@ -101,18 +104,17 @@ jobs:
           echo "✅ Docker image built and pushed successfully"
           echo "Image URI: ${{ steps.image.outputs.uri }}"
           echo "Image Tag: ${{ steps.image.outputs.tag }}"
-        shell: bash
 
   notify-deployment:
     name: Notify Deployment Ready
     runs-on: ubuntu-latest
+    environment: AWS_ACCOUNT_ID
     needs: build-and-push
     if: success()
-    
+
     steps:
       - name: Create deployment status
         run: |
           echo "✅ Image ready for deployment"
           echo "Image: ${{ needs.build-and-push.outputs.image-uri }}"
           echo "Tag: ${{ needs.build-and-push.outputs.image-tag }}"
-        shell: bash

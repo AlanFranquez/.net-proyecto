@@ -12,26 +12,23 @@ on:
       - 'INFRA/**'
       - '.github/workflows/cd-infra.yml'
 
-env:
-  AWS_REGION: us-east-1
-  TF_VERSION: '1.6.x'
-  AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-
 jobs:
   terraform-plan:
     name: Terraform Plan & Validate
     runs-on: ubuntu-latest
+    environment: AWS_ACCOUNT_ID   # <-- MUY IMPORTANTE
     permissions:
       contents: read
       id-token: write
       pull-requests: write
-    
+
+    env:
+      AWS_REGION: us-east-1
+      TF_VERSION: '1.6.x'
+
     outputs:
       plan-exists: ${{ steps.plan.outputs.exitcode }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -44,9 +41,9 @@ jobs:
       - name: Configure AWS credentials (access keys session)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Format Check
@@ -85,13 +82,18 @@ jobs:
 
   terraform-apply:
     name: Terraform Apply
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: terraform-plan
     runs-on: ubuntu-latest
+    environment: AWS_ACCOUNT_ID   # <-- igual que el anterior
     permissions:
       contents: read
       id-token: write
-    
+
+    env:
+      AWS_REGION: us-east-1
+      TF_VERSION: '1.6.x'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,9 +106,9 @@ jobs:
       - name: Configure AWS credentials (access keys session)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ env.AWS_SESSION_TOKEN }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Initialization
