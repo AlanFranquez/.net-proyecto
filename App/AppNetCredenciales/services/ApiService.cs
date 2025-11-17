@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AppNetCredenciales.models;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net.Http;
@@ -26,6 +27,155 @@ namespace AppNetCredenciales.Services
             };
         }
 
+        public async Task<BeneficioDto?> CreateBeneficioAsync(BeneficioDto beneficio)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateBeneficioAsync -> beneficioId: {beneficio.Id}");
+
+                var response = await _httpClient.PostAsJsonAsync("beneficios", beneficio, _jsonOptions);
+                var content = await response.Content.ReadAsStringAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateBeneficioAsync response status: {(int)response.StatusCode} {response.ReasonPhrase}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateBeneficioAsync response body: {content}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] CreateBeneficioAsync failed: {response.StatusCode} content={content}");
+                    return null;
+                }
+
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    try
+                    {
+                        var nuevoBeneficio = JsonSerializer.Deserialize<BeneficioDto>(content, _jsonOptions);
+                        if (nuevoBeneficio != null)
+                        {
+                            return nuevoBeneficio;
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] CreateBeneficioAsync deserialization failed: {ex.Message}");
+                    }
+                }
+
+             
+                return beneficio;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateBeneficioAsync error: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<BeneficioDto?> CanjearBeneficio(CanjeDto canje)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CanjearBeneficio -> beneficioId: {canje.beneficioId}, usuarioId: {canje.usuarioId}");
+
+                var response = await _httpClient.PostAsJsonAsync($"beneficios/{canje.beneficioId}/canjear", canje, _jsonOptions);
+                var content = await response.Content.ReadAsStringAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CanjearBeneficio response status: {(int)response.StatusCode} {response.ReasonPhrase}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CanjearBeneficio response body: {content}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] CanjearBeneficio failed: {response.StatusCode} content={content}");
+                    return null;
+                }
+
+                
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    try
+                    {
+                        var updatedBeneficio = JsonSerializer.Deserialize<BeneficioDto>(content, _jsonOptions);
+                        if (updatedBeneficio != null)
+                        {
+                            return updatedBeneficio;
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] CanjearBeneficio deserialization failed: {ex.Message}");
+                    }
+                }
+
+                // Fallback: fetch the updated benefit data
+                var getResponse = await _httpClient.GetFromJsonAsync<BeneficioDto>($"beneficios/{canje.beneficioId}", _jsonOptions);
+                return getResponse;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] CanjearBeneficio error: {ex.Message}");
+                return null;
+            }
+        }
+
+        public async Task<BeneficioDto?> UpdateBeneficioAsync(BeneficioDto beneficio)
+        {
+            try
+            {
+                var requestJson = JsonSerializer.Serialize(beneficio, _jsonOptions);
+
+                var response = await _httpClient.PutAsJsonAsync($"beneficios/{beneficio.Id}", beneficio, _jsonOptions);
+                var content = await response.Content.ReadAsStringAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateBeneficioAsync response status: {(int)response.StatusCode} {response.ReasonPhrase}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateBeneficioAsync response body: {content}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateBeneficioAsync failed: {response.StatusCode} content={content}");
+                    return null;
+                }
+
+                if (string.IsNullOrWhiteSpace(content))
+                    return beneficio; 
+
+                try
+                {
+                    var updatedBeneficio = JsonSerializer.Deserialize<BeneficioDto>(content, _jsonOptions);
+                    return updatedBeneficio ?? beneficio;
+                }
+                catch (JsonException ex)
+                {
+                    Debug.WriteLine($"ERROR - {ex.Message}");
+                    return beneficio;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateBeneficioAsync error: {ex}");
+                return null;
+            }
+        }
+
+        public async Task<List<BeneficioDto>> GetBeneficiosAsync()
+        {
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<BeneficioDto>>("beneficios", _jsonOptions) ?? new List<BeneficioDto>();
+
+                foreach(var item in list)
+                {
+                    Debug.WriteLine($"BENEFICIO => {item.Id} - {item.Tipo}");
+                }
+
+                return list;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Error fetching eventosAcceso: {ex}");
+                return new List<BeneficioDto>();
+            }
+        }
+
         public async Task<List<EventoAccesoDto>> GetEventosAccesoAsync() {             
             try
             {
@@ -48,14 +198,12 @@ namespace AppNetCredenciales.Services
         {
             try
             {
-                // ✅ Asegurar que la fecha esté en UTC antes de enviar
                 if (nuevo.MomentoDeAcceso.Kind != DateTimeKind.Utc)
                 {
                     nuevo.MomentoDeAcceso = nuevo.MomentoDeAcceso.ToUniversalTime();
                     System.Diagnostics.Debug.WriteLine($"[ApiService] Converted MomentoDeAcceso to UTC: {nuevo.MomentoDeAcceso:yyyy-MM-dd HH:mm:ss} UTC");
                 }
 
-                // ✅ Crear DTO solo con los campos requeridos para envío
                 var requestDto = new
                 {
                     momentoDeAcceso = nuevo.MomentoDeAcceso,
@@ -89,7 +237,7 @@ namespace AppNetCredenciales.Services
                     return null;
                 }
 
-                // ✅ Intentar deserializar la respuesta
+               
                 try
                 {
                     var responseDto = JsonSerializer.Deserialize<EventoAccesoDto>(content, _jsonOptions);
@@ -291,6 +439,8 @@ namespace AppNetCredenciales.Services
             try
             {
                 var requestJson = JsonSerializer.Serialize(nuevo, _jsonOptions);
+                System.Diagnostics.Debug.WriteLine($"[ApiService] === ENVIANDO PETICIÓN ===");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] URL: {_httpClient.BaseAddress}usuarios/registro");
                 System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync -> request JSON: {requestJson}");
 
                 using var req = new HttpRequestMessage(HttpMethod.Post, "usuarios/registro")
@@ -298,67 +448,200 @@ namespace AppNetCredenciales.Services
                     Content = JsonContent.Create(nuevo, options: _jsonOptions)
                 };
 
+                // Agregar headers de debug
+                System.Diagnostics.Debug.WriteLine("[ApiService] === HEADERS DE LA PETICIÓN ===");
+                foreach (var header in req.Headers)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] {header.Key}: {string.Join(", ", header.Value)}");
+                }
+                if (req.Content?.Headers != null)
+                {
+                    foreach (var header in req.Content.Headers)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] Content-{header.Key}: {string.Join(", ", header.Value)}");
+                    }
+                }
+
                 var resp = await _httpClient.SendAsync(req);
                 var content = await resp.Content.ReadAsStringAsync();
 
-                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync response status: {(int)resp.StatusCode} {resp.ReasonPhrase}");
-                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync response body: {content}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] === RESPUESTA DEL SERVIDOR ===");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Status Code: {(int)resp.StatusCode} {resp.ReasonPhrase}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Response Headers:");
+                foreach (var header in resp.Headers)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService]   {header.Key}: {string.Join(", ", header.Value)}");
+                }
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Response Body: '{content}'");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Response Body Length: {content?.Length ?? 0} caracteres");
 
                 if (!resp.IsSuccessStatusCode)
                 {
-                   
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] ❌ ERROR: {resp.StatusCode}");
+
+                    // Intentar parsear el error del servidor
+                    if (!string.IsNullOrWhiteSpace(content))
+                    {
+                        try
+                        {
+                            using var errorDoc = JsonDocument.Parse(content);
+                            System.Diagnostics.Debug.WriteLine($"[ApiService] Error JSON: {errorDoc.RootElement}");
+                        }
+                        catch
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ApiService] Error como texto: {content}");
+                        }
+                    }
+
                     return null;
                 }
 
                 if (string.IsNullOrWhiteSpace(content))
+                {
+                    System.Diagnostics.Debug.WriteLine("[ApiService] ⚠️ Respuesta vacía del servidor");
                     return null;
+                }
 
+                // Intentar deserializar como UsuarioDto completo
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[ApiService] Intentando deserializar como UsuarioDto...");
                     var dto = JsonSerializer.Deserialize<UsuarioDto>(content, _jsonOptions);
                     if (dto != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] ✅ Deserializado exitosamente: UsuarioId={dto.UsuarioId}");
                         return dto;
+                    }
                 }
-                catch (JsonException) { /* fallthrough to flexible parsing */ }
+                catch (JsonException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] ❌ Fallo deserialización UsuarioDto: {ex.Message}");
+                }
 
+                // Intentar parsing flexible
                 try
                 {
+                    System.Diagnostics.Debug.WriteLine("[ApiService] Intentando parsing flexible...");
                     using var doc = JsonDocument.Parse(content);
                     var root = doc.RootElement;
 
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] JSON Root ValueKind: {root.ValueKind}");
+
                     if (root.ValueKind == JsonValueKind.Object)
                     {
+                        System.Diagnostics.Debug.WriteLine("[ApiService] Es un objeto JSON, buscando propiedades...");
+
+                        // Listar todas las propiedades
+                        foreach (var property in root.EnumerateObject())
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[ApiService] Propiedad: {property.Name} = {property.Value}");
+                        }
+
                         if (root.TryGetProperty("usuarioId", out var p) && p.ValueKind != JsonValueKind.Null)
-                            return new UsuarioDto { UsuarioId = p.GetString() };
+                        {
+                            var id = p.ValueKind == JsonValueKind.String ? p.GetString() : p.GetRawText();
+                            System.Diagnostics.Debug.WriteLine($"[ApiService] ✅ Encontrado usuarioId: {id}");
+                            return new UsuarioDto { UsuarioId = id };
+                        }
 
                         if (root.TryGetProperty("id", out var p2) && p2.ValueKind != JsonValueKind.Null)
-                            return new UsuarioDto { UsuarioId = p2.ValueKind == JsonValueKind.String ? p2.GetString() : p2.GetRawText() };
+                        {
+                            var id = p2.ValueKind == JsonValueKind.String ? p2.GetString() : p2.GetRawText();
+                            System.Diagnostics.Debug.WriteLine($"[ApiService] ✅ Encontrado id: {id}");
+                            return new UsuarioDto { UsuarioId = id };
+                        }
                     }
                     else if (root.ValueKind == JsonValueKind.String)
                     {
-                        return new UsuarioDto { UsuarioId = root.GetString() };
+                        var id = root.GetString();
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] ✅ String directo: {id}");
+                        return new UsuarioDto { UsuarioId = id };
                     }
                     else if (root.ValueKind == JsonValueKind.Number)
                     {
-                        return new UsuarioDto { UsuarioId = root.GetRawText() };
+                        var id = root.GetRawText();
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] ✅ Número: {id}");
+                        return new UsuarioDto { UsuarioId = id };
                     }
                 }
-                catch (JsonException e) { 
-                    Debug.WriteLine($" {e.ToString()} [ApiService] CreateUsuarioAsync: JSON parsing failed, falling back to raw content parsing.");
-
+                catch (JsonException ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] ❌ Fallo parsing flexible: {ex.Message}");
                 }
 
+                // Último intento: texto crudo
                 var trimmed = content.Trim();
                 if (trimmed.StartsWith("\"") && trimmed.EndsWith("\"") && trimmed.Length >= 2)
                     trimmed = trimmed.Substring(1, trimmed.Length - 2);
 
+                System.Diagnostics.Debug.WriteLine($"[ApiService] ⚠️ Fallback: usando texto crudo '{trimmed}'");
                 return new UsuarioDto { UsuarioId = trimmed };
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ApiService] CreateUsuarioAsync error: {ex}");
-                throw; 
+                System.Diagnostics.Debug.WriteLine($"[ApiService] ❌ EXCEPCIÓN GENERAL:");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Mensaje: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] StackTrace: {ex.StackTrace}");
+                throw;
             }
+        }
+
+        public async Task<RolDto?> UpdateRolAsync(UpdateRolDto rol)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateRolAsync -> rolId: {rol.RolId}");
+
+                var response = await _httpClient.PutAsJsonAsync($"roles/{rol.RolId}", rol, _jsonOptions);
+                var content = await response.Content.ReadAsStringAsync();
+
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateRolAsync response status: {(int)response.StatusCode} {response.ReasonPhrase}");
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateRolAsync response body: {content}");
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateRolAsync failed: {response.StatusCode} content={content}");
+                    return null;
+                }
+
+                if (!string.IsNullOrWhiteSpace(content))
+                {
+                    try
+                    {
+                        var rolActualizado = JsonSerializer.Deserialize<RolDto>(content, _jsonOptions);
+                        return rolActualizado;
+                    }
+                    catch (JsonException ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateRolAsync deserialization failed: {ex.Message}");
+                    }
+                }
+
+                return new RolDto { RolId = rol.RolId }; // Fallback
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] UpdateRolAsync error: {ex.Message}");
+                return null;
+            }
+        }
+
+        public class UpdateRolDto
+        {
+            [JsonPropertyName("rolId")]
+            public string RolId { get; set; }
+
+            [JsonPropertyName("tipo")]
+            public string Tipo { get; set; }
+
+            [JsonPropertyName("prioridad")]
+            public int Prioridad { get; set; }
+
+            [JsonPropertyName("fechaAsignado")]
+            public DateTime FechaAsignado { get; set; }
+
+            [JsonPropertyName("usuariosIDs")]
+            public string[] UsuariosIDs { get; set; }
         }
 
         public class EspacioDto
@@ -396,6 +679,48 @@ namespace AppNetCredenciales.Services
             [JsonPropertyName("fechaAsignado")]
             public DateTime fechaAsignado { get; set; }
 
+            [JsonPropertyName("usuariosIDs")]
+            public string[]? usuariosIDs { get; set; }
+
+        }
+
+        public class UpdateBeneficioDto
+        {
+            [JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [JsonPropertyName("tipo")]
+            public string Tipo { get; set; }
+
+            [JsonPropertyName("nombre")]
+            public string Nombre { get; set; }
+
+            [JsonPropertyName("descripcion")]
+            public string Descripcion { get; set; }
+
+            [JsonPropertyName("vigenciaInicio")]
+            public DateTime VigenciaInicio { get; set; }
+
+            [JsonPropertyName("vigenciaFin")]
+            public DateTime VigenciaFin { get; set; }
+
+            [JsonPropertyName("cupoTotal")]
+            public int CupoTotal { get; set; }
+
+            [JsonPropertyName("cupoPorUsuario")]
+            public int CupoPorUsuario { get; set; }
+
+            [JsonPropertyName("requiereBiometria")]
+            public bool RequiereBiometria { get; set; }
+
+            [JsonPropertyName("criterioElegibilidad")]
+            public string CriterioElegibilidad { get; set; }
+
+            [JsonPropertyName("espaciosIDs")]
+            public string[] EspaciosIDs { get; set; }
+
+            [JsonPropertyName("usuariosIDs")]
+            public string[] UsuariosIDs { get; set; }
         }
 
         public class CredentialDto
@@ -442,11 +767,17 @@ namespace AppNetCredenciales.Services
             public string[]? RolesIDs { get; set; }
         }
 
+        public class CanjeDto
+        {
+            [JsonPropertyName("beneficioId")]
+            public string beneficioId { get; set; }
+
+            [JsonPropertyName("usuarioId")]
+            public string usuarioId { get; set; }
+        }
+
         public class EventoAccesoDto
         {
-            // ❌ REMOVER: eventoAccesoId no está en la estructura requerida
-            // [JsonPropertyName("eventoAccesoId")]
-            // public string? EventoAccesoId { get; set; }
 
             [JsonPropertyName("momentoDeAcceso")]
             public DateTime MomentoDeAcceso { get; set; }
@@ -469,13 +800,55 @@ namespace AppNetCredenciales.Services
             [JsonPropertyName("firma")]
             public string? Firma { get; set; }
 
-            // ✅ AGREGAR: Propiedades que pueden venir en la respuesta del API
             [JsonPropertyName("eventoAccesoId")]
-            public string? EventoAccesoId { get; set; } // Solo para respuesta
+            public string? EventoAccesoId { get; set; } 
 
             [JsonPropertyName("id")]
-            public string? Id { get; set; } // Alias para respuesta
+            public string? Id { get; set; }
         }
+
+        public class BeneficioDto
+        {
+
+            [JsonPropertyName("id")]
+            public string Id { get; set; }
+
+            [JsonPropertyName("descripcion")]
+            public string Descripcion { get; set; }
+            
+
+            [JsonPropertyName("tipo")]
+            public string Tipo { get; set; }
+
+            [JsonPropertyName("nombre")]
+            public string Nombre { get; set; }
+
+            [JsonPropertyName("vigenciaInicio")]
+            public DateTime VigenciaInicio { get; set; }
+
+            [JsonPropertyName("VigenciaFin")]
+            public DateTime VigenciaFin { get; set; }
+
+            [JsonPropertyName("cupoTotal")]
+            public int? CupoTotal { get; set; }
+
+            [JsonPropertyName("cupoPorUsuario")]
+            public int? CupoPorUsuario { get; set; }
+
+
+            [JsonPropertyName("requiereBiometria")]
+            public bool? RequiereBiometria { get; set; }
+
+            [JsonPropertyName("criterioElegibilidad")]
+            public string? CriterioElegibilidad { get; set; }
+
+            [JsonPropertyName("espaciosIDs")]
+            public string[]? EspaciosIDs { get; set; }
+
+            [JsonPropertyName("usuariosIDs")]
+            public string[]? UsuariosIDs { get; set; }
+
+    }
 
         public class NewUsuarioDto
         {

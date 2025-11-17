@@ -1,0 +1,113 @@
+name: CI - Build, Test, Quality & Security
+
+on:
+  push:
+    branches: ["main", "test"]
+    paths:
+      - "BACKEND/**"
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: ["main", "test"]
+    paths:
+      - "BACKEND/**"
+      - '.github/workflows/ci.yml'
+ 
+env:
+  DOTNET_VERSION: "8.0.x"
+  BUILD_CONFIGURATION: Release
+
+jobs:
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: csharp
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Build backend
+        run: dotnet build BACKEND/LabNet/src/Espectaculos.WebApi -c ${{ env.BUILD_CONFIGURATION }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+
+
+  code-quality:
+    environment: AWS_ACCOUNT_ID   # <-- MUY IMPORTANTE
+    name: Code Quality Analysis (Sonar)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Install SonarScanner
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_ORG: ${{ secrets.SONAR_ORG }}
+        run: |
+          dotnet sonarscanner begin \
+            /k:"fabdiangelo_.net-proyecto" \
+            /o:"${SONAR_ORG}" \
+            /d:sonar.host.url="${SONAR_HOST_URL}" \
+            /d:sonar.login="${SONAR_TOKEN}" \
+            /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
+            /d:sonar.scm.provider=git \
+            /d:sonar.coverage.exclusions="**/Migrations/**,**/*Tests*/**"
+
+
+      - name: Rebuild for Sonar
+        run: dotnet build BACKEND/LabNet/src/Espectaculos.WebApi -c ${{ env.BUILD_CONFIGURATION }}
+
+      - name: End SonarCloud analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet sonarscanner end /d:sonar.login="${SONAR_TOKEN}"
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "BACKEND/LabNet/src"
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"

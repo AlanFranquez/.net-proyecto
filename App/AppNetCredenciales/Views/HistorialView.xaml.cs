@@ -82,7 +82,7 @@ public partial class HistorialView : ContentPage
                     // Cargar información del espacio si no está presente
                     if (evento.Espacio == null && evento.EspacioId > 0)
                     {
-                        evento.Espacio = await _db.GetEspacioByIdAsync(evento.EspacioId);
+                        evento.Espacio = await _db.GetEspacioByIdAsync(evento.EspacioIdApi);
                     }
 
                     // Si no se encontró por ID local, buscar por idApi

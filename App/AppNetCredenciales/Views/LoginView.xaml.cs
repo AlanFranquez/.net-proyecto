@@ -30,15 +30,15 @@ public partial class LoginView : ContentPage
         }
     }
 
-    // inside chequearConectividad
     private async void chequearConectividad(object sender, EventArgs e)
     {
         await _dbService.SincronizarRolesFromBack();
         await _dbService.SincronizarUsuariosFromBack();
         await _dbService.SincronizarEspaciosFromBack();
         await _dbService.SincronizarEventosFromBack();
+        await _dbService.SincronizarBeneficiosFromBack();
         var raw = await _apiService.GetUsuariosRawAsync();
-        System.Diagnostics.Debug.WriteLine($"[ApiTest] Raw users response: {raw}");
+
         await DisplayAlert("Raw response", (raw?.Length > 100 ? raw.Substring(0, 100) + "..." : raw) ?? "<null>", "OK");
         
      
