@@ -61,23 +61,26 @@ jobs:
       - name: Install SonarScanner
         run: dotnet tool install --global dotnet-sonarscanner
 
-      - name: Begin SonarQube analysis
+      - name: Begin SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_ORG: ${{ secrets.SONAR_ORG }}
         run: |
           dotnet sonarscanner begin \
             /k:"espectaculos-api" \
+            /o:"${SONAR_ORG}" \
             /d:sonar.host.url="${SONAR_HOST_URL}" \
             /d:sonar.login="${SONAR_TOKEN}" \
             /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml" \
             /d:sonar.scm.provider=git \
             /d:sonar.coverage.exclusions="**/Migrations/**,**/*Tests*/**"
 
+
       - name: Rebuild for Sonar
         run: dotnet build BACKEND/LabNet/src/Espectaculos.WebApi -c ${{ env.BUILD_CONFIGURATION }}
 
-      - name: End SonarQube analysis
+      - name: End SonarCloud analysis
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet sonarscanner end /d:sonar.login="${SONAR_TOKEN}"
