@@ -128,6 +128,7 @@ public partial class HistorialView : ContentPage
         }
     }
 
+    // ✅ Método original (mantener para compatibilidad)
     private async void OnAccesoSelected(object sender, SelectionChangedEventArgs e)
     {
         try
@@ -143,6 +144,26 @@ public partial class HistorialView : ContentPage
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[HistorialView] Error in OnAccesoSelected: {ex}");
+        }
+    }
+
+    // ✅ NUEVO: Método para el botón "Ver Detalle"
+    private async void OnVerDetalleClicked(object sender, EventArgs e)
+    {
+        try
+        {
+            if (sender is Button button && button.CommandParameter is EventoAcceso acceso)
+            {
+                System.Diagnostics.Debug.WriteLine($"[HistorialView] Ver detalle de acceso: {acceso.EventoId} - Espacio: {acceso.Espacio?.Nombre}");
+
+                // ✅ Misma navegación que el método original
+                await Shell.Current.GoToAsync($"accesoPerfil?eventoId={acceso.EventoId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[HistorialView] Error en OnVerDetalleClicked: {ex.Message}");
+            await DisplayAlert("Error", "No se pudo abrir el detalle del acceso.", "OK");
         }
     }
 }

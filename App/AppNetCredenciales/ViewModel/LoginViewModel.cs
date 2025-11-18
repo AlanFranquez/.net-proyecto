@@ -114,28 +114,172 @@ namespace AppNetCredenciales.ViewModel
 
             try
             {
-                System.Diagnostics.Debug.WriteLine($"DATOS DE USURIO {u.UsuarioId} - {u.Email} - {u.idApi}");
+                System.Diagnostics.Debug.WriteLine($"DATOS DE USUARIO {u.UsuarioId} - {u.Email} - {u.idApi}");
                 await SessionManager.SaveUserAsync(u.UsuarioId, Email, u.idApi);
 
-                int idRol = u.RolId ?? 0;
+                // ✅ NUEVA LÓGICA: Verificar todos los roles del usuario
+                await DeterminarNavegacionPorRoles(u);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error en login: {ex.Message}");
+                Console.WriteLine(ex.Message);
+            }
 
-                Rol r = await dbService.GetRolByIdAsync(idRol);
+            return true;
+        }
 
-                if(r != null && r.Tipo == "Funcionario")
+        // ✅ NUEVO MÉTODO: Determinar navegación basada en roles
+        private async Task DeterminarNavegacionPorRoles(Usuario usuario)
+        {
+            try
+            {
+                // Obtener todos los roles del usuario
+                List<Rol> rolesDelUsuario = new List<Rol>();
+
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] === VERIFICANDO ROLES PARA USUARIO ===");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Usuario: {usuario.Email}");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] RolId principal: {usuario.RolId}");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] RolesIDs count: {usuario.RolesIDs?.Length ?? 0}");
+
+                // Método 1: Verificar RolId principal (si existe)
+                if (usuario.RolId.HasValue && usuario.RolId > 0)
                 {
+                    var rolPrincipal = await dbService.GetRolByIdAsync(usuario.RolId.Value);
+                    if (rolPrincipal != null)
+                    {
+                        rolesDelUsuario.Add(rolPrincipal);
+                        System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Rol principal encontrado: {rolPrincipal.Tipo}");
+                    }
+                }
 
-                await Shell.Current.GoToAsync("scan");
-                } else
+                // Método 2: Verificar RolesIDs (array de roles)
+                if (usuario.RolesIDs != null && usuario.RolesIDs.Length > 0)
                 {
+                    System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Verificando {usuario.RolesIDs.Length} roles adicionales...");
+
+                    foreach (var rolIdApi in usuario.RolesIDs)
+                    {
+                        if (string.IsNullOrWhiteSpace(rolIdApi)) continue;
+
+                        // Buscar rol por idApi
+                        var rol = await dbService.GetRolByTipoAsync(rolIdApi);
+                        if (rol == null)
+                        {
+                            // Si no se encuentra por tipo, buscar por idApi
+                            var todosLosRoles = await dbService.GetRolesAsync();
+                            rol = todosLosRoles.FirstOrDefault(r => r.idApi == rolIdApi);
+                        }
+
+                        if (rol != null && !rolesDelUsuario.Any(r => r.RolId == rol.RolId))
+                        {
+                            rolesDelUsuario.Add(rol);
+                            System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Rol adicional encontrado: {rol.Tipo}");
+                        }
+                    }
+                }
+
+                // Método 3: Usar el método GetRolsByUserAsync
+                try
+                {
+                    var rolesDelMetodo = await dbService.GetRolsByUserAsync(usuario.UsuarioId);
+                    foreach (var rol in rolesDelMetodo)
+                    {
+                        if (!rolesDelUsuario.Any(r => r.RolId == rol.RolId))
+                        {
+                            rolesDelUsuario.Add(rol);
+                            System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Rol del método encontrado: {rol.Tipo}");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Error obteniendo roles por usuario: {ex.Message}");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] === RESUMEN DE ROLES ===");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Total roles encontrados: {rolesDelUsuario.Count}");
+
+                var tiposDeRoles = rolesDelUsuario.Select(r => r.Tipo).ToList();
+                foreach (var tipo in tiposDeRoles)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LoginViewModel] - Rol: {tipo}");
+                }
+
+                // ✅ LÓGICA DE NAVEGACIÓN
+                await NavegarSegunRoles(tiposDeRoles);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Error determinando roles: {ex.Message}");
+
+                // Fallback: usar navegación por defecto
+                await Shell.Current.GoToAsync("espacio");
+            }
+        }
+
+        // ✅ NUEVO MÉTODO: Navegar según los roles
+        private async Task NavegarSegunRoles(List<string> tiposDeRoles)
+        {
+            try
+            {
+                // Si no tiene roles o la lista está vacía, ir a espacios por defecto
+                if (tiposDeRoles == null || tiposDeRoles.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[LoginViewModel] ⚠️ No hay roles definidos, navegando a espacios");
+                    await Shell.Current.GoToAsync("espacio");
+                    return;
+                }
+
+                // Verificar si SOLO tiene el rol "Funcionario"
+                bool soloEsFuncionario = tiposDeRoles.Count == 1 &&
+                                       tiposDeRoles.Any(r => r.Equals("Funcionario", StringComparison.OrdinalIgnoreCase));
+
+                // Verificar si tiene rol de "Funcionario" (pero puede tener otros)
+                bool esFuncionario = tiposDeRoles.Any(r => r.Equals("Funcionario", StringComparison.OrdinalIgnoreCase));
+
+                // Verificar si tiene roles de usuario (Usuario, Cliente, etc.)
+                bool esUsuario = tiposDeRoles.Any(r =>
+                    r.Equals("Usuario", StringComparison.OrdinalIgnoreCase) ||
+                    r.Equals("Cliente", StringComparison.OrdinalIgnoreCase) ||
+                    r.Equals("Participante", StringComparison.OrdinalIgnoreCase));
+
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] === ANÁLISIS DE NAVEGACIÓN ===");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Solo es funcionario: {soloEsFuncionario}");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Es funcionario: {esFuncionario}");
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Es usuario: {esUsuario}");
+
+                // ✅ REGLAS DE NAVEGACIÓN
+                if (soloEsFuncionario)
+                {
+                    // Si SOLO es funcionario → ir a scan
+                    System.Diagnostics.Debug.WriteLine("[LoginViewModel] ✅ Navegando a SCAN (solo funcionario)");
+                    await Shell.Current.GoToAsync("scan");
+                }
+                else if (esUsuario)
+                {
+                    // Si tiene rol de usuario → ir a espacios
+                    System.Diagnostics.Debug.WriteLine("[LoginViewModel] ✅ Navegando a ESPACIOS (usuario)");
+                    await Shell.Current.GoToAsync("espacio");
+                }
+                else if (esFuncionario)
+                {
+                    // Si es funcionario pero no usuario → ir a scan
+                    System.Diagnostics.Debug.WriteLine("[LoginViewModel] ✅ Navegando a SCAN (funcionario sin rol usuario)");
+                    await Shell.Current.GoToAsync("scan");
+                }
+                else
+                {
+                    // Fallback: ir a espacios por defecto
+                    System.Diagnostics.Debug.WriteLine("[LoginViewModel] ⚠️ Navegación por defecto a ESPACIOS");
                     await Shell.Current.GoToAsync("espacio");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Error en navegación: {ex.Message}");
+                await Shell.Current.GoToAsync("espacio"); // Fallback
             }
-
-            return true;
         }
     }
 }

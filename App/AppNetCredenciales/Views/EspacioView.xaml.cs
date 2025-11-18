@@ -1,4 +1,4 @@
-using AppNetCredenciales.Data;
+﻿using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
 using AppNetCredenciales.services;
 using AppNetCredenciales.ViewModel;
@@ -34,14 +34,23 @@ public partial class EspacioView : ContentPage
         await _viewModel.LoadEspaciosAsync();
     }
 
-    private async void OnEspacioSelected(object sender, SelectionChangedEventArgs e)
+    // ✅ Método único para el botón "Ver Perfil" - hace exactamente lo mismo que la selección anterior
+    private async void OnVerPerfilClicked(object sender, EventArgs e)
     {
-        var seleccionado = e.CurrentSelection?.FirstOrDefault() as Espacio;
-        if (seleccionado == null)
-            return;
+        try
+        {
+            if (sender is Button button && button.CommandParameter is Espacio espacio)
+            {
+                System.Diagnostics.Debug.WriteLine($"[EspacioView] Ver perfil de: {espacio.Nombre} (ID: {espacio.idApi})");
 
-        await Shell.Current.GoToAsync($"espacioPerfil?espacioId={seleccionado.idApi}");
-
-        if (sender is CollectionView cv) cv.SelectedItem = null;
+                // ✅ Misma navegación que el método original OnEspacioSelected
+                await Shell.Current.GoToAsync($"espacioPerfil?espacioId={espacio.idApi}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[EspacioView] Error en OnVerPerfilClicked: {ex.Message}");
+            await DisplayAlert("Error", "No se pudo abrir el perfil del espacio.", "OK");
+        }
     }
 }

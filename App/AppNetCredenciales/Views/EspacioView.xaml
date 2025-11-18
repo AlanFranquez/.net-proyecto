@@ -5,7 +5,7 @@
              x:Class="AppNetCredenciales.Views.EspacioView"
              Title="Espacios">
     <Grid RowDefinitions="Auto,*,Auto" Padding="12" BackgroundColor="White">
-        
+
         <!-- Row 0: Busy indicator -->
         <ActivityIndicator Grid.Row="0"
                            IsRunning="{Binding IsBusy}"
@@ -13,41 +13,100 @@
                            HorizontalOptions="Center"
                            Margin="0,6" />
 
-        <!-- Row 1: CollectionView - ✅ AGREGAR Grid.Row="1" -->
+        <!-- Row 1: CollectionView -->
         <CollectionView Grid.Row="1"
                         ItemsSource="{Binding Espacios}"
-                        SelectionChanged="OnEspacioSelected"
-                        SelectionMode="Single"
+                        SelectionMode="None"
                         RemainingItemsThreshold="1"
                         Margin="0,6">
             <CollectionView.EmptyView>
-                <StackLayout VerticalOptions="CenterAndExpand" HorizontalOptions="CenterAndExpand" Spacing="6">
-                    <Label Text="No hay registros aún" FontSize="20" HorizontalTextAlignment="Center" TextColor="#666" />
-                    <Label Text="Aquí verás tus accesos cuando se registren" FontSize="14" HorizontalTextAlignment="Center" TextColor="#999" />
-                </StackLayout>
+                <Grid RowDefinitions="Auto,Auto" 
+                      VerticalOptions="Center" 
+                      HorizontalOptions="Center">
+                    <Label Grid.Row="0"
+                           Text="🏢"
+                           FontSize="48" 
+                           HorizontalOptions="Center"
+                           Margin="0,0,0,12" />
+                    <StackLayout Grid.Row="1" Spacing="6" HorizontalOptions="Center">
+                        <Label Text="No hay espacios disponibles para ti" 
+                               FontSize="20" 
+                               HorizontalTextAlignment="Center" 
+                               TextColor="#666" />
+                        <Label Text="Los espacios disponibles aparecerán aquí." 
+                               FontSize="14" 
+                               HorizontalTextAlignment="Center" 
+                               TextColor="#999" />
+                    </StackLayout>
+                </Grid>
             </CollectionView.EmptyView>
 
             <CollectionView.ItemTemplate>
                 <DataTemplate>
-                    <Frame Margin="6" Padding="12" CornerRadius="10" HasShadow="False" BorderColor="#ddd">
-                        <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
-                            <Frame WidthRequest="44" HeightRequest="44" CornerRadius="22" BackgroundColor="#f0f0f0" Padding="0" VerticalOptions="Center">
-                                <Label Text="🏷" HorizontalOptions="Center" VerticalOptions="Center" />
-                            </Frame>
+                    <Frame Margin="6" 
+                           Padding="12" 
+                           CornerRadius="10" 
+                           HasShadow="False" 
+                           BorderColor="#ddd"
+                           BackgroundColor="White">
+                        <!-- ✅ Grid con filas: información + botón -->
+                        <Grid RowDefinitions="Auto,Auto" ColumnSpacing="0" RowSpacing="12">
 
-                            <StackLayout Grid.Column="1" Padding="8,0" VerticalOptions="Center">
-                                <Label Text="{Binding Nombre}" FontAttributes="Bold" FontSize="16" LineBreakMode="TailTruncation" />
-                                <Label Text="{Binding Descripcion}" FontSize="12" TextColor="Gray" LineBreakMode="TailTruncation" />
-                                <Label Text="{Binding Tipo}" FontSize="12" TextColor="Gray" LineBreakMode="TailTruncation" />
-                                <Label Text="{Binding Activo}" FontSize="12" TextColor="Gray" LineBreakMode="TailTruncation" />
-                            </StackLayout>
+                            <!-- Fila 0: Información del espacio -->
+                            <Grid Grid.Row="0" ColumnDefinitions="Auto,*" VerticalOptions="Center">
+                                <!-- Icono del espacio -->
+                                <Frame Grid.Column="0"
+                                       WidthRequest="44" 
+                                       HeightRequest="44" 
+                                       CornerRadius="22" 
+                                       BackgroundColor="#f0f0f0" 
+                                       Padding="0" 
+                                       VerticalOptions="Center">
+                                    <Label Text="🏢" 
+                                           HorizontalOptions="Center" 
+                                           VerticalOptions="Center" 
+                                           FontSize="18" />
+                                </Frame>
+
+                                <!-- Información del espacio -->
+                                <StackLayout Grid.Column="1" 
+                                           Padding="12,0" 
+                                           VerticalOptions="Center"
+                                           Spacing="2">
+                                    <Label Text="{Binding Nombre}" 
+                                           FontAttributes="Bold" 
+                                           FontSize="16" 
+                                           LineBreakMode="TailTruncation" 
+                                           TextColor="#333" />
+                                    <Label Text="{Binding Tipo}" 
+                                           FontSize="12" 
+                                           TextColor="Gray" 
+                                           LineBreakMode="TailTruncation" />
+                                    <Label Text="{Binding Activo, StringFormat='Estado: {0}'}" 
+                                           FontSize="11" 
+                                           TextColor="#666" 
+                                           LineBreakMode="TailTruncation" />
+                                </StackLayout>
+                            </Grid>
+
+                            <!-- ✅ Fila 1: Botón único centrado -->
+                            <Button Grid.Row="1"
+                                    Text="📋 Ver Perfil" 
+                                    FontSize="16"
+                                    BackgroundColor="#2196F3"
+                                    TextColor="White"
+                                    CornerRadius="8"
+                                    HeightRequest="40"
+                                    Margin="0,4,0,0"
+                                    Clicked="OnVerPerfilClicked"
+                                    CommandParameter="{Binding}" />
                         </Grid>
                     </Frame>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Row 2: Navbar - ✅ CAMBIAR a Grid.Row="2" -->
+        <!-- Row 2: Navbar -->
         <views:Navbar Grid.Row="2" />
     </Grid>
 </ContentPage>
