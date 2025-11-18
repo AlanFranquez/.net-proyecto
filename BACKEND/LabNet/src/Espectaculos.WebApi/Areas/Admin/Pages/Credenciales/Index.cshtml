@@ -1,0 +1,80 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Credenciales.IndexModel
+@{
+    ViewData["Title"] = "Credenciales";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Credenciales</h1>
+    <a asp-area="Admin" asp-page="/Credenciales/Crear" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nueva credencial
+    </a>
+</div>
+
+@if (TempData["Ok"] is string okMsg)
+{
+    <div class="alert alert-success">@okMsg</div>
+}
+
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        @if (!Model.Credenciales.Any())
+        {
+            <div class="p-3 text-muted">
+                No hay credenciales registradas.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Id</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Id criptográfico</th>
+                            <th>Fecha emisión</th>
+                            <th>Fecha expiración</th>
+                            <th>UsuarioId</th>
+                            <th style="width: 130px;"></th> @* acciones *@
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var c in Model.Credenciales)
+                    {
+                        <tr>
+                            <td>@c.CredencialId</td>
+                            <td>@c.Tipo</td>
+                            <td>@c.Estado</td>
+                            <td>@c.IdCriptografico</td>
+                            <td>@c.FechaEmision.ToLocalTime().ToString("g")</td>
+                            <td>@(c.FechaExpiracion?.ToLocalTime().ToString("g") ?? "-")</td>
+                            <td>@c.UsuarioId</td>
+                            <td class="text-end">
+                                <a asp-area="Admin"
+                                   asp-page="/Credenciales/Editar"
+                                   asp-route-id="@c.CredencialId"
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form asp-area="Admin"
+                                      asp-page="/Credenciales/Eliminar"
+                                      asp-route-id="@c.CredencialId"
+                                      method="post"
+                                      class="d-inline"
+                                      onsubmit="return confirm('¿Eliminar esta credencial?');">
+                                    @Html.AntiForgeryToken()
+                                    <button class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

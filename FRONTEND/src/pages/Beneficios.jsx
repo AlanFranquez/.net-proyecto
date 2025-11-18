@@ -13,7 +13,7 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
 
   const loggedIn = !!user;
 
-  // ------------------ LOAD USER BENEFITS ------------------
+  // ------------------ LOAD BENEFICIOS ------------------
   useEffect(() => {
     if (authLoading) return;
 
@@ -27,7 +27,6 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
         setLoading(true);
         setError(null);
 
-        // 1) obtener beneficios (backend real)
         const res = await fetch(toApi("/beneficios"), {
           method: "GET",
           credentials: "include",
@@ -42,9 +41,9 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
           throw new Error("Formato desconocido en beneficios");
         }
 
-        // Se espera estructura:
+        // Esperamos algo como:
         // [{
-        //    id, nombre, estado, vigenciaInicio, vigenciaFin,
+        //    id, nombre, estado (disponible/obtenido), vigenciaInicio, vigenciaFin,
         //    cuposTotales, cuposDisponibles, costo
         // }]
         setBeneficios(data);
@@ -59,6 +58,14 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
     load();
   }, [authLoading, loggedIn]);
 
+  // Separamos en 2 listas:
+  const misBeneficios = beneficios.filter(
+    (b) => (b.estado || "").toLowerCase() === "obtenido"
+  );
+  const disponibles = beneficios.filter(
+    (b) => (b.estado || "").toLowerCase() !== "obtenido"
+  );
+
   // ------------------ SOLICITAR BENEFICIO ------------------
   async function solicitarBeneficio(b) {
     try {
@@ -72,16 +79,23 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
         throw new Error(txt || "No se pudo solicitar el beneficio");
       }
 
-      // actualizar pantalla
+      // actualizar pantalla: marcamos el beneficio como obtenido
       setBeneficios((prev) =>
         prev.map((x) =>
           x.id === b.id
-            ? { ...x, estado: "obtenido", cuposDisponibles: x.cuposDisponibles - 1 }
+            ? {
+                ...x,
+                estado: "obtenido",
+                cuposDisponibles:
+                  typeof x.cuposDisponibles === "number"
+                    ? x.cuposDisponibles - 1
+                    : x.cuposDisponibles,
+              }
             : x
         )
       );
 
-      alert("Beneficio solicitado correctamente");
+      alert("Beneficio obtenido correctamente");
       setModal(null);
     } catch (err) {
       console.error(err);
@@ -89,13 +103,13 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
     }
   }
 
-  // ------------------ UI ------------------
+  // ------------------ UI ESTADOS GENERALES ------------------
   if (authLoading || loading) {
     return (
       <>
         <Navbar isLoggedIn={loggedIn ?? isLoggedIn} onToggle={onToggle} />
         <div className="beneficios-container">
-          <h2>Mis Beneficios</h2>
+          <h2>Beneficios</h2>
           <p>Cargando beneficios…</p>
         </div>
       </>
@@ -107,50 +121,82 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
       <>
         <Navbar isLoggedIn={false} onToggle={onToggle} />
         <div className="beneficios-container">
-          <h2>Mis Beneficios</h2>
+          <h2>Beneficios</h2>
           <p>Debes iniciar sesión para ver tus beneficios.</p>
         </div>
       </>
     );
   }
 
+  const noHayNinguno = beneficios.length === 0;
+
   return (
     <>
       <Navbar isLoggedIn={true} onToggle={onToggle} />
 
       <div className="beneficios-container">
-        <h2>Mis Beneficios</h2>
+        <h2>Beneficios</h2>
 
         {error && <p className="beneficios-error">{error}</p>}
 
-        <div className="beneficios-list">
-          {beneficios.map((b) => (
-            <div key={b.id} className="beneficio-item">
-              <span>{b.nombre}</span>
+        {noHayNinguno && !error && (
+          <p className="beneficios-empty">
+            No hay beneficios configurados por ahora.
+          </p>
+        )}
 
-              {b.estado === "obtenido" ? (
-                <button className="btn-disabled">Obtenido</button>
-              ) : (
-                <button className="btn-obtener" onClick={() => setModal(b)}>
-                  Obtener
-                </button>
+        {/* ------------------ MIS BENEFICIOS ------------------ */}
+        {!noHayNinguno && (
+          <>
+            <h3 className="beneficios-subtitle">Mis beneficios</h3>
+            <div className="beneficios-list">
+              {misBeneficios.map((b) => (
+                <div key={b.id} className="beneficio-item">
+                  <span>{b.nombre}</span>
+                  <button className="btn-disabled" disabled>
+                    Obtenido
+                  </button>
+                </div>
+              ))}
+
+              {misBeneficios.length === 0 && (
+                <p className="beneficios-empty">
+                  Aún no has obtenido ningún beneficio.
+                </p>
               )}
             </div>
-          ))}
 
-          {beneficios.length === 0 && (
-            <p className="beneficios-empty">
-              No tienes beneficios disponibles por ahora.
-            </p>
-          )}
-        </div>
+            {/* ------------------ BENEFICIOS DISPONIBLES ------------------ */}
+            <h3 className="beneficios-subtitle">Beneficios disponibles</h3>
+            <div className="beneficios-list">
+              {disponibles.map((b) => (
+                <div key={b.id} className="beneficio-item">
+                  <span>{b.nombre}</span>
+
+                  <button
+                    className="btn-obtener"
+                    onClick={() => setModal(b)}
+                  >
+                    Obtener
+                  </button>
+                </div>
+              ))}
+
+              {disponibles.length === 0 && (
+                <p className="beneficios-empty">
+                  No hay beneficios nuevos disponibles en este momento.
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* ------------------ MODAL ------------------ */}
       {modal && (
         <div className="modal-overlay" onClick={() => setModal(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Petición de Beneficio</h3>
+            <h3>Obtener Beneficio</h3>
 
             <p>
               <strong>Beneficio:</strong> {modal.nombre}
@@ -171,8 +217,8 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
             </p>
 
             <p>
-              <strong>Estado:</strong>{" "}
-              {modal.estado === "disponible" ? "Disponible" : "Obtenido"}
+              <strong>Estado actual:</strong>{" "}
+              {(modal.estado || "disponible").toString()}
             </p>
 
             <div className="modal-actions">
@@ -184,7 +230,7 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
                 className="btn-solicitar"
                 onClick={() => solicitarBeneficio(modal)}
               >
-                Solicitar
+                Confirmar
               </button>
             </div>
           </div>
