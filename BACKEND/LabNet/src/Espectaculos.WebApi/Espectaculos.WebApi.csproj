@@ -44,6 +44,44 @@
   <ItemGroup>
     <ProjectReference Include="..\Espectaculos.Application\Espectaculos.Application.csproj" />
     <ProjectReference Include="..\Espectaculos.Infrastructure\Espectaculos.Infrastructure.csproj" />
+      <ProjectReference Include="..\Espectaculos.Backoffice\Espectaculos.Backoffice.csproj" />
+
+  </ItemGroup>
+
+  <ItemGroup>
+    <AdditionalFiles Include="Areas\Admin\Pages\Beneficios\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Beneficios\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Beneficios\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Credenciales\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Credenciales\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Credenciales\Eliminar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Credenciales\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Dashboard\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Espacios\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Espacios\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Espacios\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Novedades\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Novedades\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Novedades\Eliminar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Novedades\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Reglas\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Reglas\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Reglas\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Reportes\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Roles\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Roles\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Roles\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Shared\_ValidationScriptsPartial.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\TestEventos\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Usuarios\Crear.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Usuarios\Editar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Usuarios\Eliminar.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\Usuarios\Index.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\_Layout.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\_ViewImports.cshtml" />
+    <AdditionalFiles Include="Areas\Admin\Pages\_ViewStart.cshtml" />
+    <AdditionalFiles Include="Areas\Identity\Pages\Shared\_LoginPartial.cshtml" />
   </ItemGroup>
 
 </Project>

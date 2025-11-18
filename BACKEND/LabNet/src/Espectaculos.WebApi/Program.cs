@@ -2,8 +2,12 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Amazon.CognitoIdentityProvider;
 using DotNetEnv;
+using Amazon.Runtime;
+
+using Espectaculos.Application;
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
+using Espectaculos.Application.Common.Behaviors;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
 using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
@@ -29,19 +33,21 @@ using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
-using Espectaculos.Application.services;          // ICognitoService, CognitoService
-using Espectaculos.Application.Services;         // IAccesosRealtimeNotifier
+using Espectaculos.Application.Services;
+
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
 using Espectaculos.Infrastructure.Persistence.Seed;
-using Espectaculos.Infrastructure.RealTime;      // AccesosSignalRNotifier, AccesosHub
+using Espectaculos.Infrastructure.RealTime;
 using Espectaculos.Infrastructure.Repositories;
+
 using Espectaculos.WebApi.Endpoints;
 using Espectaculos.WebApi.Health;
 using Espectaculos.WebApi.Options;
 using Espectaculos.WebApi.Security;
 using Espectaculos.WebApi.SerilogConfig;
 using Espectaculos.WebApi.Utils;
+
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -151,6 +157,14 @@ if (builder.Environment.IsDevelopment())
 
 // ---------- Servicios básicos ----------
 builder.Services.AddEndpointsApiExplorer();
+
+// ---------- BACKOFFICE: Razor Pages + ruta por defecto ----------
+builder.Services.AddRazorPages()
+    .AddRazorPagesOptions(o =>
+    {
+        // Redirige "/" al Dashboard del área Admin (como en Backoffice)
+        o.Conventions.AddAreaPageRoute("Admin", "/Dashboard/Index", "");
+    });
 
 // ---------- OpenTelemetry ----------
 var serviceName = "Espectaculos.WebApi";
@@ -302,7 +316,7 @@ if (isDev)
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
 
-// ---------- FluentValidation (validators explícitos) ----------
+// ---------- FluentValidation ----------
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
 builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
 builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
@@ -328,14 +342,15 @@ builder.Services.AddScoped<IValidator<CreateDispositivoCommand>, CreateDispositi
 builder.Services.AddScoped<IValidator<UpdateDispositivoCommand>, UpdateDispositivoValidator>();
 builder.Services.AddScoped<IValidator<DeleteDispositivoCommand>, DeleteDispositivoValidator>();
 
-
 builder.Services.AddValidatorsFromAssembly(Assembly.Load("Espectaculos.Application"));
 
-// ---------- MediatR ----------
+// ---------- MediatR + pipeline de validación ----------
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssembly(Assembly.Load("Espectaculos.Application"));
+    cfg.RegisterServicesFromAssembly(ApplicationAssembly.Value);
 });
+
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // ---------- Repositorios + UnitOfWork ----------
 builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
@@ -363,10 +378,30 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // ---------- Amazon Cognito client + servicio ----------
 builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
 {
+    var cfg = sp.GetRequiredService<IConfiguration>();
     var opts = sp.GetRequiredService<IOptions<AwsCognitoSettings>>().Value;
-    var region = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
-    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region);
+    var logger = sp.GetRequiredService<ILogger<Program>>();
 
+    var regionName = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
+    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(regionName);
+
+    var accessKey = cfg["AWS:AccessKeyId"] ?? Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+    var secretKey = cfg["AWS:SecretAccessKey"] ?? Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+
+    logger.LogInformation("AWS DEBUG: Region={Region}, AccessKeyPresent={HasAccessKey}",
+        regionName,
+        !string.IsNullOrEmpty(accessKey));
+
+    if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
+    {
+        var creds = new BasicAWSCredentials(accessKey, secretKey);
+        return new AmazonCognitoIdentityProviderClient(creds, new AmazonCognitoIdentityProviderConfig
+        {
+            RegionEndpoint = regionEndpoint
+        });
+    }
+
+    logger.LogWarning("Using fallback AWS credential chain (no explicit access/secret key found).");
     return new AmazonCognitoIdentityProviderClient(regionEndpoint);
 });
 
@@ -378,6 +413,15 @@ builder.Services.AddRouting();
 builder.Services.AddHostedService<SincronizacionesMetrics>();
 
 var app = builder.Build();
+
+// ---------- Middleware típico web (incluyendo Backoffice) ----------
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
 
 // ---------- Archivos estáticos ----------
 var provider = new FileExtensionContentTypeProvider();
@@ -421,7 +465,10 @@ api.MapUsuariosEndpoints();
 api.MapSincronizacionEndpoints();
 api.MapDispositivosEndpoints();
 
-// ---------- SignalR hubs ----------
+// ---------- Razor Pages (Backoffice UI) ----------
+app.MapRazorPages();
+
+// ---------- SignalR hubs compartidos ----------
 app.MapHub<AccesosHub>("/hubs/accesos");
 
 // ---------- Health ----------

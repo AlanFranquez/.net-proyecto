@@ -1,5 +1,5 @@
 ﻿using Espectaculos.Application.Abstractions;
-using Espectaculos.Application.services;
+using Espectaculos.Application.Services;
 using Espectaculos.Domain.Entities;
 using Espectaculos.Domain.Enums;
 using FluentValidation;
@@ -11,20 +11,24 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
     {
         private readonly IUnitOfWork _uow;
         private readonly IValidator<CreateUsuarioCommand> _validator;
-        private readonly ICognitoService _cognito;
+        private readonly ICognitoService _cognitoService; // Better naming
 
-        public CreateUsuarioHandler(IUnitOfWork uow, IValidator<CreateUsuarioCommand> validator, ICognitoService cognito)
+        public CreateUsuarioHandler(
+            IUnitOfWork uow, 
+            IValidator<CreateUsuarioCommand> validator, 
+            ICognitoService cognitoService) // Better naming
         {
             _uow = uow;
             _validator = validator;
-            _cognito = cognito;
+            _cognitoService = cognitoService;
         }
 
         public async Task<Guid> Handle(CreateUsuarioCommand command, CancellationToken ct)
         {
             await _validator.ValidateAndThrowAsync(command, ct);
             
-            var cognitoSub = await _cognito.RegisterUserAsync(command.Email, command.Password, ct);
+            // Register user in Cognito
+            var cognitoSub = await _cognitoService.RegisterUserAsync(command.Email, command.Password, ct);
 
             var usuario = new Usuario
             {
@@ -33,7 +37,7 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Apellido = command.Apellido,
                 Email = command.Email,
                 Documento = command.Documento,
-                PasswordHash = command.Password,
+                PasswordHash = command.Password, // Consider hashing this
                 Estado = UsuarioEstado.Activo,
                 Credencial = null,
                 CredencialId = null,
@@ -43,7 +47,7 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Canjes = new List<Canje>()
             };
             
-            if (command.RolesIDs is not null)
+            if (command.RolesIDs is not null && command.RolesIDs.Any())
             {
                 var rolesExistentes = await _uow.Roles.ListByIdsAsync(command.RolesIDs, ct);
                 if (rolesExistentes.Count() != command.RolesIDs.Distinct().Count())

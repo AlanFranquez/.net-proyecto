@@ -23,7 +23,6 @@ public static class DispositivosEndpoints
             return Results.Ok(dispositivos);
         }).WithName("ListarDispositivos").WithTags("Dispositivos").WithOpenApi();
         
-        
         group.MapDelete("/", async ([FromBody] DeleteDispositivoCommand command, [FromServices]IMediator mediator) =>
         {
             await mediator.Send(command);

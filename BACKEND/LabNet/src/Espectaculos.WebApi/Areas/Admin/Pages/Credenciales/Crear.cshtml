@@ -1,0 +1,79 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Credenciales.CrearModel
+@using Espectaculos.Domain.Enums
+@{
+    ViewData["Title"] = "Crear credencial";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Crear credencial</h1>
+    <a asp-area="Admin" asp-page="/Credenciales/Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="All" class="text-danger small mb-3"></div>
+
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tipo</label>
+                    <select asp-for="Vm.Tipo"
+                            asp-items="Html.GetEnumSelectList<CredencialTipo>()"
+                            class="form-select"></select>
+                    <span asp-validation-for="Vm.Tipo" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Estado</label>
+                    <select asp-for="Vm.Estado"
+                            asp-items="Html.GetEnumSelectList<CredencialEstado>()"
+                            class="form-select"></select>
+                    <span asp-validation-for="Vm.Estado" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">ID Criptográfico</label>
+                    <input asp-for="Vm.IdCriptografico" class="form-control" />
+                    <span asp-validation-for="Vm.IdCriptografico" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Fecha de emisión</label>
+                    <input asp-for="Vm.FechaEmision" type="datetime-local" class="form-control" />
+                    <span asp-validation-for="Vm.FechaEmision" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Fecha de expiración (opcional)</label>
+                    <input asp-for="Vm.FechaExpiracion" type="datetime-local" class="form-control" />
+                    <span asp-validation-for="Vm.FechaExpiracion" class="text-danger small"></span>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Usuario</label>
+                    <select asp-for="Vm.UsuarioId"
+                            asp-items="Model.UsuarioOptions"
+                            class="form-select">
+                    </select>
+                    <span asp-validation-for="Vm.UsuarioId" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-2">
+                <button class="btn btn-primary" type="submit">
+                    <i class="bi bi-plus-circle"></i> Crear
+                </button>
+                <a asp-area="Admin" asp-page="/Credenciales/Index" class="btn btn-outline-secondary">
+                    Cancelar
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }
