@@ -13,8 +13,9 @@ const AuthContext = createContext(null);
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-// Convierte "/usuarios/login" → "http://localhost:8080/api/usuarios/login"
-const toApi = (p = "") => {
+// ⬇⬇⬇  EXPORTAMOS toApi para reutilizarlo en otros services
+// eslint-disable-next-line react-refresh/only-export-components
+export const toApi = (p = "") => {
   const clean = p.startsWith("/") ? p : `/${p}`;
   const apiPath = clean.startsWith("/api/") ? clean : `/api${clean}`;
   return `${API_BASE_URL}${apiPath}`;
@@ -38,7 +39,7 @@ export default function AuthProvider({ children }) {
     try {
       const res = await fetch(toApi("/usuarios/me"), {
         method: "GET",
-        credentials: "include", // envía cookie espectaculos_session
+        credentials: "include",
         headers: { Accept: "application/json" },
       });
 
@@ -133,36 +134,33 @@ export default function AuthProvider({ children }) {
     [fetchMe]
   );
 
-  // POST /api/usuarios/logout
-  const logout = useCallback(
-    async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(toApi("/usuarios/logout"), {
-          method: "POST",
-          credentials: "include",
-        });
+  // POST /api/usuarios/logout  (ajusta si tu backend usa otra ruta)
+  const logout = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(toApi("/usuarios/logout"), {
+        method: "POST",
+        credentials: "include",
+      });
 
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(txt || `Logout failed: ${res.status}`);
-        }
-
-        setUser(null);
-        await fetchMe();
-
-        return true;
-      } catch (err) {
-        console.error("logout error:", err);
-        setErrorFromCatch(err);
-        return false;
-      } finally {
-        setLoading(false);
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Logout failed: ${res.status}`);
       }
-    },
-    [fetchMe]
-  );
+
+      setUser(null);
+      await fetchMe();
+
+      return true;
+    } catch (err) {
+      console.error("logout error:", err);
+      setErrorFromCatch(err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchMe]);
 
   const value = {
     user,

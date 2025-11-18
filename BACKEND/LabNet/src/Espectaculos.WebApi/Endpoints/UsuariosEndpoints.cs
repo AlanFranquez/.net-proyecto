@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Espectaculos.WebApi.Endpoints;
+
 public class CreateUsuarioDto
 {
     public string Nombre { get; set; } = string.Empty;
@@ -26,6 +27,14 @@ public class CreateUsuarioDto
     public string Password { get; set; } = string.Empty;
     public IEnumerable<Guid>? RolesIDs { get; set; }
 }
+
+// 👇 NUEVO DTO para cambio de contraseña
+public class CambiarPasswordDto
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+}
+
 public static class UsuariosEndpoints
 {
     public static IEndpointRouteBuilder MapUsuariosEndpoints(this IEndpointRouteBuilder endpoints)
@@ -149,14 +158,49 @@ public static class UsuariosEndpoints
         })
         .WithName("EditarUsuario")
         .WithTags("Usuarios");
-        group.MapPost("/logout", (HttpContext http) =>
-    {
-        http.Response.Cookies.Delete("espectaculos_session");
-        return Results.Ok(new { message = "logged_out" });
-    })
-    .WithName("LogoutUsuario")
-    .WithTags("Usuarios");
 
+        group.MapPost("/logout", (HttpContext http) =>
+        {
+            http.Response.Cookies.Delete("espectaculos_session");
+            return Results.Ok(new { message = "logged_out" });
+        })
+        .WithName("LogoutUsuario")
+        .WithTags("Usuarios");
+
+        // 👇 NUEVO: endpoint para cambiar contraseña
+        group.MapPost("/cambiar-password", [Authorize] async (
+                ClaimsPrincipal user,
+                [FromBody] CambiarPasswordDto dto,
+                ICognitoService cognito,
+                CancellationToken ct) =>
+            {
+                var email = user.FindFirstValue(ClaimTypes.Email);
+                if (string.IsNullOrWhiteSpace(email))
+                    return Results.Unauthorized();
+
+                if (string.IsNullOrWhiteSpace(dto.CurrentPassword) ||
+                    string.IsNullOrWhiteSpace(dto.NewPassword))
+                {
+                    return Results.BadRequest(new { error = "CurrentPassword y NewPassword son obligatorios." });
+                }
+
+                try
+                {
+                    await cognito.ChangePasswordAsync(email, dto.CurrentPassword, dto.NewPassword, ct);
+                    return Results.NoContent();
+                }
+                catch (NotAuthorizedException)
+                {
+                    return Results.BadRequest(new { error = "Contraseña actual incorrecta o no autorizado." });
+                }
+                catch (Exception ex)
+                {
+                    Serilog.Log.Error(ex, "Error en cambiar-password");
+                    return Results.StatusCode(500);
+                }
+            })
+            .WithName("CambiarPassword")
+            .WithTags("Usuarios");
 
 #if DEMO_ENABLE_ADMIN
         group.MapPost("", async (CreateEventoCommand command, IUnitOfWork uow, IValidator<CreateEventoCommand> validator) =>

@@ -2,6 +2,8 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Amazon.CognitoIdentityProvider;
 using DotNetEnv;
+using Amazon.Runtime;
+
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
@@ -360,12 +362,36 @@ builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.N
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // ---------- Amazon Cognito client + servicio ----------
+
 builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
 {
+    var cfg = sp.GetRequiredService<IConfiguration>();
     var opts = sp.GetRequiredService<IOptions<AwsCognitoSettings>>().Value;
-    var region = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
-    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region);
+    var logger = sp.GetRequiredService<ILogger<Program>>();
 
+    var regionName = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
+    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(regionName);
+
+    // Leer claves desde config o env
+    var accessKey = cfg["AWS:AccessKeyId"] ?? Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+    var secretKey = cfg["AWS:SecretAccessKey"] ?? Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+
+    logger.LogInformation("AWS DEBUG: Region={Region}, AccessKeyPresent={HasAccessKey}",
+        regionName,
+        !string.IsNullOrEmpty(accessKey));
+
+    if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
+    {
+        // ✅ IAM User “fijo”: sin session token
+        var creds = new BasicAWSCredentials(accessKey, secretKey);
+        return new AmazonCognitoIdentityProviderClient(creds, new AmazonCognitoIdentityProviderConfig
+        {
+            RegionEndpoint = regionEndpoint
+        });
+    }
+
+    // Fallback: cadena por defecto (si algún día querés usar SSO/perfil)
+    logger.LogWarning("Using fallback AWS credential chain (no explicit access/secret key found).");
     return new AmazonCognitoIdentityProviderClient(regionEndpoint);
 });
 
