@@ -24,15 +24,17 @@ public class IndexModel : PageModel
             .Select(c => new VmCredencial
             {
                 CredencialId    = c.CredencialId,
-                // c.Tipo y c.Estado son nullable en el DTO, así que ponemos fallback válidos
                 Tipo            = c.Tipo   ?? CredencialTipo.Campus,
                 Estado          = c.Estado ?? CredencialEstado.Emitida,
                 IdCriptografico = c.IdCriptografico ?? string.Empty,
                 FechaEmision    = c.FechaEmision ?? DateTime.MinValue,
                 FechaExpiracion = c.FechaExpiracion,
-                UsuarioId       = c.UsuarioId
+                UsuarioId       = c.UsuarioId,
+                UsuarioNombre   = c.UsuarioNombre ?? "",
+                UsuarioApellido = c.UsuarioApellido ?? ""
             })
             .ToList();
+
     }
 
     public class VmCredencial
@@ -44,5 +46,8 @@ public class IndexModel : PageModel
         public DateTime FechaEmision { get; set; }
         public DateTime? FechaExpiracion { get; set; }
         public Guid UsuarioId { get; set; }
+        public string UsuarioNombre { get; set; } = "";
+        public string UsuarioApellido { get; set; } = "";
     }
+
 }

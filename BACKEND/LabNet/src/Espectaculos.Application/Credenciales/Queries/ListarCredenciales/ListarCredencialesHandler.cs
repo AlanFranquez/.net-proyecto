@@ -17,7 +17,6 @@ namespace Espectaculos.Application.Credenciales.Queries.ListarCredenciales
         public async Task<List<CredencialDTO>> Handle(ListarCredencialesQuery query, CancellationToken ct)
         {
             var credenciales = await _uow.Credenciales.ListAsync(ct);
-
             return credenciales.Select(e => new CredencialDTO
             {
                 CredencialId = e.CredencialId,
@@ -27,8 +26,14 @@ namespace Espectaculos.Application.Credenciales.Queries.ListarCredenciales
                 FechaEmision = e.FechaEmision,
                 FechaExpiracion = e.FechaExpiracion,
                 UsuarioId = e.UsuarioId,
+
+                UsuarioNombre = e.Usuario?.Nombre,
+                UsuarioApellido = e.Usuario?.Apellido,
+
                 EventoAccesoIds = e.EventosAcceso.Select(a => a.EventoId).ToList()
             }).ToList();
+
+
         }
     }
 }
