@@ -50,7 +50,9 @@
                             <td>@c.IdCriptografico</td>
                             <td>@c.FechaEmision.ToLocalTime().ToString("g")</td>
                             <td>@(c.FechaExpiracion?.ToLocalTime().ToString("g") ?? "-")</td>
-                            <td>@c.UsuarioId</td>
+                            <td>@(string.IsNullOrWhiteSpace(c.UsuarioNombre) 
+                                    ? "<sin usuario>" 
+                                    : c.UsuarioNombre + " " + c.UsuarioApellido)</td>
                             <td class="text-end">
                                 <a asp-area="Admin"
                                    asp-page="/Credenciales/Editar"

@@ -11,4 +11,8 @@ public class CredencialDTO
     public DateTime? FechaExpiracion { get; set; } = null;
     public Guid UsuarioId { get; set; }
     public IEnumerable<Guid>? EventoAccesoIds { get; set; } = null;
+    public string? UsuarioNombre { get; set; }
+    public string? UsuarioApellido { get; set; }
+    public string? UsuarioEmail { get; set; }
+
 }
