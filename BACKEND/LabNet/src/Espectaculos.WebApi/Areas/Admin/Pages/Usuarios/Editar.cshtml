@@ -58,22 +58,8 @@
                   asp-items="Model.RolesOptions"
                   multiple>
           </select>
-          <span class="form-text">Use Ctrl/Cmd + click para seleccionar múltiples roles.</span>
+          <span class="form-text"></span>
           <span asp-validation-for="ModelVm.RolesIDs" class="text-danger small"></span>
-        </div>
-      </div>
-
-      <!-- NUEVO: Beneficios -->
-      <div class="row g-3 mt-3">
-        <div class="col-12">
-          <label class="form-label">Beneficios</label>
-          <select asp-for="ModelVm.BeneficiosIDs"
-                  class="form-select"
-                  asp-items="Model.BeneficiosOptions"
-                  multiple>
-          </select>
-          <span class="form-text">Use Ctrl/Cmd + click para seleccionar múltiples beneficios.</span>
-          <span asp-validation-for="ModelVm.BeneficiosIDs" class="text-danger small"></span>
         </div>
       </div>
 

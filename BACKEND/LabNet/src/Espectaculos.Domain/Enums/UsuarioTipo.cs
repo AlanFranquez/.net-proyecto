@@ -3,5 +3,7 @@
 public enum UsuarioTipo
 {
     Estudiante = 0,
-    Funcionario = 1
+    Funcionario = 1,
+    Admin =2,
+
 }

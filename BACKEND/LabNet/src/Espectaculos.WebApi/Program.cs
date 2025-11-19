@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 using Amazon.CognitoIdentityProvider;
 using DotNetEnv;
 using Amazon.Runtime;
-
+using System.Security.Claims;
 using Espectaculos.Application;
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
@@ -47,7 +47,7 @@ using Espectaculos.WebApi.Options;
 using Espectaculos.WebApi.Security;
 using Espectaculos.WebApi.SerilogConfig;
 using Espectaculos.WebApi.Utils;
-
+using Microsoft.AspNetCore.Authorization; 
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -99,12 +99,11 @@ string connectionString =
 Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
 
 // ---------- AWS Cognito ----------
+// ---------- AWS Cognito ----------
 builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
 var cognitoSection = builder.Configuration.GetSection("AWS:Cognito");
-var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>();
-
-if (cognitoSettings == null)
-    throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
+var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>()
+    ?? throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
 
 if (string.IsNullOrWhiteSpace(cognitoSettings.Region) ||
     string.IsNullOrWhiteSpace(cognitoSettings.UserPoolId) ||
@@ -133,6 +132,7 @@ builder.Services
         {
             OnMessageReceived = ctx =>
             {
+                // If no Authorization header, get token from cookie
                 if (string.IsNullOrEmpty(ctx.Request.Headers["Authorization"]))
                 {
                     if (ctx.Request.Cookies.TryGetValue("espectaculos_session", out var tokenFromCookie))
@@ -140,13 +140,78 @@ builder.Services
                         ctx.Token = tokenFromCookie;
                     }
                 }
+                return Task.CompletedTask;
+            },
 
+            // 401 - not authenticated
+            OnChallenge = ctx =>
+            {
+                ctx.HandleResponse();
+                var path = ctx.HttpContext.Request.Path;
+
+                if (!path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.Redirect("/Admin/Account/Login");
+                    return Task.CompletedTask;
+                }
+
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            },
+
+            // 403 - authenticated but fails policy
+            OnForbidden = ctx =>
+            {
+                var path = ctx.HttpContext.Request.Path;
+
+                if (!path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.Redirect("/Admin/Account/Login");
+                    return Task.CompletedTask;
+                }
+
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
             }
         };
     });
 
-builder.Services.AddAuthorization();
+
+// ---------- Authorization: ONLY configured admin can access Backoffice ----------
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("BackofficeAdminOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+        {
+            var adminEmail = config["Backoffice:AdminEmail"];
+
+            if (string.IsNullOrWhiteSpace(adminEmail))
+                return false;
+
+            var email =
+                ctx.User.FindFirst("email")?.Value ??
+                ctx.User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            return string.Equals(
+                email.Trim(),
+                adminEmail.Trim(),
+                StringComparison.OrdinalIgnoreCase
+            );
+        });
+    });
+});
+
+
+
 
 // Log de diagnóstico en Development
 if (builder.Environment.IsDevelopment())
@@ -162,8 +227,15 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddRazorPages()
     .AddRazorPagesOptions(o =>
     {
-        // Redirige "/" al Dashboard del área Admin (como en Backoffice)
+        // Default route: / → Admin/Dashboard/Index
         o.Conventions.AddAreaPageRoute("Admin", "/Dashboard/Index", "");
+
+        // Protect entire Admin area with BackofficeAdminOnly
+        o.Conventions.AuthorizeAreaFolder("Admin", "/", "BackofficeAdminOnly");
+
+        // Allow anonymous access to login + logout pages
+        o.Conventions.AllowAnonymousToAreaPage("Admin", "/Account/Login");
+        o.Conventions.AllowAnonymousToAreaPage("Admin", "/Account/Logout");
     });
 
 // ---------- OpenTelemetry ----------
@@ -368,7 +440,6 @@ builder.Services.AddScoped<ISincronizacionRepository, SincronizacionRepository>(
 builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
 builder.Services.AddScoped<INovedadRepository, NovedadRepository>();
 
-// Notificador realtime de accesos (SignalR)
 // Notificador realtime de accesos (SignalR)
 builder.Services.AddScoped<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
 

@@ -1,9 +1,11 @@
-﻿using Espectaculos.Application.Abstractions;
+﻿// Espectaculos.Application/Usuarios/Commands/CreateUsuario/CreateUsuarioHandler.cs
+using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Services;
 using Espectaculos.Domain.Entities;
 using Espectaculos.Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Configuration;
 
 namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
 {
@@ -11,25 +13,39 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
     {
         private readonly IUnitOfWork _uow;
         private readonly IValidator<CreateUsuarioCommand> _validator;
-        private readonly ICognitoService _cognitoService; // Better naming
+        private readonly ICognitoService _cognitoService;
+        private readonly IConfiguration _config;
 
         public CreateUsuarioHandler(
-            IUnitOfWork uow, 
-            IValidator<CreateUsuarioCommand> validator, 
-            ICognitoService cognitoService) // Better naming
+            IUnitOfWork uow,
+            IValidator<CreateUsuarioCommand> validator,
+            ICognitoService cognitoService,
+            IConfiguration config)
         {
             _uow = uow;
             _validator = validator;
             _cognitoService = cognitoService;
+            _config = config;
         }
 
         public async Task<Guid> Handle(CreateUsuarioCommand command, CancellationToken ct)
         {
             await _validator.ValidateAndThrowAsync(command, ct);
-            
-            // Register user in Cognito
+
+            // 1) Register user in Cognito
             var cognitoSub = await _cognitoService.RegisterUserAsync(command.Email, command.Password, ct);
 
+            // 2) Decide estado (special-case Backoffice admin)
+            var backofficeAdminEmail = _config["Backoffice:AdminEmail"];
+            var estado = UsuarioEstado.Activo;
+
+            if (!string.IsNullOrWhiteSpace(backofficeAdminEmail) &&
+                string.Equals(command.Email, backofficeAdminEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                estado = UsuarioEstado.Admin;
+            }
+
+            // 3) Create domain user
             var usuario = new Usuario
             {
                 UsuarioId = Guid.NewGuid(),
@@ -37,8 +53,8 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Apellido = command.Apellido,
                 Email = command.Email,
                 Documento = command.Documento,
-                PasswordHash = command.Password, // Consider hashing this
-                Estado = UsuarioEstado.Activo,
+                PasswordHash = command.Password, // (you may hash later if desired)
+                Estado = estado,
                 Credencial = null,
                 CredencialId = null,
                 UsuarioRoles = new List<UsuarioRol>(),
@@ -46,13 +62,14 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Beneficios = new List<BeneficioUsuario>(),
                 Canjes = new List<Canje>()
             };
-            
+
+            // 4) Roles
             if (command.RolesIDs is not null && command.RolesIDs.Any())
             {
                 var rolesExistentes = await _uow.Roles.ListByIdsAsync(command.RolesIDs, ct);
                 if (rolesExistentes.Count() != command.RolesIDs.Distinct().Count())
                     throw new KeyNotFoundException("Algun rol enviado no existe.");
-                
+
                 usuario.UsuarioRoles = command.RolesIDs
                     .Distinct()
                     .Select(rid => new UsuarioRol
