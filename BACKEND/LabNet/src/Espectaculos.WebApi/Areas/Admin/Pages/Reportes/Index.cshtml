@@ -1,35 +1,144 @@
 ﻿@page
+@using Espectaculos.Domain.Enums   <!-- IMPORTANTE: para usar AccesoTipo -->
 @model Espectaculos.Backoffice.Areas.Admin.Pages.Reportes.IndexModel
 @{
     ViewData["Title"] = "Reportes y auditoría";
 }
 
-<h1>Accesos en vivo</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-0">Accesos</h1>
+        <small class="text-muted">Accesos en vivo y registros históricos</small>
+    </div>
+</div>
 
-<p>Listado de los últimos accesos recibidos en tiempo real.</p>
+<div class="grid">
+    <!-- ACCESOS EN VIVO -->
+    <div class="card shadow-sm border-0">
+        <div class="hdr mb-2">
+            <div>
+                <strong>Accesos en vivo</strong>
+                <div class="text-muted small">
+                    Eventos que llegan en tiempo real desde los dispositivos.
+                </div>
+            </div>
+            <span class="badge bg-light text-muted" id="realtime-badge">
+                Desconectado
+            </span>
+        </div>
 
-<div class="card">
-    <strong>Tablero de accesos en vivo</strong>
+        <p id="realtime-status" class="text-muted mb-2">
+            Conectando al servidor de eventos...
+        </p>
 
-    <p id="realtime-status" class="text-muted" style="margin-top:10px;">
-        Conectando al servidor de eventos...
-    </p>
+        <div class="table-responsive">
+            <table class="table table-hover table-striped table-fixed mb-0 align-middle">
 
-    <div class="table-responsive" style="margin-top:10px;">
-        <table class="table table-sm">
-            <thead>
-            <tr>
-                <th>Momento</th>
-                <th>Espacio</th>
-                <th>Usuario</th>
-                <th>Resultado</th>
-                <th>Modo</th>
-                <th>Motivo</th>
-            </tr>
-            </thead>
-            <tbody id="realtime-body">
-            </tbody>
-        </table>
+                <thead class="table-light">
+                <tr>
+                    <th>Momento</th>
+                    <th>Espacio</th>
+                    <th>Usuario</th>
+                    <th>Resultado</th>
+                    <th>Modo</th>
+                    <th>Motivo</th>
+                </tr>
+                </thead>
+                <tbody id="realtime-body">
+                @* Se llena vía SignalR en reportes-realtime.js *@
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="card shadow-sm border-0 mt-3">
+        <div class="hdr mb-2">
+            <div>
+                <strong>Histórico de accesos</strong>
+                <div class="text-muted small">
+                    Todos los eventos de acceso registrados en el sistema.
+                </div>
+            </div>
+            <span class="small text-muted">
+                Total @Model.Historico.Count
+            </span>
+        </div>
+
+        @if (!Model.Historico.Any())
+        {
+            <div class="p-3">
+                <div class="alert alert-info mb-0">
+                    No hay eventos de acceso registrados.
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-striped table-fixed mb-0 align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Momento</th>
+                        <th>Espacio</th>
+                        <th>Usuario</th>
+                        <th>Email</th>
+                        <th>Resultado</th>
+                        <th>Modo</th>
+                        <th>Motivo</th>
+                    </tr>
+                    </thead>
+                    @using Espectaculos.Domain.Enums
+
+                    <tbody>
+                    @foreach (var e in Model.Historico)
+                    {
+                        <tr>
+                            <td class="text-nowrap">
+                                @(e.MomentoDeAcceso?.ToString("yyyy-MM-dd HH:mm:ss") ?? "-")
+                            </td>
+                            <td class="text-nowrap">
+                                @e.EspacioNombre
+                            </td>
+                            <td class="text-nowrap">
+                                @e.UsuarioNombre
+                            </td>
+                            <td class="text-nowrap">
+                                @e.UsuarioEmail
+                            </td>
+                            <td>
+                                @if (e.Resultado == AccesoTipo.Permitir)
+                                {
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        Permitir
+                                    </span>
+                                }
+                                else if (e.Resultado == AccesoTipo.Denegar)
+                                {
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                        Denegar
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                        @e.Resultado
+                                    </span>
+                                }
+                            </td>
+                            <td class="text-nowrap">
+                                @e.Modo
+                            </td>
+                            <td class="text-wrap">
+                                @e.Motivo
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+
+                </table>
+            </div>
+        }
     </div>
 </div>
 

@@ -369,7 +369,8 @@ builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
 builder.Services.AddScoped<INovedadRepository, NovedadRepository>();
 
 // Notificador realtime de accesos (SignalR)
-builder.Services.AddSingleton<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
+// Notificador realtime de accesos (SignalR)
+builder.Services.AddScoped<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
 
 builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.Notifications.LoggingNotificationSender>();
 

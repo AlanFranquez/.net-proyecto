@@ -17,7 +17,9 @@ public class EspectaculosDbContext : DbContext
     }
     
     public DbSet<Usuario> Usuario => Set<Usuario>();
-    
+    public DbSet<Beneficio> Beneficios => Set<Beneficio>();
+    public DbSet<BeneficioUsuario> BeneficioUsuarios => Set<BeneficioUsuario>();
+
     public DbSet<Novedad> Novedades { get; set; } = default!;
 
     // Novedad removed - use Notificaciones instead

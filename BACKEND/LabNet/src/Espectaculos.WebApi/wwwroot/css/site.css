@@ -11,3 +11,14 @@
 @media (max-width: 1024px){ .grid.kpi { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (max-width: 640px){ .grid.kpi { grid-template-columns: 1fr; } }
 .hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.table-fixed {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.table-fixed th,
+.table-fixed td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}

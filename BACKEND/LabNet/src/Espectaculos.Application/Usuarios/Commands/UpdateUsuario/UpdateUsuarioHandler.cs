@@ -20,9 +20,11 @@ public class UpdateUsuarioHandler : IRequestHandler<UpdateUsuarioCommand, Guid>
     {
         await _validator.ValidateAndThrowAsync(command, ct);
 
+        // Usuario debe venir trackeado por el mismo DbContext del UoW
         var usuario = await _uow.Usuarios.GetByIdAsync(command.UsuarioId, ct)
                       ?? throw new KeyNotFoundException("Usuario no encontrado");
         
+        // Campos simples
         if (command.Nombre is not null)
             usuario.Nombre = command.Nombre.Trim();
         
@@ -41,6 +43,7 @@ public class UpdateUsuarioHandler : IRequestHandler<UpdateUsuarioCommand, Guid>
         if (command.Estado.HasValue)
             usuario.Estado = command.Estado.Value;
 
+        // Credencial
         if (command.CredencialId.HasValue)
         {
             var credencial = await _uow.Credenciales.GetByIdAsync(command.CredencialId.Value, ct)
@@ -49,49 +52,63 @@ public class UpdateUsuarioHandler : IRequestHandler<UpdateUsuarioCommand, Guid>
             usuario.Credencial = credencial;
         }
         
+        // ----- ROLES -----
         if (command.RolesIDs is not null)
         {
             var rolesExistentes = await _uow.Roles.ListByIdsAsync(command.RolesIDs, ct);
             if (rolesExistentes.Count() != command.RolesIDs.Distinct().Count())
-                throw new KeyNotFoundException("Algun rol enviado no existe.");
+                throw new KeyNotFoundException("Algún rol enviado no existe.");
+
             await _uow.Usuarios.RemoveRolesRelacionados(usuario.UsuarioId, ct);
 
-            // Reemplazamos la colección de join-entities
-            usuario.UsuarioRoles = command.RolesIDs
-                .Distinct()
-                .Select(rid => new UsuarioRol
+            usuario.UsuarioRoles ??= new List<UsuarioRol>();
+            usuario.UsuarioRoles.Clear();
+
+            foreach (var rid in command.RolesIDs.Distinct())
+            {
+                usuario.UsuarioRoles.Add(new UsuarioRol
                 {
                     UsuarioId = usuario.UsuarioId,
                     RolId = rid
-                })
-                .ToList();
+                });
+            }
         }
 
+        // ----- BENEFICIOS -----
         if (command.BeneficiosIDs is not null)
         {
             var beneficiosExistentes = await _uow.Beneficios.ListByIdsAsync(command.BeneficiosIDs, ct);
             if (beneficiosExistentes.Count() != command.BeneficiosIDs.Distinct().Count())
                 throw new KeyNotFoundException("Algún beneficio enviado no existe.");
             
+            // Limpio en DB (si tu método hace DELETE directos, está bien)
             await _uow.Usuarios.RemoveBeneficiosRelacionados(usuario.UsuarioId, ct);
 
-            usuario.Beneficios = command.BeneficiosIDs
-                .Distinct()
-                .Select(bid => new BeneficioUsuario()
+            // Me aseguro de que EF vea los cambios en la navegación
+            usuario.Beneficios ??= new List<BeneficioUsuario>();
+            usuario.Beneficios.Clear();
+
+            foreach (var bid in command.BeneficiosIDs.Distinct())
+            {
+                usuario.Beneficios.Add(new BeneficioUsuario
                 {
                     UsuarioId = usuario.UsuarioId,
                     BeneficioId = bid
-                })
-                .ToList();
+                });
+            }
         }
 
+        // ----- CANJES -----
         if (command.CanjesIDs is not null)
         {
+            // Ojo: esto asume que Canjes ya existen con esos IDs;
+            // si no, deberías cargarlos en lugar de new Canje { CanjeId = ... }
             usuario.Canjes = command.CanjesIDs
                 .Select(eid => new Canje { CanjeId = eid })
                 .ToList();
         }
         
+        // ----- DISPOSITIVOS -----
         if (command.DispositivosIDs is not null)
         {
             usuario.Dispositivos = command.DispositivosIDs
@@ -99,8 +116,11 @@ public class UpdateUsuarioHandler : IRequestHandler<UpdateUsuarioCommand, Guid>
                 .ToList();
         }
 
+        // IMPORTANTE:
+        // Si el usuario fue obtenido con tracking, no hace falta llamar UpdateAsync.
+        // EF ya sabe qué cambió. Solo guardamos.
+        // await _uow.Usuarios.UpdateAsync(usuario, ct);  // <- mejor NO usarlo aquí
 
-        await _uow.Usuarios.UpdateAsync(usuario, ct);
         await _uow.SaveChangesAsync(ct);
         return usuario.UsuarioId;
     }

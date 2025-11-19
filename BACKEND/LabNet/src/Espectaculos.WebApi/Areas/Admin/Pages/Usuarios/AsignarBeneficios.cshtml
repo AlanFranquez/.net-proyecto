@@ -1,0 +1,93 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios.AsignarBeneficiosModel
+
+@{
+    ViewData["Title"] = "Asignar beneficios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-0">Asignar beneficios</h1>
+        <small class="text-muted">
+            @Model.NombreCompleto (@Model.Email)
+        </small>
+    </div>
+    <a asp-area="Admin" asp-page="/Usuarios/Index" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Volver al listado
+    </a>
+</div>
+
+@if (TempData["Error"] is string err)
+{
+    <div class="alert alert-danger alert-dismissible fade show">
+        <i class="bi bi-exclamation-triangle"></i> @err
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
+<form method="post" class="card shadow-sm border-0">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="UsuarioId" />
+
+    <div class="card-header bg-white">
+        <strong><i class="bi bi-gift"></i> Beneficios disponibles</strong>
+    </div>
+
+    <div class="card-body p-0">
+        @if (!Model.Beneficios.Any())
+        {
+            <div class="p-4">
+                <div class="alert alert-info mb-0">
+                    No hay beneficios configurados.
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Beneficio</th>
+                            <th class="text-center" style="width:120px;">Asignado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @for (int i = 0; i < Model.Beneficios.Count; i++)
+                    {
+                        <tr>
+                            <td>@Model.Beneficios[i].Nombre</td>
+                            <td class="text-center">
+                                <input type="hidden" asp-for="Beneficios[i].BeneficioId" />
+                                <div class="form-check d-inline-block">
+                                    <input class="form-check-input" asp-for="Beneficios[i].Asignado" />
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <div class="card-footer bg-white d-flex justify-content-between">
+        <div>
+            <span class="text-muted small">
+                Selecciona los beneficios que el usuario debe tener.
+            </span>
+        </div>
+        <div class="d-flex gap-2">
+            <a asp-area="Admin" asp-page="/Usuarios/Index" class="btn btn-outline-secondary">
+                Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> Guardar cambios
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
