@@ -4,5 +4,6 @@ public enum UsuarioEstado
 {
     Activo = 0,
     Inactivo = 1,
-    Suspendido = 2
+    Suspendido = 2,
+    Admin =3
 }

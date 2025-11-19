@@ -14,8 +14,8 @@ public interface ICognitoService
     Task<string> RegisterUserAsync(string email, string password, CancellationToken ct = default);
     Task<string> LoginAsync(string username, string password, CancellationToken ct = default);
     Task DeleteUserByUsernameAsync(string username, CancellationToken ct = default);
+    Task<(string AccessToken, string IdToken, string RefreshToken)> AuthenticateAsync(string email, string password, CancellationToken ct = default);
 
-    // 👇 NUEVO: cambio de contraseña
     Task ChangePasswordAsync(string email, string currentPassword, string newPassword, CancellationToken ct = default);
 }
 
@@ -70,7 +70,47 @@ public class CognitoService : ICognitoService
             _logger.LogWarning(ex, "Error while inspecting Cognito provider concrete type.");
         }
     }
+    public async Task<(string AccessToken, string IdToken, string RefreshToken)> AuthenticateAsync(
+        string email,
+        string password,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(email)) throw new ArgumentNullException(nameof(email));
+        if (string.IsNullOrWhiteSpace(password)) throw new ArgumentNullException(nameof(password));
 
+        try
+        {
+            _logger.LogDebug("AuthenticateAsync started for {Email}", email);
+
+            var req = new AdminInitiateAuthRequest
+            {
+                UserPoolId = _settings.UserPoolId,
+                ClientId = _settings.ClientId,
+                AuthFlow = AuthFlowType.ADMIN_NO_SRP_AUTH,
+                AuthParameters = new Dictionary<string, string>
+                {
+                    ["USERNAME"] = email,
+                    ["PASSWORD"] = password
+                }
+            };
+
+            var resp = await _provider.AdminInitiateAuthAsync(req, ct);
+
+            if (resp.AuthenticationResult == null)
+                throw new InvalidOperationException("Autenticación incompleta: se esperaban tokens.");
+
+            var r = resp.AuthenticationResult;
+
+            _logger.LogDebug("AuthenticateAsync completed OK for {Email}", email);
+
+            return (r.AccessToken, r.IdToken, r.RefreshToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AuthenticateAsync failed for {Email}", email);
+            throw;
+        }
+    }
     public async Task<string> RegisterUserAsync(string email, string password, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(email)) throw new ArgumentNullException(nameof(email));
