@@ -324,12 +324,12 @@ namespace AppNetCredenciales.Views
 
                 await _db.SaveAndPushEventoAccesoAsync(ev);
 
-                System.Diagnostics.Debug.WriteLine($"[Scan] ✅ Event created successfully");
+                System.Diagnostics.Debug.WriteLine($"[Scan] Event created successfully");
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[Scan] ❌ HandleScannedPayloadAsync error: {ex}");
-                await DisplayAlert("Error", $"Error procesando el código QR: {ex.Message}", "OK");
+                System.Diagnostics.Debug.WriteLine($"[Scan] ERROR HandleScannedPayloadAsync: {ex}");
+                await DisplayAlert("Error", $"Error procesando el codigo QR: {ex.Message}", "OK");
             }
         }
     }   

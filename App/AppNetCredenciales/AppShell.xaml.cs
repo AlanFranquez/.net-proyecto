@@ -314,7 +314,7 @@ namespace AppNetCredenciales
             if (results.BeneficiosTotal > 0)
                 message += $"Beneficios: {results.BeneficiosSuccess}/{results.BeneficiosTotal}\n";
 
-            var title = results.IsFullSuccess ? "Sincronización exitosa" : "⚠️ Sincronización parcial";
+            var title = results.IsFullSuccess ? "Sincronizacion exitosa" : "ADVERTENCIA: Sincronizacion parcial";
 
             await Current.DisplayAlert(title, message, "OK");
         }
