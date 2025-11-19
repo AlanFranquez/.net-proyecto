@@ -41,11 +41,6 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
           throw new Error("Formato desconocido en beneficios");
         }
 
-        // Esperamos algo como:
-        // [{
-        //    id, nombre, estado (disponible/obtenido), vigenciaInicio, vigenciaFin,
-        //    cuposTotales, cuposDisponibles, costo
-        // }]
         setBeneficios(data);
       } catch (err) {
         console.error(err);
@@ -58,12 +53,51 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
     load();
   }, [authLoading, loggedIn]);
 
-  // Separamos en 2 listas:
-  const misBeneficios = beneficios.filter(
-    (b) => (b.estado || "").toLowerCase() === "obtenido"
-  );
-  const disponibles = beneficios.filter(
-    (b) => (b.estado || "").toLowerCase() !== "obtenido"
+  // ------------------ DERIVED LISTS (replicando lógica de Credencial) ------------------
+  // Filtramos vigentes y asignados al usuario, como en Credencial
+  const now = new Date();
+  const usuarioId = user?.usuarioId ?? user?.id;
+  const beneficiosUsuarioIds =
+    user?.beneficiosIDs ?? user?.beneficiosIds ?? [];
+
+  // Todos los beneficios vigentes (para cualquiera)
+  const beneficiosVigentes = beneficios.filter((b) => {
+    const ini =
+      b.vigenciaInicio ?? b.desde ?? b.fechaInicio ?? b.inicio ?? null;
+    const fin = b.vigenciaFin ?? b.hasta ?? b.fechaFin ?? b.fin ?? null;
+
+    const dIni = ini ? new Date(ini) : null;
+    const dFin = fin ? new Date(fin) : null;
+
+    const okIni = !dIni || dIni <= now;
+    const okFin = !dFin || dFin >= now;
+
+    return okIni && okFin;
+  });
+
+  // Mis beneficios (vigentes y asignados al usuario)
+  const misBeneficios = beneficiosVigentes.filter((b) => {
+    const usuariosIDs = b.usuariosIDs ?? [];
+    const byUserList =
+      Array.isArray(usuariosIDs) &&
+      usuarioId &&
+      usuariosIDs.includes(usuarioId);
+
+    const byIdList =
+      Array.isArray(beneficiosUsuarioIds) &&
+      beneficiosUsuarioIds.includes(b.id);
+
+    // Además, por si el backend marca explícitamente estado "obtenido"
+    const estado = (b.estado || "").toLowerCase();
+    const esObtenido =
+      estado === "obtenido" || estado === "activo";
+
+    return byUserList || byIdList || esObtenido;
+  });
+
+  // Beneficios vigentes que NO son míos
+  const disponibles = beneficiosVigentes.filter(
+    (b) => !misBeneficios.some((mb) => mb.id === b.id)
   );
 
   // ------------------ SOLICITAR BENEFICIO ------------------
@@ -128,7 +162,7 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
     );
   }
 
-  const noHayNinguno = beneficios.length === 0;
+  const noHayNinguno = beneficiosVigentes.length === 0;
 
   return (
     <>
@@ -166,19 +200,14 @@ export default function Beneficios({ isLoggedIn, onToggle }) {
               )}
             </div>
 
-            {/* ------------------ BENEFICIOS DISPONIBLES ------------------ */}
+            {/* ------------------ BENEFICIOS DISPONIBLES (todos los demás vigentes) ------------------ */}
             <h3 className="beneficios-subtitle">Beneficios disponibles</h3>
             <div className="beneficios-list">
               {disponibles.map((b) => (
                 <div key={b.id} className="beneficio-item">
                   <span>{b.nombre}</span>
-
-                  <button
-                    className="btn-obtener"
-                    onClick={() => setModal(b)}
-                  >
-                    Obtener
-                  </button>
+                  {/* Aquí podrías abrir el modal para ver detalle y confirmar */}
+                  {/* <button onClick={() => setModal(b)}>Ver / Solicitar</button> */}
                 </div>
               ))}
 

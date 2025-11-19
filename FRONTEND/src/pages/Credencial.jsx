@@ -6,8 +6,6 @@ import "../styles/Credencial.css";
 export default function Credencial({ isLoggedIn, onToggle }) {
   const { user, loading: authLoading } = useAuth();
 
-  const [qrSeed, setQrSeed] = useState(Date.now());
-
   const [credencial, setCredencial] = useState(null);
   const [loadingCred, setLoadingCred] = useState(true);
   const [errorCred, setErrorCred] = useState(null);
@@ -20,11 +18,76 @@ export default function Credencial({ isLoggedIn, onToggle }) {
   const [loadingBeneficios, setLoadingBeneficios] = useState(false);
   const [errorBeneficios, setErrorBeneficios] = useState(null);
 
+  const [roles, setRoles] = useState([]);
+  const [loadingRoles, setLoadingRoles] = useState(false);
+  const [errorRoles, setErrorRoles] = useState(null);
+
+  const [currentUsuario, setCurrentUsuario] = useState(null);
+  const [loadingUsuario, setLoadingUsuario] = useState(false);
+  const [errorUsuario, setErrorUsuario] = useState(null);
+
   const loggedIn = !!user;
+
+  // ---------- Cargar usuario completo desde /usuarios (para tener RolesIDs, BeneficiosIDs, etc) ----------
+  useEffect(() => {
+    if (authLoading || !user) {
+      setCurrentUsuario(null);
+      setLoadingUsuario(false);
+      setErrorUsuario(null);
+      return;
+    }
+
+    const fetchUsuarios = async () => {
+      setLoadingUsuario(true);
+      setErrorUsuario(null);
+      try {
+        const res = await fetch(toApi("/usuarios"), {
+          method: "GET",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `Error al cargar usuarios: ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          setCurrentUsuario(null);
+          return;
+        }
+
+        const uId = user.usuarioId ?? user.UsuarioId ?? user.id;
+        const uIdStr = uId ? String(uId) : null;
+        const uEmail = (user.email ?? user.Email ?? "").toLowerCase();
+
+        const mine =
+          data.find((u) => {
+            const uuId = u.usuarioId ?? u.UsuarioId ?? u.id;
+            const uuIdStr = uuId ? String(uuId) : null;
+            const uEmail2 = (u.email ?? u.Email ?? "").toLowerCase();
+
+            const idMatch = uIdStr && uuIdStr && uuIdStr === uIdStr;
+            const emailMatch = uEmail && uEmail2 && uEmail2 === uEmail;
+            return idMatch || emailMatch;
+          }) ?? null;
+
+        setCurrentUsuario(mine);
+      } catch (err) {
+        console.error("Error cargando usuarios:", err);
+        setErrorUsuario(err.message || "Error al cargar usuarios");
+        setCurrentUsuario(null);
+      } finally {
+        setLoadingUsuario(false);
+      }
+    };
+
+    fetchUsuarios();
+  }, [authLoading, user?.usuarioId, user?.email, user?.id]);
 
   // ------------------ Cargar credencial del usuario actual ------------------
   useEffect(() => {
-    // Cada vez que cambia el usuario, limpiamos todo lo asociado
     setCredencial(null);
     setErrorCred(null);
     setAccesos([]);
@@ -37,7 +100,6 @@ export default function Credencial({ isLoggedIn, onToggle }) {
       return;
     }
 
-    // Si no hay usuario logueado, no hay credencial
     if (!user) {
       setLoadingCred(false);
       return;
@@ -58,30 +120,42 @@ export default function Credencial({ isLoggedIn, onToggle }) {
         }
 
         const data = await res.json();
-
         if (!Array.isArray(data)) {
           setCredencial(null);
           return;
         }
 
-        const uId = user.usuarioId ?? user.id;
+        const userCredId =
+          currentUsuario?.credencialId ??
+          currentUsuario?.CredencialId ??
+          user.credencialId ??
+          user.CredencialId ??
+          null;
+        const userCredIdStr = userCredId ? String(userCredId) : null;
+
+        const uId = currentUsuario?.usuarioId ?? user.usuarioId ?? user.id;
+        const uIdStr = uId ? String(uId) : null;
+        const uEmail = (currentUsuario?.email ?? user.email ?? "").toLowerCase();
 
         const mine =
           data.find((c) => {
-            // 👇 Ajusta estos campos según tu DTO real de credencial
+            const cCred = c.credencialId ?? c.CredencialId ?? c.id;
+            const cCredStr = cCred ? String(cCred) : null;
+
             const cUserId =
-              c.usuarioId ?? c.userId ?? c.usuario?.usuarioId ?? c.usuario?.id;
+              c.usuarioId ?? c.UsuarioId ?? c.usuario?.usuarioId ?? c.usuario?.id;
+            const cUserIdStr = cUserId ? String(cUserId) : null;
 
-            const cEmail = c.usuarioEmail ?? c.email ?? c.usuario?.email;
+            const cEmail = (
+              c.usuarioEmail ?? c.email ?? c.usuario?.email ?? ""
+            ).toLowerCase();
 
-            const matchesId = uId && cUserId && String(cUserId) === String(uId);
+            const matchCred =
+              userCredIdStr && cCredStr && cCredStr === userCredIdStr;
+            const matchId = uIdStr && cUserIdStr && cUserIdStr === uIdStr;
+            const matchEmail = uEmail && cEmail && cEmail === uEmail;
 
-            const matchesEmail =
-              user.email &&
-              cEmail &&
-              cEmail.toLowerCase() === user.email.toLowerCase();
-
-            return matchesId || matchesEmail;
+            return matchCred || matchId || matchEmail;
           }) ?? null;
 
         setCredencial(mine);
@@ -95,17 +169,145 @@ export default function Credencial({ isLoggedIn, onToggle }) {
     };
 
     fetchCredencial();
-  }, [authLoading, user?.usuarioId, user?.email]);
+  }, [
+    authLoading,
+    user?.usuarioId,
+    user?.email,
+    user?.id,
+    user?.credencialId,
+    currentUsuario?.usuarioId,
+    currentUsuario?.email,
+    currentUsuario?.credencialId,
+  ]);
+
+  // ------------------ Cargar roles del usuario ------------------
+  useEffect(() => {
+    if (authLoading || !user || !currentUsuario) {
+      setRoles([]);
+      setErrorRoles(null);
+      setLoadingRoles(false);
+      return;
+    }
+
+    const fetchRoles = async () => {
+      setLoadingRoles(true);
+      setErrorRoles(null);
+      try {
+        const res = await fetch(toApi("/roles"), {
+          method: "GET",
+          credentials: "include",
+          headers: { Accept: "application/json" },
+        });
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `Error al cargar roles: ${res.status}`);
+        }
+
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          setRoles([]);
+          return;
+        }
+
+        const usuarioId =
+          currentUsuario.usuarioId ??
+          currentUsuario.UsuarioId ??
+          user.usuarioId ??
+          user.UsuarioId ??
+          user.id;
+        const usuarioIdStr = usuarioId ? String(usuarioId) : null;
+
+        const userRoleIdsRaw =
+          currentUsuario.rolesIDs ??
+          currentUsuario.RolesIDs ??
+          user.rolesIDs ??
+          user.RolesIDs ??
+          [];
+        const userRoleIds = Array.isArray(userRoleIdsRaw)
+          ? userRoleIdsRaw.map((x) => String(x))
+          : [];
+
+        const mine = data.filter((r) => {
+          const rId = r.rolId ?? r.RolId ?? r.id;
+          const rIdStr = rId ? String(rId) : null;
+
+          const usuariosIDs = Array.isArray(r.usuariosIDs ?? r.UsuariosIDs)
+            ? (r.usuariosIDs ?? r.UsuariosIDs).map((x) => String(x))
+            : [];
+
+          const byRoleIdList =
+            rIdStr && userRoleIds.length && userRoleIds.includes(rIdStr);
+
+          const byUserList =
+            usuarioIdStr &&
+            usuariosIDs.length &&
+            usuariosIDs.includes(usuarioIdStr);
+
+          return byRoleIdList || byUserList;
+        });
+
+        setRoles(mine);
+      } catch (err) {
+        console.error("Error cargando roles:", err);
+        setErrorRoles(err.message || "Error al cargar roles");
+        setRoles([]);
+      } finally {
+        setLoadingRoles(false);
+      }
+    };
+
+    fetchRoles();
+  }, [
+    authLoading,
+    user?.usuarioId,
+    user?.id,
+    user?.rolesIDs,
+    currentUsuario?.usuarioId,
+    currentUsuario?.rolesIDs,
+  ]);
 
   // ------------------ Helpers de UI ------------------
-  const estado =
-    credencial?.estado ?? (credencial ? "Activa" : "Sin credencial");
+
+  // 🔽🔽🔽 SOLO CAMBIA ESTA PARTE (estado) 🔽🔽🔽
+
+  // Normalizar estado venga como string o número (enum)
+  const estado = (() => {
+    if (!credencial) return "—";
+
+    const raw = credencial.estado ?? credencial.Estado;
+
+    if (raw === null || raw === undefined) return "—";
+
+    // Caso 1: string ("Emitida", "Activada", etc.)
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      return trimmed || "—";
+    }
+
+    // Caso 2: número (0,1,2,3 según tu enum)
+    if (typeof raw === "number") {
+      const map = {
+        0: "Emitida",
+        1: "Activada",
+        2: "Suspendida",
+        3: "Expirada",
+      };
+      return map[raw] ?? String(raw);
+    }
+
+    // Cualquier otra cosa rara
+    return String(raw);
+  })();
+
+  // qué estados se muestran como "encendidos" visualmente
+  const estadoBadgeOn = ["Emitida", "Activada"].includes(estado);
+
+  // 🔼🔼🔼 SOLO CAMBIA ESTA PARTE (estado) 🔼🔼🔼
 
   const fechaEmision = (() => {
     if (!credencial) return null;
-    // TODO: ajusta nombres de campos según tu DTO
-    const raw =
-      credencial.fechaEmision ?? credencial.emitidaEl ?? credencial.createdAt;
+    const raw = credencial.fechaEmision ?? credencial.FechaEmision;
     if (!raw) return null;
     const d = new Date(raw);
     return isNaN(d) ? null : d.toLocaleDateString("es-UY");
@@ -113,39 +315,31 @@ export default function Credencial({ isLoggedIn, onToggle }) {
 
   const fechaExpiracion = (() => {
     if (!credencial) return null;
-    // TODO: ajusta nombres de campos según tu DTO
-    const raw =
-      credencial.fechaExpiracion ??
-      credencial.expiraEl ??
-      credencial.vigenteHasta;
+    const raw = credencial.fechaExpiracion ?? credencial.FechaExpiracion;
     if (!raw) return null;
     const d = new Date(raw);
     return isNaN(d) ? null : d.toLocaleDateString("es-UY");
   })();
 
   const rolesTexto = (() => {
-    const roles =
-      user?.roles?.map((r) => r.nombre ?? r.name ?? r.descripcion) ??
-      user?.usuarioRoles?.map((ur) => ur.nombre ?? ur.rolNombre) ??
-      [];
-    return roles.length ? roles.join(", ") : "Sin roles asignados";
+    if (loadingRoles || loadingUsuario) return "Cargando roles...";
+    if (errorRoles || errorUsuario) return "Error al cargar roles";
+    if (!roles || !roles.length) return "Sin roles asignados";
+    return roles
+      .map((r) => r.tipo ?? r.Tipo ?? r.nombre ?? r.descripcion)
+      .join(", ");
   })();
 
-  const nfcTexto = (() => {
-    if (!credencial) return "No disponible";
-    if (typeof credencial.tieneNfc === "boolean") {
-      return credencial.tieneNfc ? "Disponible" : "No disponible";
-    }
-    return "Disponible";
-  })();
+  // NFC: siempre "Activado"
+  const nfcTexto = "Activado";
 
-  const credIdTexto =
-    credencial?.id ??
+  // ID mostrado: idCriptografico, si no, credencialId
+  const credId =
+    credencial?.idCriptografico ??
+    credencial?.IdCriptografico ??
     credencial?.credencialId ??
-    credencial?.codigo ??
-    "sin-id";
-
-  const codigoVisible = credencial?.codigoVisible ?? `ID-${credIdTexto}`;
+    credencial?.CredencialId ??
+    "—";
 
   // ------------------ Fetch Últimos accesos (eventos por CREDENCIAL) ------------------
   useEffect(() => {
@@ -178,29 +372,24 @@ export default function Credencial({ isLoggedIn, onToggle }) {
           return;
         }
 
-        // Id de la credencial actual (ajusta si tu DTO cambia)
-        const credId =
-          credencial.CredencialId ??
+        const credGuid =
           credencial.credencialId ??
+          credencial.CredencialId ??
           credencial.id ??
           credencial.codigo;
+        const credGuidStr = credGuid ? String(credGuid).toLowerCase() : null;
 
         const filtrados = data.filter((e) => {
-          // nombres tal cual salen del backend
           const eCredId =
-            e.CredencialId ??
             e.credencialId ??
+            e.CredencialId ??
             e.Credencial?.CredencialId ??
             e.Credencial?.Id;
+          const eCredIdStr = eCredId ? String(eCredId).toLowerCase() : null;
 
-          return (
-            credId &&
-            eCredId &&
-            String(eCredId).toLowerCase() === String(credId).toLowerCase()
-          );
+          return credGuidStr && eCredIdStr && eCredIdStr === credGuidStr;
         });
 
-        // Ordenar por MomentoDeAcceso descendente y quedarse con los 5 últimos
         const sorted = filtrados
           .slice()
           .sort((a, b) => {
@@ -232,9 +421,9 @@ export default function Credencial({ isLoggedIn, onToggle }) {
     credencial?.codigo,
   ]);
 
-  // ------------------ Fetch Beneficios activos ------------------
+  // ------------------ Fetch Beneficios activos (vigentes + asignados al usuario) ------------------
   useEffect(() => {
-    if (!credencial) {
+    if (!credencial || !currentUsuario) {
       setBeneficios([]);
       setErrorBeneficios(null);
       setLoadingBeneficios(false);
@@ -264,23 +453,52 @@ export default function Credencial({ isLoggedIn, onToggle }) {
         }
 
         const now = new Date();
+        const usuarioId =
+          currentUsuario.usuarioId ??
+          currentUsuario.UsuarioId ??
+          user?.usuarioId ??
+          user?.UsuarioId ??
+          user?.id;
+        const usuarioIdStr = usuarioId ? String(usuarioId) : null;
 
-        const vigentes = data.filter((b) => {
-          // 👇 Ajusta estos campos según tu DTO de Beneficio
-          const ini =
-            b.vigenciaInicio ?? b.desde ?? b.fechaInicio ?? b.inicio ?? null;
-          const fin = b.vigenciaFin ?? b.hasta ?? b.fechaFin ?? b.fin ?? null;
+        const beneficiosUsuarioIdsRaw =
+          currentUsuario.beneficiosIDs ??
+          currentUsuario.BeneficiosIDs ??
+          user?.beneficiosIDs ??
+          user?.BeneficiosIDs ??
+          [];
+        const beneficiosUsuarioIds = Array.isArray(beneficiosUsuarioIdsRaw)
+          ? beneficiosUsuarioIdsRaw.map((x) => String(x))
+          : [];
+
+        const vigentesYAsignados = data.filter((b) => {
+          const ini = b.vigenciaInicio ?? b.desde ?? b.fechaInicio ?? b.inicio;
+          const fin = b.vigenciaFin ?? b.hasta ?? b.fechaFin ?? b.fin;
 
           const dIni = ini ? new Date(ini) : null;
           const dFin = fin ? new Date(fin) : null;
 
           const okIni = !dIni || dIni <= now;
           const okFin = !dFin || dFin >= now;
+          if (!okIni || !okFin) return false;
 
-          return okIni && okFin;
+          const usuariosIDs = Array.isArray(b.usuariosIDs ?? b.UsuariosIDs)
+            ? (b.usuariosIDs ?? b.UsuariosIDs).map((x) => String(x))
+            : [];
+
+          const byUserList =
+            usuarioIdStr &&
+            usuariosIDs.length &&
+            usuariosIDs.includes(usuarioIdStr);
+
+          const byIdList =
+            beneficiosUsuarioIds.length &&
+            beneficiosUsuarioIds.includes(String(b.id));
+
+          return byUserList || byIdList;
         });
 
-        setBeneficios(vigentes.slice(0, 5));
+        setBeneficios(vigentesYAsignados.slice(0, 5));
       } catch (err) {
         console.error("Error cargando beneficios:", err);
         setErrorBeneficios(err.message || "Error al cargar beneficios");
@@ -291,13 +509,13 @@ export default function Credencial({ isLoggedIn, onToggle }) {
     };
 
     fetchBeneficios();
-  }, [credencial?.id, credencial?.credencialId, credencial?.codigo]);
+  }, [
+    credencial?.credencialId,
+    currentUsuario?.usuarioId,
+    currentUsuario?.beneficiosIDs,
+  ]);
 
   // ------------------ Acciones ------------------
-  const recargarQR = () => {
-    setQrSeed(Date.now());
-  };
-
   const recargarDesdeServidor = () => {
     if (!user) return;
 
@@ -320,29 +538,42 @@ export default function Credencial({ isLoggedIn, onToggle }) {
         }
 
         const data = await res.json();
-
         if (!Array.isArray(data)) {
           setCredencial(null);
           return;
         }
 
-        const uId = user.usuarioId ?? user.id;
+        const userCredId =
+          currentUsuario?.credencialId ??
+          user.credencialId ??
+          user.CredencialId ??
+          null;
+        const userCredIdStr = userCredId ? String(userCredId) : null;
+
+        const uId =
+          currentUsuario?.usuarioId ?? user.usuarioId ?? user.UsuarioId ?? user.id;
+        const uIdStr = uId ? String(uId) : null;
+        const uEmail = (currentUsuario?.email ?? user.email ?? "").toLowerCase();
 
         const mine =
           data.find((c) => {
+            const cCred = c.credencialId ?? c.CredencialId ?? c.id;
+            const cCredStr = cCred ? String(cCred) : null;
+
             const cUserId =
-              c.usuarioId ?? c.userId ?? c.usuario?.usuarioId ?? c.usuario?.id;
+              c.usuarioId ?? c.UsuarioId ?? c.usuario?.usuarioId ?? c.usuario?.id;
+            const cUserIdStr = cUserId ? String(cUserId) : null;
 
-            const cEmail = c.usuarioEmail ?? c.email ?? c.usuario?.email;
+            const cEmail = (
+              c.usuarioEmail ?? c.email ?? c.usuario?.email ?? ""
+            ).toLowerCase();
 
-            const matchesId = uId && cUserId && String(cUserId) === String(uId);
+            const matchCred =
+              userCredIdStr && cCredStr && cCredStr === userCredIdStr;
+            const matchId = uIdStr && cUserIdStr && cUserIdStr === uIdStr;
+            const matchEmail = uEmail && cEmail && cEmail === uEmail;
 
-            const matchesEmail =
-              user.email &&
-              cEmail &&
-              cEmail.toLowerCase() === user.email.toLowerCase();
-
-            return matchesId || matchesEmail;
+            return matchCred || matchId || matchEmail;
           }) ?? null;
 
         setCredencial(mine);
@@ -352,19 +583,10 @@ export default function Credencial({ isLoggedIn, onToggle }) {
         setCredencial(null);
       } finally {
         setLoadingCred(false);
-        setQrSeed(Date.now());
       }
     };
 
     refetch();
-  };
-
-  const validarBiometria = () => {
-    alert("Validación biométrica no implementada aún (placeholder).");
-  };
-
-  const renovar = () => {
-    alert("Renovación de credencial no implementada aún (placeholder).");
   };
 
   // ------------------ VISTAS ------------------
@@ -449,8 +671,8 @@ export default function Credencial({ isLoggedIn, onToggle }) {
                 <span className="k" role="rowheader">
                   Credencial
                 </span>
-                <span className="v" role="cell">
-                  {codigoVisible}
+                <span className="v mono" role="cell">
+                  {credId}
                 </span>
               </div>
               <div className="cred-row" role="row">
@@ -458,7 +680,8 @@ export default function Credencial({ isLoggedIn, onToggle }) {
                   Usuario
                 </span>
                 <span className="v" role="cell">
-                  {user?.nombre} {user?.apellido}
+                  {currentUsuario?.nombre ?? user?.nombre}{" "}
+                  {currentUsuario?.apellido ?? user?.apellido}
                 </span>
               </div>
               <div className="cred-row" role="row">
@@ -474,7 +697,7 @@ export default function Credencial({ isLoggedIn, onToggle }) {
                   Tipo
                 </span>
                 <span className="v" role="cell">
-                  {credencial.tipo ?? "Digital"}
+                  {credencial.tipo ?? credencial.Tipo ?? "Digital"}
                 </span>
               </div>
               <div className="cred-row" role="row">
@@ -482,9 +705,7 @@ export default function Credencial({ isLoggedIn, onToggle }) {
                   Estado
                 </span>
                 <span
-                  className={`badge ${
-                    estado === "Activa" || estado === "Renovada" ? "on" : ""
-                  }`}
+                  className={`badge ${estadoBadgeOn ? "on" : ""}`}
                   role="cell"
                 >
                   {estado}
@@ -514,31 +735,6 @@ export default function Credencial({ isLoggedIn, onToggle }) {
                   {nfcTexto}
                 </span>
               </div>
-              <div className="cred-row" role="row">
-                <span className="k" role="rowheader">
-                  ID
-                </span>
-                <span className="v mono" role="cell">
-                  {credIdTexto}
-                </span>
-              </div>
-            </div>
-
-            {/* QR */}
-            <div className="qr-box" aria-label="Código QR">
-              <div className="qr" key={qrSeed} aria-hidden>
-                {[...Array(25)].map((_, i) => (
-                  <span key={i} className={Math.random() > 0.5 ? "b" : ""} />
-                ))}
-              </div>
-              <div className="qr-caption">Código QR</div>
-              <button
-                type="button"
-                className="btn ghost btn-small"
-                onClick={recargarQR}
-              >
-                Recargar QR
-              </button>
             </div>
           </div>
 
@@ -562,23 +758,20 @@ export default function Credencial({ isLoggedIn, onToggle }) {
                 <ul className="list">
                   {accesos.length === 0 && <li>No hay accesos recientes.</li>}
                   {accesos.map((a) => {
-                    // Fecha: MomentoDeAcceso
                     const fechaRaw = a.MomentoDeAcceso ?? a.momentoDeAcceso;
                     const d = fechaRaw ? new Date(fechaRaw) : null;
                     const fechaTxt = d
                       ? d.toLocaleString("es-UY")
                       : "Fecha desconocida";
 
-                    // Lugar: nombre del espacio
                     const lugar =
                       a.Espacio?.Nombre ??
                       a.Espacio?.nombre ??
                       a.espacioNombre ??
                       "Acceso";
 
-                    // Modo / Resultado
-                    const modo = a.Modo ?? a.modo; // Online / NFC / QR / etc.
-                    const resultado = a.Resultado ?? a.resultado; // Permitir / Denegar...
+                    const modo = a.Modo ?? a.modo;
+                    const resultado = a.Resultado ?? a.resultado;
 
                     const metodoTexto =
                       [modo, resultado].filter(Boolean).join(" · ") ||
@@ -594,7 +787,6 @@ export default function Credencial({ isLoggedIn, onToggle }) {
               )}
             </section>
 
-            {/* Beneficios activos */}
             <section className="panel" aria-labelledby="beneficios-activos">
               <div className="panel-header">
                 <h3 id="beneficios-activos">Beneficios Activos</h3>
@@ -625,7 +817,6 @@ export default function Credencial({ isLoggedIn, onToggle }) {
             </section>
           </div>
 
-          {/* acciones */}
           <div
             className="cred-actions"
             role="toolbar"
@@ -637,16 +828,6 @@ export default function Credencial({ isLoggedIn, onToggle }) {
               onClick={recargarDesdeServidor}
             >
               Recargar desde servidor
-            </button>
-            <button type="button" className="btn" onClick={renovar}>
-              Renovar
-            </button>
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={validarBiometria}
-            >
-              Validar Biometría
             </button>
           </div>
 

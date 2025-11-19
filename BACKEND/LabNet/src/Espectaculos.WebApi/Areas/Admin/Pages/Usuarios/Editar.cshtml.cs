@@ -1,7 +1,9 @@
+// File: Espectaculos.Backoffice/Areas/Admin/Pages/Usuarios/Editar.cshtml.cs
 using System.ComponentModel.DataAnnotations;
 using Espectaculos.Application.Abstractions.Repositories;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
-using Espectaculos.Application.Roles.Queries.ListarRoles; 
+using Espectaculos.Application.Roles.Queries.ListarRoles;
+using Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 using Espectaculos.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -21,9 +23,11 @@ public class EditarModel : PageModel
         _mediator = mediator;
     }
 
-    [BindProperty] public Vm ModelVm { get; set; } = new();
+    [BindProperty] 
+    public Vm ModelVm { get; set; } = new();
 
     public IEnumerable<SelectListItem> RolesOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+    public IEnumerable<SelectListItem> BeneficiosOptions { get; set; } = Enumerable.Empty<SelectListItem>();
 
     public async Task<IActionResult> OnGetAsync(Guid id, CancellationToken ct)
     {
@@ -37,27 +41,50 @@ public class EditarModel : PageModel
         ModelVm = new Vm
         {
             UsuarioId = u.UsuarioId,
-            Nombre = u.Nombre,
-            Apellido = u.Apellido,
-            Email = u.Email,
+            Nombre    = u.Nombre,
+            Apellido  = u.Apellido,
+            Email     = u.Email,
             Documento = u.Documento,
-            Estado = u.Estado,
-            RolesIDs = u.UsuarioRoles?.Select(ur => ur.RolId).ToList() ?? new()
+            Estado    = u.Estado,
+            RolesIDs  = u.UsuarioRoles?.Select(ur => ur.RolId).ToList() ?? new(),
+
+            // Navegación: Usuario.Beneficios : ICollection<BeneficioUsuario>
+            BeneficiosIDs = u.Beneficios?.Select(bu => bu.BeneficioId).ToList() ?? new()
         };
 
         await LoadRolesAsync(ct);
+        await LoadBeneficiosAsync(ct);
+
         return Page();
     }
 
     private async Task LoadRolesAsync(CancellationToken ct)
     {
         var roles = await _mediator.Send(new ListarRolesQuery(), ct);
+        var seleccionados = ModelVm?.RolesIDs?.ToHashSet() ?? new HashSet<Guid>();
 
         RolesOptions = roles
             .Select(r => new SelectListItem
             {
-                Value = r.RolId.ToString(),
-                Text = $"{r.Tipo} (prio {r.Prioridad})"
+                Value    = r.RolId.ToString(),
+                Text     = $"{r.Tipo} (prio {r.Prioridad})",
+                Selected = seleccionados.Contains(r.RolId)
+            })
+            .ToList();
+    }
+
+    private async Task LoadBeneficiosAsync(CancellationToken ct)
+    {
+        // ListBeneficiosQuery devuelve IReadOnlyList<BeneficioDTO>
+        var beneficios = await _mediator.Send(new ListBeneficiosQuery(), ct);
+        var seleccionados = ModelVm?.BeneficiosIDs?.ToHashSet() ?? new HashSet<Guid>();
+
+        BeneficiosOptions = beneficios
+            .Select(b => new SelectListItem
+            {
+                Value    = b.Id.ToString(),   // del BeneficioDTO
+                Text     = b.Nombre,
+                Selected = seleccionados.Contains(b.Id)
             })
             .ToList();
     }
@@ -65,6 +92,7 @@ public class EditarModel : PageModel
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)
     {
         await LoadRolesAsync(ct);
+        await LoadBeneficiosAsync(ct);
 
         if (!ModelState.IsValid) 
             return Page();
@@ -73,14 +101,15 @@ public class EditarModel : PageModel
         {
             await _mediator.Send(new UpdateUsuarioCommand
             {
-                UsuarioId = ModelVm.UsuarioId,
-                Nombre     = ModelVm.Nombre?.Trim(),
-                Apellido   = ModelVm.Apellido?.Trim(),
-                Email      = ModelVm.Email?.Trim(),
-                Documento  = ModelVm.Documento?.Trim(),
-                Password   = string.IsNullOrWhiteSpace(ModelVm.Password) ? null : ModelVm.Password!.Trim(),
-                Estado     = ModelVm.Estado,
-                RolesIDs   = ModelVm.RolesIDs ?? new List<Guid>()
+                UsuarioId     = ModelVm.UsuarioId,
+                Nombre        = ModelVm.Nombre?.Trim(),
+                Apellido      = ModelVm.Apellido?.Trim(),
+                Email         = ModelVm.Email?.Trim(),
+                Documento     = ModelVm.Documento?.Trim(),
+                Password      = string.IsNullOrWhiteSpace(ModelVm.Password) ? null : ModelVm.Password!.Trim(),
+                Estado        = ModelVm.Estado,
+                RolesIDs      = ModelVm.RolesIDs ?? new List<Guid>(),
+                BeneficiosIDs = ModelVm.BeneficiosIDs ?? new List<Guid>()
             }, ct);
 
             TempData["Ok"] = "Usuario actualizado.";
@@ -103,7 +132,8 @@ public class EditarModel : PageModel
         public string? Password { get; set; }
         public UsuarioEstado? Estado { get; set; }
 
-        // NEW
         public List<Guid>? RolesIDs { get; set; } = new();
+
+        public List<Guid>? BeneficiosIDs { get; set; } = new();
     }
 }

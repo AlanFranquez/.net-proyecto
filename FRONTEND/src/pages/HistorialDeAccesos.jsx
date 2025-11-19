@@ -1,3 +1,4 @@
+// src/pages/HistorialDeAccesos.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import { useAuth, toApi } from "../services/AuthService.jsx";
@@ -12,20 +13,20 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
   const [info, setInfo] = useState(null); // evento seleccionado
 
   const [eventos, setEventos] = useState([]);
+  const [espaciosById, setEspaciosById] = useState({}); // idEspacio -> nombre
   const [loadingEventos, setLoadingEventos] = useState(true);
   const [errorEventos, setErrorEventos] = useState(null);
 
   const loggedIn = !!user;
 
-  // --------- Cargar eventos del usuario actual (vía credenciales) ----------
+  // --------- Cargar eventos del usuario + espacios ----------
   useEffect(() => {
     setEventos([]);
+    setEspaciosById({});
     setErrorEventos(null);
     setLoadingEventos(true);
 
-    if (authLoading) {
-      return;
-    }
+    if (authLoading) return;
 
     if (!user) {
       setLoadingEventos(false);
@@ -34,28 +35,48 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
 
     const fetchForUser = async () => {
       try {
-        // 1) Obtener credenciales del usuario
-        const credRes = await fetch(toApi("/credenciales"), {
-          method: "GET",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
+        // 1) Pedimos credenciales, eventos y espacios en paralelo
+        const [credRes, evRes, espRes] = await Promise.all([
+          fetch(toApi("/credenciales"), {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+          fetch(toApi("/eventos"), {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+          fetch(toApi("/espacios"), {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+        ]);
 
         if (!credRes.ok) {
           const txt = await credRes.text();
-          throw new Error(
-            txt || `Error al cargar credenciales: ${credRes.status}`
-          );
+          throw new Error(txt || `Error al cargar credenciales: ${credRes.status}`);
+        }
+        if (!evRes.ok) {
+          const txt = await evRes.text();
+          throw new Error(txt || `Error al cargar eventos: ${evRes.status}`);
+        }
+        if (!espRes.ok) {
+          const txt = await espRes.text();
+          throw new Error(txt || `Error al cargar espacios: ${espRes.status}`);
         }
 
         const credData = await credRes.json();
+        const evData = await evRes.json();
+        const espData = await espRes.json();
+
+        // 2) Filtrar credenciales del usuario actual
         const uId = user.usuarioId ?? user.id;
 
         let credencialesUsuario = [];
-
         if (Array.isArray(credData)) {
           credencialesUsuario = credData.filter((c) => {
-            // TODO: ajusta estos nombres según tu DTO de credencial
             const cUserId =
               c.UsuarioId ??
               c.usuarioId ??
@@ -95,35 +116,37 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
             c.codigo
         );
 
-        // Si no tiene credenciales, no habrá eventos
-        if (!credIds.length) {
+        // 3) Construimos índice de espacios: EspacioId -> Nombre
+        const espIndex = {};
+        if (Array.isArray(espData)) {
+          for (const esp of espData) {
+            const espId =
+              esp.EspacioId ??
+              esp.espacioId ??
+              esp.Id ??
+              esp.id;
+            const nombre =
+              esp.Nombre ??
+              esp.nombre ??
+              esp.NombreEspacio ??
+              esp.nombreEspacio ??
+              "Espacio";
+
+            if (espId) {
+              espIndex[String(espId).toLowerCase()] = nombre;
+            }
+          }
+        }
+        setEspaciosById(espIndex);
+
+        // 4) si el usuario no tiene credenciales, no habrá eventos
+        if (!credIds.length || !Array.isArray(evData)) {
           setEventos([]);
           setLoadingEventos(false);
           return;
         }
 
-        // 2) Obtener todos los eventos
-        const evRes = await fetch(toApi("/eventos"), {
-          method: "GET",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-
-        if (!evRes.ok) {
-          const txt = await evRes.text();
-          throw new Error(
-            txt || `Error al cargar eventos: ${evRes.status}`
-          );
-        }
-
-        const evData = await evRes.json();
-        if (!Array.isArray(evData)) {
-          setEventos([]);
-          setLoadingEventos(false);
-          return;
-        }
-
-        // 3) Filtrar eventos cuyas CredencialId estén dentro de las del usuario
+        // 5) Filtrar eventos cuyas CredencialId estén dentro de las del usuario
         const credIdSet = new Set(
           credIds
             .filter(Boolean)
@@ -131,7 +154,6 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
         );
 
         const filtrados = evData.filter((e) => {
-          // Nombres según tu entity EventoAcceso
           const eCredId =
             e.CredencialId ??
             e.credencialId ??
@@ -139,11 +161,10 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
             e.Credencial?.Id;
 
           if (!eCredId) return false;
-
           return credIdSet.has(String(eCredId).toLowerCase());
         });
 
-        // Ordenamos por MomentoDeAcceso descendente
+        // 6) Ordenamos por MomentoDeAcceso descendente
         const ordenados = filtrados
           .slice()
           .sort((a, b) => {
@@ -159,10 +180,9 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
         setEventos(ordenados);
       } catch (err) {
         console.error("Error cargando historial de accesos:", err);
-        setErrorEventos(
-          err.message || "Error al cargar historial de accesos"
-        );
+        setErrorEventos(err.message || "Error al cargar historial de accesos");
         setEventos([]);
+        setEspaciosById({});
       } finally {
         setLoadingEventos(false);
       }
@@ -172,37 +192,47 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
   }, [authLoading, user?.usuarioId, user?.email]);
 
   // --------- Normalización para la UI ----------
-  function mapEventoToUI(e) {
+  function mapEventoToUI(e, espaciosById) {
     const dtRaw = e.MomentoDeAcceso ?? e.momentoDeAcceso;
     const d = dtRaw ? new Date(dtRaw) : null;
 
-    // Para filtros y display
     const fechaStr = d ? formatDateInput(d) : "";
     const fechaDisplay = d ? formatDMY(d) : "Fecha desconocida";
     const horaDisplay = d ? formatHM(d) : "--:--";
 
-    const espacioNombre =
-      e.Espacio?.Nombre ??
-      e.Espacio?.nombre ??
-      e.espacioNombre ??
-      "Acceso";
+    // EspacioId del evento
+    const eEspacioId =
+      e.EspacioId ??
+      e.espacioId ??
+      e.IdEspacio ??
+      e.idEspacio ??
+      e.Espacio?.EspacioId ??
+      e.Espacio?.Id;
 
-    // Resultado enum → estado UI
+    let espacioNombre = "Acceso";
+    if (eEspacioId) {
+      const key = String(eEspacioId).toLowerCase();
+      if (espaciosById[key]) {
+        espacioNombre = espaciosById[key];
+      }
+    }
+    // fallback si viniera incluido el objeto espacio
+    if (espacioNombre === "Acceso") {
+      espacioNombre =
+        e.Espacio?.Nombre ??
+        e.Espacio?.nombre ??
+        e.espacioNombre ??
+        "Acceso";
+    }
+
     const resultadoRaw =
       (e.Resultado ?? e.resultado ?? "").toString().toLowerCase();
     let estado = "otro";
     if (resultadoRaw.includes("permit")) estado = "permitido";
     else if (resultadoRaw.includes("deneg")) estado = "denegado";
 
-    const modo =
-      e.Modo ??
-      e.modo ??
-      "Online";
-
-    const motivo =
-      e.Motivo ??
-      e.motivo ??
-      "-";
+    const modo = e.Modo ?? e.modo ?? "Online";
+    const motivo = e.Motivo ?? e.motivo ?? "-";
 
     const id =
       e.EventoId ??
@@ -213,7 +243,7 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
 
     return {
       id,
-      fecha: fechaStr, // para filtro YYYY-MM-DD
+      fecha: fechaStr,
       fechaDisplay,
       horaDisplay,
       espacio: espacioNombre,
@@ -225,8 +255,8 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
   }
 
   const eventosUI = useMemo(
-    () => eventos.map(mapEventoToUI),
-    [eventos]
+    () => eventos.map((e) => mapEventoToUI(e, espaciosById)),
+    [eventos, espaciosById]
   );
 
   // --------- Filtros (texto, fecha, espacio) ----------
@@ -237,9 +267,7 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
         const hay =
           r.espacio.toLowerCase().includes(s) ||
           r.estado.toLowerCase().includes(s) ||
-          (r.fechaDisplay + " " + r.horaDisplay)
-            .toLowerCase()
-            .includes(s) ||
+          (r.fechaDisplay + " " + r.horaDisplay).toLowerCase().includes(s) ||
           r.modo?.toLowerCase().includes(s) ||
           r.motivo?.toLowerCase().includes(s);
         if (!hay) return false;
@@ -250,11 +278,10 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
     });
   }, [q, fecha, espacioFiltro, eventosUI]);
 
-  // espacios únicos para el filtro
   const espacios = useMemo(
     () =>
-      Array.from(new Set(eventosUI.map((r) => r.espacio))).sort(
-        (a, b) => a.localeCompare(b)
+      Array.from(new Set(eventosUI.map((r) => r.espacio))).sort((a, b) =>
+        a.localeCompare(b)
       ),
     [eventosUI]
   );
@@ -423,7 +450,6 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
               <span className="k">ID Evento</span>
               <span>{info.id}</span>
 
-              {/* Si quisieras mostrar la credencial, firma, etc.: */}
               <span className="k">Firma</span>
               <span>
                 {info.raw?.Firma ??

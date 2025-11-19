@@ -307,7 +307,6 @@ export default function Canjes({ isLoggedIn = true, onToggle }) {
                 <div key={r.id} className="row" role="row">
                   <div className="col-main" role="cell">
                     <div className="bold">Canje #{r.id}</div>
-                    <div className="sub">Usuario: {r.usuarioId}</div>
                   </div>
 
                   <div className="col" data-label="Fecha" role="cell">
@@ -376,9 +375,6 @@ export default function Canjes({ isLoggedIn = true, onToggle }) {
             <div className="cj-grid">
               <span className="k">ID</span>
               <span>{detalle.id}</span>
-
-              <span className="k">Usuario</span>
-              <span>{detalle.usuarioId}</span>
 
               <span className="k">Fecha</span>
               <span>{detalle.fechaDisplay}</span>
