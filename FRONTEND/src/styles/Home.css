@@ -70,3 +70,50 @@
   gap: 6px;
   margin: 6px 0;              /* More compact */
 }
+.home {
+  display: grid;
+  place-items: center;
+}
+
+/* Centrar todo dentro del hero-card */
+.hero-card {
+  text-align: center;        /* Centra todo el texto */
+  display: flex;
+  flex-direction: column;
+  align-items: center;        /* Centra botones, listas y elementos internos */
+  justify-content: center;
+}
+
+/* Asegura que los botones queden centrados */
+.cta {
+  display: flex;
+  flex-direction: column;     /* Uno abajo del otro (opcional) */
+  gap: 12px;
+  align-items: center;
+}
+
+/* Lista centrada */
+.features {
+  list-style: none;
+  padding: 0;
+  text-align: center;
+}
+/* src/styles/Home.css */
+
+.home-guest {
+  /* tu fondo actual */
+  background-image: url("../assets\library-bg.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.home-logged {
+  background-image: url("../assets/home-logged-bg.jpg");
+  background-size: cover;
+  background-position: center;
+}
+
+.username-highlight {
+  font-weight: 600;
+
+}

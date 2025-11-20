@@ -337,7 +337,7 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
 
           <div className="ha-filters">
             <div className="f-col">
-              <div className="f-icon">🔎</div>
+              <div className="f-icon"></div>
               <label>Buscar</label>
               <input
                 type="text"
@@ -348,7 +348,7 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
             </div>
 
             <div className="f-col">
-              <div className="f-icon">📅</div>
+              <div className="f-icon"></div>
               <label>Filtro por fecha</label>
               <input
                 type="date"
@@ -358,7 +358,7 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
             </div>
 
             <div className="f-col">
-              <div className="f-icon">⤵️</div>
+              <div className="f-icon"></div>
               <label>Espacio</label>
               <select
                 value={espacioFiltro}

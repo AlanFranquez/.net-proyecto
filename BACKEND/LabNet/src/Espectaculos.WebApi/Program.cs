@@ -42,6 +42,7 @@ using Espectaculos.Infrastructure.RealTime;
 using Espectaculos.Infrastructure.Repositories;
 
 using Espectaculos.WebApi.Endpoints;
+using Espectaculos.WebApi.Endpoints.Novedades;
 using Espectaculos.WebApi.Health;
 using Espectaculos.WebApi.Options;
 using Espectaculos.WebApi.Security;
@@ -536,6 +537,7 @@ api.MapRolesEndpoints();
 api.MapUsuariosEndpoints();
 api.MapSincronizacionEndpoints();
 api.MapDispositivosEndpoints();
+api.MapNovedades();
 
 // ---------- Razor Pages (Backoffice UI) ----------
 app.MapRazorPages();
