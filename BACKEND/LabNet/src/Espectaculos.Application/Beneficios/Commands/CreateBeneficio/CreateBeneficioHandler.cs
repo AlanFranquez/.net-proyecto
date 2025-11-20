@@ -7,8 +7,13 @@ namespace Espectaculos.Application.Beneficios.Commands.CreateBeneficio;
 public class CreateBeneficioHandler : IRequestHandler<CreateBeneficioCommand, Guid>
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICacheService _cache;
 
-    public CreateBeneficioHandler(IUnitOfWork uow) => _uow = uow;
+    public CreateBeneficioHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _cache = cache;
+        _uow = uow;
+    }
 
     public async Task<Guid> Handle(CreateBeneficioCommand request, CancellationToken cancellationToken)
     {
@@ -40,6 +45,7 @@ public class CreateBeneficioHandler : IRequestHandler<CreateBeneficioCommand, Gu
         // 4. Persistencia
         await _uow.Beneficios.AddAsync(b, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
+        await _cache.RemoveAsync("shows:list");
 
         return b.BeneficioId;
     }

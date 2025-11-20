@@ -1,4 +1,7 @@
+version: "3.9"
+
 services:
+  # ---------------------- BASE DE DATOS ----------------------
   db:
     image: postgres:17
     container_name: espectaculos_db
@@ -17,6 +20,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
 
+  # ---------------------- APLICACIÓN ----------------------
   web:
     build:
       context: .
@@ -26,16 +30,20 @@ services:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
       ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:8080}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5262}
-      ConnectionStrings__Default: ${ConnectionStrings__Default:-Host=db;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres}
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres"
+
       AUTO_MIGRATE: ${AUTO_MIGRATE:-true}
       AUTO_SEED: ${AUTO_SEED:-true}
       SEED_RESET: ${SEED_RESET:-true}
+
       VALIDATION_TOKENS__SECRET: ${VALIDATION_TOKENS__SECRET:-local-dev-super-secret}
       VALIDATION_TOKENS__DEFAULT_EXPIRY_MINUTES: ${VALIDATION_TOKENS__DEFAULT_EXPIRY_MINUTES:-120}
-      # OpenTelemetry: exportar a Collector corriendo en host (observability compose)
-      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-http://host.docker.internal:4317}
-      # Serilog -> Seq del host
-      Serilog__WriteTo__1__Args__serverUrl: ${SEQ_URL:-http://host.docker.internal:5341}
+
+      # OpenTelemetry -> collector dentro del mismo compose
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"
+
+      # Serilog -> Seq dentro del mismo compose
+      Serilog__WriteTo__1__Args__serverUrl: "http://seq:80"
       Serilog__WriteTo__1__Args__apiKey: ${SEQ_API_KEY:-}
     ports:
       - "${WEB_PORT:-8080}:8080"
@@ -43,6 +51,51 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+
+  # ---------------------- OBSERVABILITY STACK ----------------------
+
+  seq:
+    image: datalust/seq:2024.3
+    ports:
+      - "5341:80"
+    environment:
+      - ACCEPT_EULA=Y
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus-rules:/etc/prometheus/rules:ro
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+
+  tempo:
+    image: grafana/tempo:2.5.0
+    command: ["-config.expand-env=true"]
+    environment:
+      - JAEGER_DISABLED=true
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.1
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "9464:9464"
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - tempo
 
 volumes:
   pgdata:
