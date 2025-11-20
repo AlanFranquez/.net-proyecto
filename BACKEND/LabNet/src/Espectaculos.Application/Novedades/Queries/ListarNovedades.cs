@@ -6,7 +6,7 @@ using Espectaculos.Application.DTOs;
 namespace Espectaculos.Application.Novedades.Queries;
 public record ListarNovedadesQuery(
     string? Q,
-    Espectaculos.Domain.Enums.NotificacionTipo? Tipo, // ⬅️ fully-qualified
+    Espectaculos.Domain.Enums.NotificacionTipo? Tipo,
     bool OnlyPublished,
     bool OnlyActive,
     int Page = 1,

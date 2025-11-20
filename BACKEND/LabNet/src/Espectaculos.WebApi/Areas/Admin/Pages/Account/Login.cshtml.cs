@@ -42,10 +42,11 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
         {
         }
 
-        public async Task<IActionResult> OnPostAsync(string? returnUrl = null, CancellationToken ct = default)
+        // LOGIN handler → matches asp-page-handler="Login"
+        public async Task<IActionResult> OnPostLoginAsync(string? returnUrl = null, CancellationToken ct = default)
         {
             returnUrl ??=
-                Url.Page("/Dashboard/Index", new { area = "Admin" })
+                Url.Page("/Dashboard/Index", new { area = "Admin" }) 
                 ?? "/";
 
             if (!ModelState.IsValid)
@@ -53,7 +54,7 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
 
             try
             {
-                // 1) Authenticate against Cognito (any user in the pool)
+                // 1) Authenticate against Cognito
                 var idToken = await _cognitoService.LoginAsync(Input.Email, Input.Password, ct);
 
                 // 2) Decode token and extract email
@@ -66,7 +67,7 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
                 // 3) Only allow the configured admin email
                 if (string.IsNullOrWhiteSpace(adminEmail) ||
                     string.IsNullOrWhiteSpace(emailFromToken) ||
-                    !string.Equals(emailFromToken, adminEmail, StringComparison.OrdinalIgnoreCase))
+                    !string.Equals(emailFromToken.Trim(), adminEmail.Trim(), StringComparison.OrdinalIgnoreCase))
                 {
                     _logger.LogWarning(
                         "Login denied. User {EmailClaim} is not configured Backoffice admin ({AdminEmail}).",
@@ -108,6 +109,43 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
                 ModelState.AddModelError(string.Empty, "Ocurrió un error al iniciar sesión.");
                 return Page();
             }
+        }
+
+        // CREATE ADMIN handler → matches asp-page-handler="CreateAdmin"
+        public async Task<IActionResult> OnPostCreateAdminAsync(CancellationToken ct = default)
+        {
+            var adminEmail = _config["Backoffice:AdminEmail"];
+            var adminPassword = _config["Backoffice:AdminPassword"];
+
+            if (string.IsNullOrWhiteSpace(adminEmail) || string.IsNullOrWhiteSpace(adminPassword))
+            {
+                ModelState.AddModelError(string.Empty,
+                    "Backoffice:AdminEmail y Backoffice:AdminPassword deben estar configurados en appsettings o variables de entorno.");
+                return Page();
+            }
+
+            try
+            {
+                await _cognitoService.RegisterUserAsync(adminEmail, adminPassword, ct);
+
+                TempData["Ok"] =
+                    $"Admin creado en Cognito: {adminEmail}. Ahora podés iniciar sesión con ese email y esa contraseña.";
+                _logger.LogInformation("Admin user {Email} created via CreateAdmin.", adminEmail);
+            }
+            catch (UsernameExistsException)
+            {
+                TempData["Ok"] =
+                    $"El usuario {adminEmail} ya existe en Cognito. Probá iniciar sesión con ese email y la contraseña configurada.";
+                _logger.LogInformation("CreateAdmin called but user {Email} already exists.", adminEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear el admin en Cognito.");
+                ModelState.AddModelError(string.Empty, "No se pudo crear el admin en Cognito.");
+                return Page();
+            }
+
+            return RedirectToPage(); // recarga /Admin/Account/Login
         }
     }
 }

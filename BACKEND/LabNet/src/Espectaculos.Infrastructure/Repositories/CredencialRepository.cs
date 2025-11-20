@@ -17,7 +17,7 @@ namespace Espectaculos.Infrastructure.Repositories
 
         public async Task<IReadOnlyList<Credencial>> ListVigentesAsync(DateTime onDateUtc, CancellationToken ct = default)
             => await _set
-                .Include(c => c.Usuario)                 // <-- ADDED
+                .Include(c => c.Usuario) 
                 .AsNoTracking()
                 .Where(c => (!c.FechaExpiracion.HasValue || c.FechaExpiracion >= onDateUtc)
                          &&  c.FechaEmision <= onDateUtc)
@@ -56,7 +56,7 @@ namespace Espectaculos.Infrastructure.Repositories
         {
             var idArray = ids.Distinct().ToArray();
             return await _db.Set<Credencial>()
-                .Include(c => c.Usuario)                 // <-- ADDED
+                .Include(c => c.Usuario) 
                 .Where(r => idArray.Contains(r.CredencialId))
                 .AsNoTracking()
                 .ToListAsync(ct);

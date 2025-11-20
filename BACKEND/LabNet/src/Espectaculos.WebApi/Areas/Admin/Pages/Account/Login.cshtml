@@ -2,40 +2,50 @@
 @model Espectaculos.Backoffice.Areas.Admin.Pages.Account.LoginModel
 @{
     ViewData["Title"] = "Iniciar sesión";
-    Layout = "_Layout";  // or a login-specific layout if you have it
+    Layout = "_Layout";
 }
 
 <div class="container py-5" style="max-width: 420px;">
     <h1 class="h3 mb-3 text-center">Backoffice - Login</h1>
 
+    @if (TempData["Ok"] is string okMsg)
+    {
+        <div class="alert alert-success">@okMsg</div>
+    }
+
+    @if (!ViewData.ModelState.IsValid)
+    {
+        foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div class="alert alert-danger">@error.ErrorMessage</div>
+        }
+    }
 
     <form method="post" asp-page-handler="Login">
         @Html.AntiForgeryToken()
         <div class="mb-3">
             <label asp-for="Input.Email" class="form-label">Email</label>
-            <input asp-for="Input.Email" class="form-control"/>
+            <input asp-for="Input.Email" class="form-control" />
             <span asp-validation-for="Input.Email" class="text-danger small"></span>
         </div>
 
         <div class="mb-3">
             <label asp-for="Input.Password" class="form-label">Password</label>
-            <input asp-for="Input.Password" class="form-control" type="password"/>
+            <input asp-for="Input.Password" class="form-control" type="password" />
             <span asp-validation-for="Input.Password" class="text-danger small"></span>
         </div>
 
         <button type="submit" class="btn btn-primary w-100">Iniciar sesión</button>
     </form>
 
-    <hr class="my-4"/>
+    <hr class="my-4" />
 
-    <!-- Optional: button to create admin if not exists -->
     <form method="post" asp-page-handler="CreateAdmin">
         @Html.AntiForgeryToken()
         <button type="submit" class="btn btn-outline-secondary w-100">
             Crear admin por defecto (si no existe)
         </button>
     </form>
-
 </div>
 
 @section Scripts {

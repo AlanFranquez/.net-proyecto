@@ -14,6 +14,9 @@ import HistorialDeAccesos from "./pages/HistorialDeAccesos.jsx";
 import Autenticacion from "./pages/Autenticacion.jsx";
 import Registrarse from "./pages/Registrarse.jsx";
 import TestApi from "./pages/TestApi.jsx";
+import Novedades from "./pages/Novedades.jsx";
+import Notificaciones from "./pages/Notificaciones.jsx";
+
 
 export default function App() {
   return (
@@ -21,7 +24,6 @@ export default function App() {
       <Route path="/" element={<Home />} />
 
       <Route path="/registrarse" element={<Registrarse />} />
-
       <Route path="/login" element={<Login />} />
 
       {/* Rutas protegidas */}
@@ -79,8 +81,23 @@ export default function App() {
         }
       />
 
+      <Route
+        path="/novedades"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Novedades />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notificaciones"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Notificaciones />
+          </ProtectedRoute>
+        }
+      />
       <Route path="/canjes" element={<Canjes />} />
-
       <Route path="/test-api" element={<TestApi />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

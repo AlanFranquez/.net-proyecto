@@ -1,3 +1,4 @@
+// Espectaculos.Application/Notificaciones/Queries/GetNotificacionById/GetNotificacionByIdHandler.cs
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Notificaciones.Dtos;
 using MediatR;
@@ -19,6 +20,7 @@ public class GetNotificacionByIdHandler : IRequestHandler<GetNotificacionByIdQue
         if (n is null) return null;
         return new NotificacionDto(
             n.NotificacionId,
+            n.UsuarioId,              // ⬅⬅⬅ NUEVO
             n.Tipo,
             n.Titulo,
             n.Cuerpo,

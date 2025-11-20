@@ -1,0 +1,202 @@
+/* src/styles/Novedades.css */
+
+.novedades-container {
+  max-width: 900px;
+  margin: 2rem auto;
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.novedades-container h2 {
+  margin-bottom: 1.5rem;
+}
+
+.novedades-error {
+  color: #b91c1c;
+  margin-bottom: 1rem;
+}
+
+.novedades-empty {
+  color: #6b7280;
+}
+
+.novedades-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+/* Tarjeta de novedad */
+
+.novedad-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  background: #f9fafb;
+  cursor: pointer;
+  transition: transform 0.05s ease, box-shadow 0.05s ease,
+    background-color 0.05s ease;
+}
+
+.novedad-item:hover {
+  background: #f3f4f6;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.novedad-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.novedad-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.novedad-badge {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+}
+
+/* Estados */
+.estado-activa {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #16a34a;
+}
+
+.estado-programada {
+  background: #e0f2fe;
+  color: #1d4ed8;
+  border-color: #3b82f6;
+}
+
+.estado-finalizada {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #ef4444;
+}
+
+.estado-no-publicada {
+  background: #e5e7eb;
+  color: #374151;
+  border-color: #9ca3af;
+}
+
+.novedad-tipo {
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.novedad-contenido {
+  font-size: 0.9rem;
+  margin: 0.25rem 0 0.75rem;
+  color: #111827;
+}
+
+.novedad-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* -------- MODAL / POPUP -------- */
+
+.novedades-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50;
+}
+
+.novedades-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 1.5rem 1.75rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+}
+
+.novedades-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.novedades-modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.novedades-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+
+.novedades-modal-subtitle {
+  font-size: 0.9rem;
+  color: #4b5563;
+  margin-bottom: 0.75rem;
+}
+
+.novedades-modal-content {
+  font-size: 0.95rem;
+  color: #111827;
+  margin-bottom: 1rem;
+}
+
+.novedades-modal-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin-bottom: 0.25rem;
+  gap: 0.5rem;
+}
+
+.novedades-modal-id {
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #9ca3af;
+  word-break: break-all;
+}
+
+.novedades-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.25rem;
+}
+
+.novedades-modal-btn {
+  background: #111827;
+  color: #ffffff;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.novedades-list-no-vigentes .novedad-item {
+  opacity: 0.7;
+}
