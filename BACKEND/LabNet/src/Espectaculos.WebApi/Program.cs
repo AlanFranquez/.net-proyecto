@@ -103,7 +103,7 @@ string connectionString =
 
 Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
 builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
-// ---------- AWS Cognito ----------
+
 // ---------- AWS Cognito ----------
 builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
 var cognitoSection = builder.Configuration.GetSection("AWS:Cognito");
