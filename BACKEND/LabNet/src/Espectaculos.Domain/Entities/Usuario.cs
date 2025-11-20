@@ -17,6 +17,5 @@ public class Usuario
     public ICollection<Dispositivo>  Dispositivos { get; set; } = new List<Dispositivo>();
     public ICollection<BeneficioUsuario> Beneficios { get; set; } = new List<BeneficioUsuario>();
     public ICollection<Canje> Canjes { get; set; }= new List<Canje>();
-    // Notificaciones asociadas al usuario (registro histórico de notificaciones recibidas)
     public ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
 }

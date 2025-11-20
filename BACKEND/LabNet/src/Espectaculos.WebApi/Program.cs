@@ -6,6 +6,7 @@ using Amazon.Runtime;
 using System.Security.Claims;
 using Espectaculos.Application;
 using Espectaculos.Application.Abstractions;
+using Espectaculos.Application.Abstractions.Security;
 using Espectaculos.Application.Abstractions.Repositories;
 using Espectaculos.Application.Common.Behaviors;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
@@ -63,6 +64,9 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using Espectaculos.Application.Abstractions.Security;
+using Espectaculos.Infrastructure.Security;
+
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
@@ -98,7 +102,7 @@ string connectionString =
     ?? "Host=localhost;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres";
 
 Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
-
+builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 // ---------- AWS Cognito ----------
 // ---------- AWS Cognito ----------
 builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
