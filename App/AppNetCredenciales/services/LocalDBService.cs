@@ -1420,5 +1420,114 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
                 return false;
             }
         }
+
+        // ===== MÉTODOS PARA SISTEMA NFC =====
+        
+        /// <summary>
+        /// Busca una credencial por su IdCriptografico
+        /// </summary>
+        public async Task<Credencial?> GetCredencialByIdCriptograficoAsync(string idCriptografico)
+        {
+            if (string.IsNullOrWhiteSpace(idCriptografico))
+                return null;
+
+            var credenciales = await GetCredencialesAsync();
+            return credenciales.FirstOrDefault(c => c.IdCriptografico == idCriptografico);
+        }
+
+        /// <summary>
+        /// Obtiene un usuario por su IdApi
+        /// </summary>
+        public async Task<Usuario?> GetUsuarioByIdApiAsync(string idApi)
+        {
+            if (string.IsNullOrWhiteSpace(idApi))
+                return null;
+
+            var usuarios = await GetUsuariosAsync();
+            return usuarios.FirstOrDefault(u => u.idApi == idApi);
+        }
+
+        /// <summary>
+        /// Sobrecarga de GetEspacioByIdAsync que acepta int y lo convierte a string
+        /// </summary>
+        public async Task<Espacio?> GetEspacioByIdAsync(int espacioId)
+        {
+            var espacios = await GetEspaciosAsync();
+            return espacios.FirstOrDefault(e => e.EspacioId == espacioId);
+        }
+
+        /// <summary>
+        /// Obtiene las reglas de acceso de un espacio
+        /// </summary>
+        public async Task<List<EspacioReglaDeAcceso>> GetReglasDeAccesoByEspacioIdAsync(int espacioId)
+        {
+            try
+            {
+                return await _connection.Table<EspacioReglaDeAcceso>()
+                    .Where(er => er.EspacioId == espacioId)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LocalDBService] Error obteniendo reglas de espacio {espacioId}: {ex.Message}");
+                return new List<EspacioReglaDeAcceso>();
+            }
+        }
+
+        /// <summary>
+        /// Obtiene una regla de acceso por su ID
+        /// </summary>
+        public async Task<ReglaDeAcceso?> GetReglaDeAccesoByIdAsync(int reglaId)
+        {
+            try
+            {
+                return await _connection.Table<ReglaDeAcceso>()
+                    .Where(r => r.ReglaId == reglaId)
+                    .FirstOrDefaultAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LocalDBService] Error obteniendo regla {reglaId}: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Obtiene eventos de acceso por ID de espacio
+        /// </summary>
+        public async Task<List<EventoAcceso>> GetEventosAccesoByEspacioIdAsync(int espacioId)
+        {
+            try
+            {
+                return await _connection.Table<EventoAcceso>()
+                    .Where(e => e.EspacioId == espacioId)
+                    .OrderByDescending(e => e.MomentoDeAcceso)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LocalDBService] Error obteniendo eventos del espacio {espacioId}: {ex.Message}");
+                return new List<EventoAcceso>();
+            }
+        }
+
+        /// <summary>
+        /// Obtiene eventos de acceso que no han sido sincronizados con la API
+        /// </summary>
+        public async Task<List<EventoAcceso>> GetEventosAccesoNoSincronizadosAsync()
+        {
+            try
+            {
+                // Por ahora retornamos una lista vacía
+                // TODO: Implementar campo "Sincronizado" en EventoAcceso
+                return await _connection.Table<EventoAcceso>()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[LocalDBService] Error obteniendo eventos no sincronizados: {ex.Message}");
+                return new List<EventoAcceso>();
+            }
+        }
     }
 }

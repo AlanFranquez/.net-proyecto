@@ -197,7 +197,6 @@ namespace AppNetCredenciales.Services
 
                 // Crear la notificación
                 var builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                    .SetSmallIcon(Android.Resource.Drawable.SymActionEmail) // Icono de email
                     .SetContentTitle(title)
                     .SetContentText(body)
                     .SetStyle(new NotificationCompat.BigTextStyle().BigText(body))

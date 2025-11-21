@@ -17,7 +17,10 @@ namespace AppNetCredenciales.Services
     public class NFCService
     {
         private bool _isReading = false;
+        private bool _isWriting = false;
+        private string? _dataToWrite = null;
         private TaskCompletionSource<NFCReadResult>? _readTaskCompletionSource;
+        private TaskCompletionSource<NFCWriteResult>? _writeTaskCompletionSource;
 
 #if ANDROID
         private NfcAdapter? _nfcAdapter;
@@ -135,9 +138,31 @@ namespace AppNetCredenciales.Services
 
 #if ANDROID
         /// <summary>
-        /// Procesa un Intent NFC recibido
+        /// Procesa un Intent NFC recibido (para lectura o escritura)
         /// </summary>
         public void ProcessNfcIntent(Intent intent)
+        {
+            // Si estamos en modo escritura, procesar como escritura
+            if (_isWriting)
+            {
+                ProcessNfcWriteIntent(intent);
+                return;
+            }
+
+            // Si estamos en modo lectura, procesar como lectura
+            if (_isReading)
+            {
+                ProcessNfcReadIntent(intent);
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine("[NFCService] Intent NFC recibido pero no hay operación activa");
+        }
+
+        /// <summary>
+        /// Procesa un Intent NFC para lectura
+        /// </summary>
+        private void ProcessNfcReadIntent(Intent intent)
         {
             try
             {
@@ -170,7 +195,11 @@ namespace AppNetCredenciales.Services
 
                 // Obtener el ID del tag (UID)
                 var tagId = BitConverter.ToString(tag.GetId() ?? Array.Empty<byte>()).Replace("-", "");
-                System.Diagnostics.Debug.WriteLine($"[NFCService] Tag detectado - ID: {tagId}");
+                System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] ?? TAG NFC DETECTADO");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] UID del hardware: '{tagId}'");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] Longitud UID: {tagId.Length} caracteres");
+                System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
 
                 // Intentar leer mensajes NDEF si existen
                 string? data = null;
@@ -186,30 +215,52 @@ namespace AppNetCredenciales.Services
                         if (ndefMessage != null && ndefMessage.GetRecords().Length > 0)
                         {
                             var record = ndefMessage.GetRecords()[0];
-                            data = System.Text.Encoding.UTF8.GetString(record.GetPayload() ?? Array.Empty<byte>());
+                            var rawPayload = record.GetPayload() ?? Array.Empty<byte>();
+                            data = System.Text.Encoding.UTF8.GetString(rawPayload);
+                            
+                            System.Diagnostics.Debug.WriteLine($"[NFCService] ?? Datos NDEF encontrados");
+                            System.Diagnostics.Debug.WriteLine($"[NFCService] Payload raw (hex): {BitConverter.ToString(rawPayload)}");
+                            System.Diagnostics.Debug.WriteLine($"[NFCService] Datos decodificados: '{data}'");
+                            System.Diagnostics.Debug.WriteLine($"[NFCService] Longitud: {data.Length} caracteres");
+                            System.Diagnostics.Debug.WriteLine($"[NFCService] TNF: {record.Tnf}");
                             
                             // Eliminar el byte de idioma si es un registro de texto
                             if (data.Length > 3 && record.Tnf == NdefRecord.TnfWellKnown)
                             {
+                                var dataOriginal = data;
                                 data = data.Substring(3);
+                                System.Diagnostics.Debug.WriteLine($"[NFCService] Datos después de quitar prefijo: '{dataOriginal}' -> '{data}'");
                             }
-                            
-                            System.Diagnostics.Debug.WriteLine($"[NFCService] Datos NDEF leídos: {data}");
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[NFCService] ?? Tag NDEF vacío o sin registros");
                         }
                         ndef.Close();
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[NFCService] Error leyendo NDEF: {ex}");
+                        System.Diagnostics.Debug.WriteLine($"[NFCService] ? Error leyendo NDEF: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[NFCService] StackTrace: {ex.StackTrace}");
                     }
                 }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] ?? Tag no tiene soporte NDEF");
+                }
+
+                var finalData = data ?? tagId;
+                System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] ? DATO FINAL A ENVIAR: '{finalData}'");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] Fuente: {(data != null ? "NDEF" : "UID del hardware")}");
+                System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
 
                 _isReading = false;
                 _readTaskCompletionSource.TrySetResult(new NFCReadResult
                 {
                     Success = true,
                     TagId = tagId,
-                    Data = data ?? tagId // Si no hay datos NDEF, usar el ID del tag
+                    Data = finalData
                 });
             }
             catch (Exception ex)
@@ -229,9 +280,9 @@ namespace AppNetCredenciales.Services
 #endif
 
         /// <summary>
-        /// Escribe datos en un tag NFC (para funcionarios)
+        /// Escribe datos en un tag NFC en formato NDEF
         /// </summary>
-        public async Task<NFCWriteResult> WriteTagAsync(string data)
+        public async Task<NFCWriteResult> WriteTagAsync(string idCriptografico)
         {
             try
             {
@@ -241,21 +292,86 @@ namespace AppNetCredenciales.Services
                     return new NFCWriteResult
                     {
                         Success = false,
-                        ErrorMessage = "NFC no está disponible"
+                        ErrorMessage = "NFC no está disponible o no está habilitado"
                     };
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[NFCService] Escribiendo en tag NFC: {data}");
+                if (_isWriting)
+                {
+                    return new NFCWriteResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Ya hay una operación de escritura en progreso"
+                    };
+                }
+
+                System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] ?? INICIANDO ESCRITURA NFC");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] Datos a escribir: '{idCriptografico}'");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] Longitud: {idCriptografico.Length} caracteres");
+                System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
 
 #if ANDROID
-                // Implementación de escritura NFC (requiere más trabajo)
-                await Task.Delay(2000);
-                return new NFCWriteResult
+                if (_activity == null || _nfcAdapter == null)
                 {
-                    Success = true
-                };
+                    return new NFCWriteResult
+                    {
+                        Success = false,
+                        ErrorMessage = "NFC no está inicializado correctamente"
+                    };
+                }
+
+                _isWriting = true;
+                _dataToWrite = idCriptografico;
+                _writeTaskCompletionSource = new TaskCompletionSource<NFCWriteResult>();
+
+                try
+                {
+                    // Habilitar modo de escritura en primer plano
+                    var intent = new Intent(_activity, _activity.GetType());
+                    intent.AddFlags(ActivityFlags.SingleTop);
+                    
+                    var pendingIntent = PendingIntent.GetActivity(
+                        _activity, 
+                        0, 
+                        intent, 
+                        PendingIntentFlags.Mutable);
+
+                    _nfcAdapter.EnableForegroundDispatch(_activity, pendingIntent, null, null);
+                    
+                    System.Diagnostics.Debug.WriteLine("[NFCService] ? ACERQUE EL CHIP NFC PARA ESCRIBIR...");
+                    System.Diagnostics.Debug.WriteLine("[NFCService] El sistema esperará hasta 60 segundos");
+                    
+                    // Esperar hasta que se escriba el tag o timeout
+                    var timeoutTask = Task.Delay(TimeSpan.FromSeconds(60));
+                    var completedTask = await Task.WhenAny(_writeTaskCompletionSource.Task, timeoutTask);
+
+                    if (completedTask == timeoutTask)
+                    {
+                        _isWriting = false;
+                        _dataToWrite = null;
+                        StopWriting();
+                        return new NFCWriteResult
+                        {
+                            Success = false,
+                            ErrorMessage = "Tiempo de espera agotado. No se detectó ningún chip NFC."
+                        };
+                    }
+
+                    return await _writeTaskCompletionSource.Task;
+                }
+                finally
+                {
+                    _isWriting = false;
+                    _dataToWrite = null;
+                    try
+                    {
+                        _nfcAdapter.DisableForegroundDispatch(_activity);
+                    }
+                    catch { }
+                }
 #else
-                await Task.Delay(2000);
+                await Task.Delay(100);
                 return new NFCWriteResult
                 {
                     Success = false,
@@ -265,7 +381,10 @@ namespace AppNetCredenciales.Services
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[NFCService] Error writing NFC: {ex}");
+                _isWriting = false;
+                _dataToWrite = null;
+                System.Diagnostics.Debug.WriteLine($"[NFCService] ? Error en WriteTagAsync: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] StackTrace: {ex.StackTrace}");
                 return new NFCWriteResult
                 {
                     Success = false,
@@ -273,6 +392,168 @@ namespace AppNetCredenciales.Services
                 };
             }
         }
+
+#if ANDROID
+        /// <summary>
+        /// Procesa un Intent NFC para escritura
+        /// </summary>
+        public void ProcessNfcWriteIntent(Intent intent)
+        {
+            try
+            {
+                if (!_isWriting || _writeTaskCompletionSource == null || string.IsNullOrEmpty(_dataToWrite))
+                {
+                    System.Diagnostics.Debug.WriteLine("[NFCService] No hay operación de escritura activa");
+                    return;
+                }
+
+                var action = intent.Action;
+                if (action != NfcAdapter.ActionNdefDiscovered &&
+                    action != NfcAdapter.ActionTagDiscovered &&
+                    action != NfcAdapter.ActionTechDiscovered)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Acción no soportada para escritura: {action}");
+                    return;
+                }
+
+                var tag = intent.GetParcelableExtra(NfcAdapter.ExtraTag) as Android.Nfc.Tag;
+                if (tag == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[NFCService] No se pudo obtener el tag del intent");
+                    _writeTaskCompletionSource.TrySetResult(new NFCWriteResult
+                    {
+                        Success = false,
+                        ErrorMessage = "No se pudo leer el chip NFC"
+                    });
+                    return;
+                }
+
+                var tagId = BitConverter.ToString(tag.GetId() ?? Array.Empty<byte>()).Replace("-", "");
+                System.Diagnostics.Debug.WriteLine($"[NFCService] ?? Chip detectado para escritura - UID: {tagId}");
+
+                // Intentar obtener tecnología NDEF
+                var ndef = Android.Nfc.Tech.Ndef.Get(tag);
+                if (ndef == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[NFCService] ? El chip no soporta NDEF");
+                    _writeTaskCompletionSource.TrySetResult(new NFCWriteResult
+                    {
+                        Success = false,
+                        ErrorMessage = "El chip no soporta formato NDEF"
+                    });
+                    return;
+                }
+
+                try
+                {
+                    ndef.Connect();
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] ? Conectado al chip NDEF");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Tipo: {ndef.Type}");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Tamaño máximo: {ndef.MaxSize} bytes");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Escribible: {ndef.IsWritable}");
+
+                    // Verificar si es escribible
+                    if (!ndef.IsWritable)
+                    {
+                        ndef.Close();
+                        System.Diagnostics.Debug.WriteLine("[NFCService] ? El chip está protegido contra escritura");
+                        _writeTaskCompletionSource.TrySetResult(new NFCWriteResult
+                        {
+                            Success = false,
+                            ErrorMessage = "El chip está protegido contra escritura"
+                        });
+                        return;
+                    }
+
+                    // Crear mensaje NDEF con el IdCriptografico
+                    var payload = System.Text.Encoding.UTF8.GetBytes(_dataToWrite);
+                    var languageCode = System.Text.Encoding.UTF8.GetBytes("en");
+                    
+                    // Construir payload completo: [status byte] + [language length] + [language] + [text]
+                    var fullPayload = new byte[1 + languageCode.Length + payload.Length];
+                    fullPayload[0] = (byte)languageCode.Length;  // Status byte con longitud del idioma
+                    Array.Copy(languageCode, 0, fullPayload, 1, languageCode.Length);
+                    Array.Copy(payload, 0, fullPayload, 1 + languageCode.Length, payload.Length);
+
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Payload total: {fullPayload.Length} bytes");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Payload (hex): {BitConverter.ToString(fullPayload)}");
+
+                    // Crear registro NDEF de tipo texto usando CreateTextRecord
+                    var record = NdefRecord.CreateTextRecord("en", _dataToWrite);
+
+                    var message = new NdefMessage(new[] { record });
+
+                    // Verificar tamaño
+                    var messageBytesArray = message.ToByteArray();
+                    int messageSize = messageBytesArray?.Count() ?? 0;
+                    if (messageSize > ndef.MaxSize)
+                    {
+                        ndef.Close();
+                        System.Diagnostics.Debug.WriteLine($"[NFCService] ? Mensaje demasiado grande: {messageSize} > {ndef.MaxSize}");
+                        _writeTaskCompletionSource.TrySetResult(new NFCWriteResult
+                        {
+                            Success = false,
+                            ErrorMessage = $"Datos demasiado grandes para el chip ({messageSize} > {ndef.MaxSize} bytes)"
+                        });
+                        return;
+                    }
+
+                    // ? ESCRIBIR en el chip
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] ?? Escribiendo mensaje NDEF...");
+                    ndef.WriteNdefMessage(message);
+                    ndef.Close();
+
+                    System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] ? ESCRITURA EXITOSA");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] IdCriptografico: '{_dataToWrite}'");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] UID del chip: {tagId}");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] Tamaño escrito: {messageSize} bytes");
+                    System.Diagnostics.Debug.WriteLine($"???????????????????????????????????????????");
+
+                    _isWriting = false;
+                    _writeTaskCompletionSource.TrySetResult(new NFCWriteResult
+                    {
+                        Success = true,
+                        Message = $"Credencial guardada correctamente en el chip NFC (UID: {tagId})"
+                    });
+                }
+                catch (Exception ex)
+                {
+                    if (ndef.IsConnected)
+                        ndef.Close();
+
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] ? Error escribiendo NDEF: {ex.Message}");
+                    System.Diagnostics.Debug.WriteLine($"[NFCService] StackTrace: {ex.StackTrace}");;
+                    
+                    _writeTaskCompletionSource.TrySetResult(new NFCWriteResult
+                    {
+                        Success = false,
+                        ErrorMessage = $"Error al escribir: {ex.Message}"
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[NFCService] ? Error procesando intent de escritura: {ex.Message}");
+                _writeTaskCompletionSource?.TrySetResult(new NFCWriteResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Error: {ex.Message}"
+                });
+            }
+            finally
+            {
+                StopWriting();
+            }
+        }
+
+        private void StopWriting()
+        {
+            _isWriting = false;
+            _dataToWrite = null;
+            System.Diagnostics.Debug.WriteLine("[NFCService] Escritura NFC detenida");
+        }
+#endif
 
         /// <summary>
         /// Detiene la lectura NFC
@@ -318,6 +599,7 @@ namespace AppNetCredenciales.Services
     public class NFCWriteResult
     {
         public bool Success { get; set; }
+        public string? Message { get; set; }
         public string? ErrorMessage { get; set; }
     }
 }

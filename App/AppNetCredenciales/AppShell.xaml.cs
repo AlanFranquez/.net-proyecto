@@ -24,6 +24,11 @@ namespace AppNetCredenciales
             Routing.RegisterRoute("historial", typeof(AppNetCredenciales.Views.HistorialView));
             Routing.RegisterRoute("accesoPerfil", typeof(AppNetCredenciales.Views.AccesoPerfilView));
             Routing.RegisterRoute("nfcReader", typeof(AppNetCredenciales.Views.NFCReaderView));
+            
+            // Rutas NFC
+            Routing.RegisterRoute("nfc-espacios", typeof(AppNetCredenciales.Views.NFCEspacioSelectionView));
+            Routing.RegisterRoute("nfc-reader", typeof(AppNetCredenciales.Views.NFCReaderActiveView));
+            Routing.RegisterRoute("nfc-chip-management", typeof(AppNetCredenciales.Views.NFCChipManagementView));
 
             _connectivityService = App.Services.GetRequiredService<ConnectivityService>();
             _localDBService = App.Services.GetRequiredService<LocalDBService>();

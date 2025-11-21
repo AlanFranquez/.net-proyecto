@@ -17,6 +17,11 @@ namespace AppNetCredenciales.Services
 
         public bool IsConnected => Connectivity.Current.NetworkAccess == NetworkAccess.Internet;
 
+        public Task<bool> IsConnectedAsync()
+        {
+            return Task.FromResult(IsConnected);
+        }
+
         private void OnConnectivityChanged(object? sender, ConnectivityChangedEventArgs e)
         {
             var connected = e.NetworkAccess == NetworkAccess.Internet;
@@ -32,4 +37,4 @@ namespace AppNetCredenciales.Services
             Connectivity.Current.ConnectivityChanged -= OnConnectivityChanged;
         }
     }
-}   
+}

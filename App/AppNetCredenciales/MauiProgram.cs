@@ -49,7 +49,6 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<RegisterView>();
             builder.Services.AddSingleton<EspacioView>();
             builder.Services.AddSingleton<EspacioViewModel>();
-            builder.Services.AddSingleton<ConectivityService>();
             builder.Services.AddSingleton<IConnectivity>(Connectivity.Current);
             builder.Services.AddSingleton<CredencialView>();
             builder.Services.AddSingleton<CredencialViewModel>();
@@ -63,8 +62,13 @@ namespace AppNetCredenciales
             builder.Services.AddSingleton<BiometricService>();
             builder.Services.AddSingleton<NFCService>();
             
-            // Vista del lector NFC
+            // Servicios NFC
+            builder.Services.AddSingleton<IEventosService, EventosService>();
+            
+            // Vistas NFC
             builder.Services.AddSingleton<NFCReaderView>();
+            builder.Services.AddTransient<NFCEspacioSelectionView>();
+            builder.Services.AddTransient<NFCReaderActiveView>();
             
 #if DEBUG
             builder.Logging.AddDebug();

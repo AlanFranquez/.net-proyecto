@@ -30,5 +30,8 @@ namespace AppNetCredenciales.models
             set => Politica = Enum.Parse<AccesoTipo>(value);
         }
         public bool RequiereBiometriaConfirmacion { get; set; }
+        
+        public string? TipoCredencialRequerida { get; set; }
+        public string? RolRequerido { get; set; }
     }
 }

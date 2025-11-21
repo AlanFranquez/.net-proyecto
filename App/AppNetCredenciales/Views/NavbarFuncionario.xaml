@@ -64,7 +64,7 @@
                 <ImageButton x:Name="NfcButton"
                             Style="{StaticResource NavIconButton}"
                             Command="{Binding NavigateCommand}"
-                            CommandParameter="nfcReader"
+                            CommandParameter="nfc-espacios"
                             AutomationId="nfcButton"
                             ToolTipProperties.Text="Lector NFC">
                     <ImageButton.Source>

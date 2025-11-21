@@ -32,6 +32,7 @@
                             <Label Text="Estado:" FontAttributes="Bold" TextColor="#555"/>
                             <Label Text="{Binding Credencial.EstadoStr}" Grid.Column="1" TextColor="{Binding Credencial.EstadoStr, Converter={StaticResource EstadoColorConverter}}"/>
                         </Grid>
+                        
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto">
                             <Label Text="ID Criptográfico:" FontAttributes="Bold" TextColor="#555"/>
                             <Label Text="{Binding Credencial.IdCriptografico}" Grid.Column="1" TextColor="#222"/>
@@ -47,6 +48,98 @@
                             <Label Text="{Binding Credencial.FechaExpiracion, StringFormat='{0:dd/MM/yyyy}'}" Grid.Column="1" TextColor="#222"/>
                         </Grid>
 
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- NUEVO: Botón para ESCRIBIR credencial en chip NFC -->
+                <Frame CornerRadius="15"
+                       Padding="20"
+                       BackgroundColor="#FFF3E0"
+                       HasShadow="False"
+                       BorderColor="#FF9800">
+                    <VerticalStackLayout Spacing="15">
+                        
+                        <Label Text="📱 Configurar Mi Chip NFC"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="#F57C00"/>
+
+                        <Label Text="Escribe tu credencial en tu chip NFC personal (tarjeta, pulsera, etc.) para usarlo en los puntos de acceso."
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="#E65100"
+                               Margin="0,0,0,10"/>
+
+                        <Button Text="📝 Escribir en Mi Chip NFC"
+                                BackgroundColor="#FF9800"
+                                TextColor="White"
+                                CornerRadius="10"
+                                HeightRequest="50"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                Command="{Binding EscribirEnChipNFCCommand}"
+                                IsEnabled="{Binding CanWriteNFC}"/>
+
+                        <!-- Indicador de progreso -->
+                        <ActivityIndicator IsRunning="{Binding IsWritingNFC}"
+                                          IsVisible="{Binding IsWritingNFC}"
+                                          Color="#FF9800"
+                                          HeightRequest="30"/>
+
+                        <!-- Mensaje de estado -->
+                        <Label Text="{Binding NFCStatusMessage}"
+                               FontSize="14"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="#F57C00"/>
+
+                        <Label Text="⚠️ Solo necesitas hacer esto UNA VEZ por chip."
+                               FontSize="12"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="#757575"
+                               Margin="0,10,0,0"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Botón para usar NFC (existente - para lectura en tótems) -->
+                <Frame CornerRadius="15"
+                       Padding="20"
+                       BackgroundColor="#E3F2FD"
+                       HasShadow="False"
+                       BorderColor="#2196F3">
+                    <VerticalStackLayout Spacing="15">
+                        
+                        <Label Text="📡 Acceso NFC"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               HorizontalOptions="Center"
+                               TextColor="#1976D2"/>
+
+                        <Label Text="Acerca tu dispositivo al lector para validar tu acceso"
+                               FontSize="14"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="#1565C0"/>
+
+                        <Button Text="🔓 Activar NFC para Acceso"
+                                BackgroundColor="#2196F3"
+                                TextColor="White"
+                                CornerRadius="10"
+                                HeightRequest="50"
+                                FontSize="16"
+                                FontAttributes="Bold"
+                                Clicked="OnActivarNFCClicked"/>
+
+                        <Label Text="Mantén esta pantalla activa y acerca el dispositivo al lector"
+                               FontSize="12"
+                               HorizontalOptions="Center"
+                               HorizontalTextAlignment="Center"
+                               TextColor="#757575"
+                               IsVisible="{Binding IsNFCActive}"/>
                     </VerticalStackLayout>
                 </Frame>
 
