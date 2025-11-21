@@ -15,6 +15,7 @@ using Espectaculos.Application.Usuarios.Queries.ListarUsuarios;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Espectaculos.WebApi.Services;
 
 namespace Espectaculos.WebApi.Endpoints;
 
@@ -57,52 +58,62 @@ public static class UsuariosEndpoints
         }).WithName("EliminarUsuario").WithTags("Usuarios");
 
         group.MapPost("/registro", async (
-            [FromBody] CreateUsuarioDto dto,
-            HttpContext http,
-            IMediator mediator,
-            ICognitoService cognito) =>
-        {
-            Serilog.Log.Information("DTO recibido: {@Dto}", dto);
+    [FromBody] CreateUsuarioDto dto,
+    HttpContext http,
+    IMediator mediator,
+    ICognitoService cognito,
+    RabbitMqService rabbitMqService) =>
+{
+    Serilog.Log.Information("DTO recibido: {@Dto}", dto);
 
-            var cmd = new CreateUsuarioCommand
-            {
-                Nombre = dto.Nombre,
-                Apellido = dto.Apellido,
-                Documento = dto.Documento,
-                Email = dto.Email,
-                Password = dto.Password,
-                RolesIDs = dto.RolesIDs?.ToList()
-            };
+    var cmd = new CreateUsuarioCommand
+    {
+        Nombre = dto.Nombre,
+        Apellido = dto.Apellido,
+        Documento = dto.Documento,
+        Email = dto.Email,
+        Password = dto.Password,
+        RolesIDs = dto.RolesIDs?.ToList()
+    };
 
-            try
-            {
-                var id = await mediator.Send(cmd);
-                var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
+    try
+    {
+        var id = await mediator.Send(cmd);
+        var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
 
-                http.Response.Cookies.Append("espectaculos_session", idToken,
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = true,
-                        SameSite = SameSiteMode.None,
-                        Expires = DateTimeOffset.UtcNow.AddHours(8)
-                    });
+        // Publicar un mensaje en RabbitMQ
+        rabbitMqService.SendMessage($"Usuario registrado: {dto.Email}");
 
-                return Results.Ok(id);
-            }
-            catch (FluentValidation.ValidationException vf)
+        http.Response.Cookies.Append("espectaculos_session", idToken,
+            new CookieOptions
             {
-                var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
-                return Results.BadRequest(new { message = "Validation failed", errors });
-            }
-            catch (Exception ex)
-            {
-                Serilog.Log.Error(ex, "Error en registro");
-                return Results.StatusCode(500);
-            }
-        })
-        .WithName("CrearUsuario")
-        .WithTags("Usuarios");
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.None,
+                Expires = DateTimeOffset.UtcNow.AddHours(8)
+            });
+
+        return Results.Ok(id);
+    }
+    catch (FluentValidation.ValidationException vf)
+    {
+        var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
+        return Results.BadRequest(new { message = "Validation failed", errors });
+        rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
+
+    }
+    catch (Exception ex)
+    {
+        Serilog.Log.Error(ex, "Error en registro");
+        rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {ex.Message}");
+        
+        return Results.StatusCode(500);
+    }
+})
+.WithName("CrearUsuario")
+.WithTags("Usuarios");
+
+
 
         group.MapPost("/login", async (HttpContext http, LoginUsuarioCommand command, ICognitoService cognito) =>
         {
@@ -149,6 +160,8 @@ public static class UsuariosEndpoints
             .WithName("GetUsuarioActual")
             .WithTags("Usuarios")
             .WithOpenApi();
+
+       
         
         group.MapPut("/{id:guid}", async (Guid id, UpdateUsuarioCommand cmd, IMediator mediator) =>
         {
@@ -201,6 +214,20 @@ public static class UsuariosEndpoints
             })
             .WithName("CambiarPassword")
             .WithTags("Usuarios");
+        group.MapPut("/bucleInfinito", async ([FromServices] RabbitMqService rabbitMqService) =>
+{
+    while (true)
+    {
+
+        rabbitMqService.SendMessage("Mensaje enviado desde el bucle infinito.");
+    }
+
+    
+        Console.WriteLine($"Publicando mensaje: mensaje de prueba");
+})
+.WithName("BucleInfinito")
+.WithTags("Usuarios");
+        
 
 #if DEMO_ENABLE_ADMIN
         group.MapPost("", async (CreateEventoCommand command, IUnitOfWork uow, IValidator<CreateEventoCommand> validator) =>

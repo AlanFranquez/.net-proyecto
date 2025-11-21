@@ -69,6 +69,8 @@ using StackExchange.Redis;
 using Espectaculos.Application.Abstractions.Security;
 using Espectaculos.Infrastructure.Security;
 
+using RabbitMQ.Client;
+using Espectaculos.WebApi.Services;
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
@@ -86,6 +88,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ---------- Logging (Serilog) ----------
 builder.AddSerilogLogging();
+
+builder.Services.AddSingleton<RabbitMqService>();
+
+// Configurar RabbitMQ en appsettings.json
+builder.Configuration.GetSection("RabbitMQ");
+
+builder.Services.AddSingleton<RabbitMqService>();
+
 
 // ---------- Configuración base ----------
 var config = builder.Configuration;
@@ -120,6 +130,8 @@ if (string.IsNullOrWhiteSpace(cognitoSettings.Region) ||
 }
 
 var authority = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
+
+builder.Services.AddHostedService<RabbitMqWorker>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
