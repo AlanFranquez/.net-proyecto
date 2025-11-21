@@ -7,9 +7,12 @@ namespace Espectaculos.Application.Beneficios.Commands.UpdateBeneficio;
 public class UpdateBeneficioHandler : IRequestHandler<UpdateBeneficioCommand, bool>
 {
     private readonly IUnitOfWork _uow;
-    public UpdateBeneficioHandler(IUnitOfWork uow)
+    private readonly ICacheService _cache;
+    
+    public UpdateBeneficioHandler(IUnitOfWork uow, ICacheService cache)
     {
         _uow = uow;
+        _cache = cache;
     }
 
     public async Task<bool> Handle(UpdateBeneficioCommand request, CancellationToken cancellationToken)
@@ -60,8 +63,10 @@ public class UpdateBeneficioHandler : IRequestHandler<UpdateBeneficioCommand, bo
         }
 
 
-    _uow.Beneficios.Update(b);
+        _uow.Beneficios.Update(b);
         await _uow.SaveChangesAsync(cancellationToken);
+        await _cache.RemoveAsync("shows:list");
+
         return true;
     }
 }

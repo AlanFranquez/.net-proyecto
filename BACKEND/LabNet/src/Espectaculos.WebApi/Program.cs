@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Text.Json.Serialization;
 using Amazon.CognitoIdentityProvider;
@@ -64,6 +65,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
+using StackExchange.Redis;
 using Espectaculos.Application.Abstractions.Security;
 using Espectaculos.Infrastructure.Security;
 
@@ -483,6 +485,40 @@ builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
 });
 
 builder.Services.AddScoped<ICognitoService, CognitoService>();
+
+// REDIS ELASTICACHE
+var redisEndpoint = builder.Configuration["Redis:Endpoint"] 
+                    ?? Environment.GetEnvironmentVariable("REDIS__ENDPOINT")
+                    ?? config["Redis:Endpoint"];
+
+if (!string.IsNullOrWhiteSpace(redisEndpoint))
+{
+    builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+    {
+        var opts = new ConfigurationOptions
+        {
+            EndPoints = { $"{redisEndpoint}:6379" },
+            AbortOnConnectFail = false,
+            ResolveDns = true,
+            ConnectTimeout = 10000,
+            SyncTimeout = 10000,
+            ConnectRetry = 5,
+            ReconnectRetryPolicy = new ExponentialRetry(5000),
+            Ssl = false
+        };
+
+        // NO password si no configuraste AUTH
+        return ConnectionMultiplexer.Connect(opts);
+    });
+
+    builder.Services.AddSingleton<ICacheService, RedisCacheService>();
+}
+else
+{
+    // modo fallback: NullCacheService para desarrollo local sin redis
+    builder.Services.AddSingleton<ICacheService, NullCacheService>();
+}
+
 
 // ---------- Seeder, routing, métricas ----------
 builder.Services.AddScoped<DbSeeder>();

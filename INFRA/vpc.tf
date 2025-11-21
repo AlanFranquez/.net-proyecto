@@ -103,3 +103,64 @@ resource "aws_route_table_association" "private_assoc_b" {
   subnet_id      = aws_subnet.private_b.id
   route_table_id = aws_route_table.private_rt.id
 }
+
+# Elastic IP para el NAT
+resource "aws_eip" "nat_eip" {
+  tags = { Name = "nat-eip" }
+}
+
+# NAT Gateway en una subnet pública (public_a)
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public_a.id
+
+  tags = { Name = "main-nat" }
+
+  depends_on = [
+    aws_internet_gateway.igw
+  ]
+}
+
+# Añadir ruta por defecto a la tabla privada hacia el NAT
+resource "aws_route" "private_default_route" {
+  route_table_id         = aws_route_table.private_rt.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat.id
+
+  depends_on = [
+    aws_nat_gateway.nat
+  ]
+}
+
+# S3 (gateway endpoint) -> para pulls desde imágenes con backing en S3, logs, etc.
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id       = aws_vpc.main.id
+  service_name = "com.amazonaws.${var.region}.s3"
+  vpc_endpoint_type = "Gateway"
+
+  route_table_ids = [ aws_route_table.private_rt.id ]
+
+  tags = { Name = "s3-endpoint" }
+}
+
+# ECR API (interface) - para obtener auth/token
+resource "aws_vpc_endpoint" "ecr_api" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.ecr.api"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [ aws_subnet.private_a.id, aws_subnet.private_b.id ]
+  security_group_ids = [ aws_security_group.nodes_sg.id ]
+
+  tags = { Name = "ecr-api-endpoint" }
+}
+
+# ECR DKR (interface) - para pulls de imágenes
+resource "aws_vpc_endpoint" "ecr_dkr" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.region}.ecr.dkr"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [ aws_subnet.private_a.id, aws_subnet.private_b.id ]
+  security_group_ids = [ aws_security_group.nodes_sg.id ]
+
+  tags = { Name = "ecr-dkr-endpoint" }
+}

@@ -8,13 +8,27 @@ namespace Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 public class ListBeneficiosHandler : IRequestHandler<ListBeneficiosQuery, IReadOnlyList<BeneficioDTO>>
 {
     private readonly IUnitOfWork _uow;
-    public ListBeneficiosHandler(IUnitOfWork uow) => _uow = uow;
+    private readonly ICacheService _cache;
+    public ListBeneficiosHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _cache = cache;
+        _uow = uow;
+    }
+
 
     public async Task<IReadOnlyList<BeneficioDTO>> Handle(ListBeneficiosQuery request, CancellationToken cancellationToken)
     {
-        var espacios = await _uow.Beneficios.ListAsync(cancellationToken);
+        string key = "shows:list";
 
-        return espacios.Select(e => new BeneficioDTO
+        // Check cache
+        var cached = await _cache.GetAsync<List<BeneficioDTO>>(key);
+        if (cached != null)
+            return cached;
+        
+        // DB fallback
+        var beneficios = await _uow.Beneficios.ListAsync(cancellationToken);
+
+        var DTbeneficios = beneficios.Select(e => new BeneficioDTO
         {
             Id = e.BeneficioId,
             Tipo = e.Tipo,
@@ -29,5 +43,10 @@ public class ListBeneficiosHandler : IRequestHandler<ListBeneficiosQuery, IReadO
             EspaciosIDs = e.Espacios.Select(b => b.EspacioId).ToList(),
             UsuariosIDs = e.Usuarios.Select(a => a.UsuarioId).ToList()
         }).ToList();
+        
+        // Store in cache 60 seconds
+        await _cache.SetAsync(key, DTbeneficios, TimeSpan.FromSeconds(60));
+
+        return DTbeneficios;
     }
 }

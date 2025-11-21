@@ -62,7 +62,7 @@ resource "aws_eks_cluster" "main" {
   role_arn = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060-LabEksClusterRole-UAoaMXxwnHCl"
 
   vpc_config {
-    subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+    subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
   }
 
   version = "1.29"
@@ -74,7 +74,7 @@ resource "aws_eks_node_group" "default" {
   node_group_name = "eks-lab-nodes"
   node_role_arn   = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060356-LabEksNodeRole-jHAS2pPr2WQi"
 
-  subnet_ids = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 
   scaling_config {
     desired_size = 2
@@ -84,10 +84,8 @@ resource "aws_eks_node_group" "default" {
 
   instance_types = ["t3.medium"]
 
-  #remote_access {
-  # ec2_ssh_key = "mykey"
-  #  source_security_group_ids = [aws_security_group.nodes_sg.id]
-  #}
+  ami_type = "AL2_x86_64"
+  capacity_type = "ON_DEMAND"
 
   # ASIGNAR EL SG
   launch_template {
@@ -114,4 +112,3 @@ resource "aws_launch_template" "eks_nodes" {
     aws_security_group.nodes_sg.id,
   ]
 }
-

@@ -1,0 +1,305 @@
+{
+  "id": null,
+  "title": "Espectáculos - Dashboard Técnico (3.5 Observabilidad)",
+  "description": "Dashboard técnico con indicadores de latencia, errores, sincronizaciones pendientes y trazabilidad con CorrelationId",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 3,
+  "refresh": "10s",
+  "tags": ["espectaculos", "otel", "prometheus", "observabilidad", "tecnico"],
+  "panels": [
+    { 
+      "type": "row", 
+      "title": "📊 INDICADORES CLAVE (SLOs)", 
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0} 
+    },
+    {
+      "type": "stat",
+      "title": "🎯 P95 Latencia (SLO: < 300ms)",
+      "description": "Percentil 95 de latencia - El 95% de las solicitudes se completan en este tiempo o menos",
+      "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "P95"
+        }
+      ],
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 300},
+              {"color": "red", "value": 500}
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "🎯 P99 Latencia (SLO: < 500ms)",
+      "description": "Percentil 99 de latencia - El 99% de las solicitudes se completan en este tiempo o menos",
+      "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "P99"
+        }
+      ],
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 500},
+              {"color": "red", "value": 1000}
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "⚡ Tiempo Medio de Respuesta",
+      "description": "Tiempo promedio de respuesta de todas las solicitudes HTTP",
+      "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(sum(rate(http_server_request_duration_seconds_sum[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))) * 1000",
+          "legendFormat": "Promedio"
+        }
+      ],
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 200},
+              {"color": "red", "value": 400}
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "❌ Tasa de Errores (SLO: < 1%)",
+      "description": "Porcentaje de solicitudes con errores (5xx)",
+      "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m])))",
+          "legendFormat": "Tasa Error %"
+        }
+      ],
+      "options": {
+        "graphMode": "area",
+        "colorMode": "value",
+        "justifyMode": "auto",
+        "textMode": "value_and_name",
+        "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "green", "value": null},
+              {"color": "yellow", "value": 0.5},
+              {"color": "red", "value": 1}
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    { 
+      "type": "row", 
+      "title": "📈 LATENCIA DETALLADA", 
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5} 
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia: P50, P95, P99 (últimos 5 minutos)",
+      "description": "Percentiles de latencia a lo largo del tiempo",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "P50 (mediana)"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "P95 (SLO: < 300ms)"
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "P99 (SLO: < 500ms)"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "lastNotNull"]}, 
+        "tooltip": {"mode": "multi"}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {"id": "byName", "options": "P95 (SLO: < 300ms)"},
+            "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]
+          },
+          {
+            "matcher": {"id": "byName", "options": "P99 (SLO: < 500ms)"},
+            "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]
+          }
+        ]
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Latencia por Endpoint (P95)",
+      "description": "P95 de latencia desglosado por ruta HTTP",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+          "legendFormat": "{{http_route}}"
+        }
+      ],
+      "options": {
+        "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "lastNotNull"]}, 
+        "tooltip": {"mode": "multi"}
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "min": 0,
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "fillOpacity": 5
+          }
+        },
+        "overrides": []
+      }
+    },
+
+    { "type": "row", "title": "Tráfico", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 9} },
+    {
+      "type": "timeseries",
+      "title": "RPS total",
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 10},
+      "targets": [
+        { "refId": "A", "expr": "sum(rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "rps" }
+      ],
+      "fieldConfig": {"defaults": {"unit": "req/s", "min": 0}, "overrides": []}
+    },
+    {
+      "type": "timeseries",
+      "title": "RPS por código",
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 10},
+      "targets": [
+        { "refId": "A", "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "{{http_response_status_code}}" }
+      ],
+      "fieldConfig": {"defaults": {"unit": "req/s", "min": 0}, "overrides": []}
+    },
+
+    { "type": "row", "title": "Errores", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17} },
+    {
+      "type": "timeseries",
+      "title": "Error rate 5xx (%)",
+      "gridPos": {"h": 7, "w": 24, "x": 0, "y": 18},
+      "targets": [
+        { "refId": "A", "expr": "100 * sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "5xx %" }
+      ],
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 100}, "overrides": []}
+    },
+
+    { "type": "row", "title": "Concurrencia", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 25} },
+    {
+      "type": "gauge",
+      "title": "Requests concurrentes",
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 26},
+      "targets": [ { "refId": "A", "expr": "sum(http_server_active_requests)" } ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showThresholdLabels": false, "showThresholdMarkers": true},
+      "fieldConfig": {"defaults": {"unit": "none", "min": 0}, "overrides": []}
+    },
+
+    { "type": "row", "title": "Sincronizaciones", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 33} },
+    {
+      "type": "gauge",
+      "title": "Backlog de sincronizaciones pendientes",
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 34},
+      "targets": [ { "refId": "A", "expr": "app_sincronizaciones_backlog" } ],
+      "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showThresholdLabels": false, "showThresholdMarkers": true},
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "min": 0,
+          "thresholds": {"mode": "absolute", "steps": [ {"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 50} ]}
+        },
+        "overrides": []
+      }
+    }
+  ]
+}
+

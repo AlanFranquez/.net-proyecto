@@ -7,8 +7,13 @@ namespace Espectaculos.Application.Beneficios.Commands.CanjearBeneficio;
 public class CanjearBeneficioHandler : IRequestHandler<CanjearBeneficioCommand, Guid>
 {
     private readonly IUnitOfWork _uow;
+    private readonly ICacheService _cache;
 
-    public CanjearBeneficioHandler(IUnitOfWork uow) => _uow = uow;
+    public CanjearBeneficioHandler(IUnitOfWork uow, ICacheService cache)
+    {
+        _uow = uow;
+        _cache = cache;
+    }
 
     public async Task<Guid> Handle(CanjearBeneficioCommand request, CancellationToken cancellationToken)
     {
@@ -41,6 +46,7 @@ public class CanjearBeneficioHandler : IRequestHandler<CanjearBeneficioCommand, 
 
         await _uow.Canjes.AddAsync(canje, cancellationToken);
         await _uow.SaveChangesAsync(cancellationToken);
+        await _cache.RemoveAsync("shows:list");
         return canje.CanjeId;
     }
 }
