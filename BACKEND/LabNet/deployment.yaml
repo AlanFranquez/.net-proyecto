@@ -24,6 +24,10 @@ spec:
         env:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
+        - name: CORS_ORIGINS
+          value: "http://localhost:8080,http://mi-frontend-react-58b37209876tyg9.s3-website-us-east-1.amazonaws.com,http://localhost:5262"
+        - name: Cors__AllowedOrigins
+          value: "http://localhost:8080,http://mi-frontend-react-58b37209876tyg9.s3-website-us-east-1.amazonaws.com,http://localhost:5262"
         - name: ConnectionStrings__Default
           value: "Host=postgres-db.cb6u64euqqve.us-east-1.rds.amazonaws.com;Port=5432;Database=espectaculosdb;Username=postgres_user;Password=postgres_user"
         - name: DEFAULT_CONNECTION

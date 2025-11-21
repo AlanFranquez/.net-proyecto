@@ -386,23 +386,21 @@ builder.Services.AddHealthChecks();
 builder.Services.AddPostgresHealthChecks(connectionString);
 
 // ---------- CORS (dev) ----------
-var isDev = builder.Environment.IsDevelopment();
-var devOrigins = (config["Cors:AllowedOrigins"]
-                  ?? Environment.GetEnvironmentVariable("CORS_ORIGINS")
+var devOrigins = ( builder.Configuration.GetSection("Cors:AllowedOrigins")
+                  ?? Environment.GetEnvironmentVariable("CORS_ORIGINS") 
+                  ?? config["Cors:AllowedOrigins"]
                   ?? "http://localhost:5262,http://localhost:5173")
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+Console.WriteLine($"[CORS DEBUG] URLs: {devOrigins}");
 
-if (isDev)
+builder.Services.AddCors(o =>
 {
-    builder.Services.AddCors(o =>
-    {
-        o.AddPolicy("DevCors", p =>
-            p.WithOrigins(devOrigins)
-             .AllowAnyHeader()
-             .AllowAnyMethod()
-             .AllowCredentials());
-    });
-}
+    o.AddPolicy("DevCors", p =>
+        p.WithOrigins(devOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
 
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
@@ -561,8 +559,7 @@ app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = provider });
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
-if (isDev)
-    app.UseCors("DevCors");
+app.UseCors("DevCors");
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
