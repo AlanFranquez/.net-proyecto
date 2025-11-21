@@ -51,21 +51,3 @@ resource "aws_s3_bucket_website_configuration" "frontend_website" {
     key = "index.html"
   }
 }
-
-# Subir tu build (opcional)
-#resource "aws_s3_object" "frontend_files" {
-#  for_each = fileset("${path.module}/build", "**/*")
-
-#  bucket       = aws_s3_bucket.frontend.id
-#  key          = each.value 
-#  source       = "${path.module}/build/${each.value}"
-#  etag         = filemd5("${path.module}/build/${each.value}")
-#  content_type = lookup({
-#    html = "text/html",
-#    js   = "application/javascript",
-#    css  = "text/css",
-#    png  = "image/png",
-#    jpg  = "image/jpeg",
-#    svg  = "image/svg+xml"
-#  }, split(".", each.value)[length(split(".", each.value)) - 1], "binary/octet-stream")
-#}

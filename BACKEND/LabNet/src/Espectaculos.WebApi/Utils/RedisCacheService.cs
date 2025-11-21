@@ -13,13 +13,18 @@ public class RedisCacheService : ICacheService
     private readonly Counter<long> _misses;
     private readonly ISubscriber _sub;
 
-    public RedisCacheService(IConnectionMultiplexer mux, Meter meter, Counter<long> hits, Counter<long> misses)
+    public RedisCacheService(IConnectionMultiplexer mux, IMeterFactory meterFactory)
     {
         _mux = mux;
         _db = _mux.GetDatabase();
         _sub = _mux.GetSubscriber();
-        _hits = hits;
-        _misses = misses;
+
+        // Crear meter específico del servicio
+        var meter = meterFactory.Create("Espectaculos.WebApi.RedisCache");
+
+        // Crear métricas
+        _hits = meter.CreateCounter<long>("redis_cache_hits", description: "Cache hits for Redis");
+        _misses = meter.CreateCounter<long>("redis_cache_misses", description: "Cache misses for Redis");
     }
 
     public async Task<T?> GetAsync<T>(string key, CancellationToken ct = default)
@@ -27,11 +32,11 @@ public class RedisCacheService : ICacheService
         var val = await _db.StringGetAsync(key);
         if (val.HasValue)
         {
-            _hits?.Add(1);
+            _hits.Add(1);
             return JsonSerializer.Deserialize<T>(val!);
         }
 
-        _misses?.Add(1);
+        _misses.Add(1);
         return default;
     }
 
@@ -48,8 +53,9 @@ public class RedisCacheService : ICacheService
             return existing;
 
         var created = await factory(ct);
-        // si factory devuelve null y quieres cachearlo, decide política aquí; suponemos que sí cacheamos
+
         await SetAsync(key, created, ttl, ct);
+
         return created;
     }
 

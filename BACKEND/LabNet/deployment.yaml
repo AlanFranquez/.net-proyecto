@@ -11,6 +11,10 @@ spec:
     metadata:
       labels:
         app: espectaculos
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
       - name: espectaculos
@@ -21,6 +25,8 @@ spec:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
         - name: ConnectionStrings__Default
+          value: "Host=postgres-db.cb6u64euqqve.us-east-1.rds.amazonaws.com;Port=5432;Database=espectaculosdb;Username=postgres_user;Password=postgres_user"
+        - name: DEFAULT_CONNECTION
           value: "Host=postgres-db.cb6u64euqqve.us-east-1.rds.amazonaws.com;Port=5432;Database=espectaculosdb;Username=postgres_user;Password=postgres_user"
         - name: REDIS_CONNECTION_STRING
           value: "redis-cluster.qatxfp.0001.use1.cache.amazonaws.com:6379"
@@ -44,6 +50,14 @@ spec:
           value: "otlp"
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: "service.name=espectaculos,service.namespace=production"
+        - name: OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+          value: "http://otel-collector:4318/v1/metrics"
+        - name: OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+          value: "http://otel-collector:4318/v1/traces"
+        - name: OTEL_EXPORTER_OTLP_PROTOCOL
+          value: "http/protobuf"
+        - name: OTEL_EXPORTER_OTLP_METRICS_PROTOCOL
+          value: "http/protobuf"
 
 # SEQ
 ---
@@ -89,84 +103,6 @@ spec:
   ports:
     - port: 80
       targetPort: 80
-
-# GRAFANA
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: grafana
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: grafana
-  template:
-    metadata:
-      labels:
-        app: grafana
-    spec:
-      securityContext:
-        fsGroup: 472
-      containers:
-        - name: grafana
-          image: grafana/grafana:11.2.0
-          env:
-            - name: GF_SECURITY_ADMIN_PASSWORD
-              value: "admin"
-          ports:
-            - containerPort: 3000
-          volumeMounts:
-            - name: grafana-storage
-              mountPath: /var/lib/grafana
-          readinessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            failureThreshold: 6
-          livenessProbe:
-            httpGet:
-              path: /api/health
-              port: 3000
-            initialDelaySeconds: 30
-            periodSeconds: 20
-            failureThreshold: 5
-      volumes:
-        - name: grafana-storage
-          emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: grafana
-spec:
-  type: LoadBalancer
-  selector:
-    app: grafana
-  ports:
-    - port: 3000
-      targetPort: 3000
-
-# PROMETHEUS
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-config
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 15s
-
-    scrape_configs:
-      - job_name: 'otel-collector'
-        static_configs:
-          - targets: ['otel-collector:9464']
-
-    rule_files:
-      - /etc/prometheus/rules/*.yml
 
 # TEMPO
 ---
@@ -228,6 +164,9 @@ spec:
   selector:
     app: tempo
   ports:
+    - name: http
+      port: 3200
+      targetPort: 3200
     - name: otlp-grpc
       port: 4317
     - name: otlp-http
@@ -314,3 +253,527 @@ spec:
       port: 4318
     - name: metrics
       port: 9464
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: default
+data:
+  dashboards.yml: |
+    apiVersion: 1
+    providers:
+      - name: espectaculos-dashboards
+        orgId: 1
+        folder: Observability
+        type: file
+        options:
+          path: /var/lib/grafana/dashboards
+          foldersFromFilesStructure: true
+
+  datasources.yml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus:9090
+        isDefault: true
+        editable: true
+
+      - name: Tempo
+        uid: tempo
+        type: tempo
+        access: proxy
+        url: http://tempo:3200
+        editable: true
+        jsonData:
+          httpMethod: GET
+          tracesToMetrics:
+            datasourceUid: prometheus
+          serviceMap:
+            datasourceUid: prometheus
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: default
+data:
+  espectaculos-observability.json: |
+    {
+      "id": null,
+      "title": "Espectáculos - Dashboard Técnico (3.5 Observabilidad)",
+      "description": "Dashboard técnico con indicadores de latencia, errores, sincronizaciones pendientes y trazabilidad con CorrelationId",
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "version": 3,
+      "refresh": "10s",
+      "tags": ["espectaculos", "otel", "prometheus", "observabilidad", "tecnico"],
+      "panels": [
+        { 
+          "type": "row", 
+          "title": "📊 INDICADORES CLAVE (SLOs)", 
+          "collapsed": false,
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0} 
+        },
+        {
+          "type": "stat",
+          "title": "🎯 P95 Latencia (SLO: < 300ms)",
+          "description": "Percentil 95 de latencia - El 95% de las solicitudes se completan en este tiempo o menos",
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 1},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "P95"
+            }
+          ],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "justifyMode": "auto",
+            "textMode": "value_and_name",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 300},
+                  {"color": "red", "value": 500}
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "🎯 P99 Latencia (SLO: < 500ms)",
+          "description": "Percentil 99 de latencia - El 99% de las solicitudes se completan en este tiempo o menos",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 1},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+              "legendFormat": "P99"
+            }
+          ],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "justifyMode": "auto",
+            "textMode": "value_and_name",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 500},
+                  {"color": "red", "value": 1000}
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "⚡ Tiempo Medio de Respuesta",
+          "description": "Tiempo promedio de respuesta de todas las solicitudes HTTP",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 1},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(sum(rate(http_server_request_duration_seconds_sum[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))) * 1000",
+              "legendFormat": "Promedio"
+            }
+          ],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "justifyMode": "auto",
+            "textMode": "value_and_name",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 200},
+                  {"color": "red", "value": 400}
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+        {
+          "type": "stat",
+          "title": "❌ Tasa de Errores (SLO: < 1%)",
+          "description": "Porcentaje de solicitudes con errores (5xx)",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 1},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "100 * (sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m])))",
+              "legendFormat": "Tasa Error %"
+            }
+          ],
+          "options": {
+            "graphMode": "area",
+            "colorMode": "value",
+            "justifyMode": "auto",
+            "textMode": "value_and_name",
+            "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "min": 0,
+              "max": 100,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {"color": "green", "value": null},
+                  {"color": "yellow", "value": 0.5},
+                  {"color": "red", "value": 1}
+                ]
+              }
+            },
+            "overrides": []
+          }
+        },
+
+        { 
+          "type": "row", 
+          "title": "📈 LATENCIA DETALLADA", 
+          "collapsed": false,
+          "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5} 
+        },
+        {
+          "type": "timeseries",
+          "title": "Latencia: P50, P95, P99 (últimos 5 minutos)",
+          "description": "Percentiles de latencia a lo largo del tiempo",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.50, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+              "legendFormat": "P50 (mediana)"
+            },
+            {
+              "refId": "B",
+              "expr": "histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+              "legendFormat": "P95 (SLO: < 300ms)"
+            },
+            {
+              "refId": "C",
+              "expr": "histogram_quantile(0.99, sum by (le) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+              "legendFormat": "P99 (SLO: < 500ms)"
+            }
+          ],
+          "options": {
+            "legend": {"displayMode": "list", "placement": "bottom", "calcs": ["mean", "lastNotNull"]}, 
+            "tooltip": {"mode": "multi"}
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0,
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 2,
+                "fillOpacity": 10,
+                "showPoints": "never"
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {"id": "byName", "options": "P95 (SLO: < 300ms)"},
+                "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]
+              },
+              {
+                "matcher": {"id": "byName", "options": "P99 (SLO: < 500ms)"},
+                "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]
+              }
+            ]
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Latencia por Endpoint (P95)",
+          "description": "P95 de latencia desglosado por ruta HTTP",
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 14},
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by (le, http_route) (rate(http_server_request_duration_seconds_bucket[5m]))) * 1000",
+              "legendFormat": "{{http_route}}"
+            }
+          ],
+          "options": {
+            "legend": {"displayMode": "table", "placement": "right", "calcs": ["mean", "max", "lastNotNull"]}, 
+            "tooltip": {"mode": "multi"}
+          },
+          "fieldConfig": {
+            "defaults": {
+              "unit": "ms",
+              "min": 0,
+              "custom": {
+                "drawStyle": "line",
+                "lineInterpolation": "smooth",
+                "lineWidth": 1,
+                "fillOpacity": 5
+              }
+            },
+            "overrides": []
+          }
+        },
+
+        { "type": "row", "title": "Tráfico", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 9} },
+        {
+          "type": "timeseries",
+          "title": "RPS total",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 10},
+          "targets": [
+            { "refId": "A", "expr": "sum(rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "rps" }
+          ],
+          "fieldConfig": {"defaults": {"unit": "req/s", "min": 0}, "overrides": []}
+        },
+        {
+          "type": "timeseries",
+          "title": "RPS por código",
+          "gridPos": {"h": 7, "w": 12, "x": 12, "y": 10},
+          "targets": [
+            { "refId": "A", "expr": "sum by (http_response_status_code) (rate(http_server_request_duration_seconds_count[1m]))", "legendFormat": "{{http_response_status_code}}" }
+          ],
+          "fieldConfig": {"defaults": {"unit": "req/s", "min": 0}, "overrides": []}
+        },
+
+        { "type": "row", "title": "Errores", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17} },
+        {
+          "type": "timeseries",
+          "title": "Error rate 5xx (%)",
+          "gridPos": {"h": 7, "w": 24, "x": 0, "y": 18},
+          "targets": [
+            { "refId": "A", "expr": "100 * sum(rate(http_server_request_duration_seconds_count{http_response_status_code=~\"5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count[5m]))", "legendFormat": "5xx %" }
+          ],
+          "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 100}, "overrides": []}
+        },
+
+        { "type": "row", "title": "Concurrencia", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 25} },
+        {
+          "type": "gauge",
+          "title": "Requests concurrentes",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 26},
+          "targets": [ { "refId": "A", "expr": "sum(http_server_active_requests)" } ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showThresholdLabels": false, "showThresholdMarkers": true},
+          "fieldConfig": {"defaults": {"unit": "none", "min": 0}, "overrides": []}
+        },
+
+        { "type": "row", "title": "Sincronizaciones", "gridPos": {"h": 1, "w": 24, "x": 0, "y": 33} },
+        {
+          "type": "gauge",
+          "title": "Backlog de sincronizaciones pendientes",
+          "gridPos": {"h": 7, "w": 12, "x": 0, "y": 34},
+          "targets": [ { "refId": "A", "expr": "app_sincronizaciones_backlog" } ],
+          "options": {"reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showThresholdLabels": false, "showThresholdMarkers": true},
+          "fieldConfig": {
+            "defaults": {
+              "unit": "none",
+              "min": 0,
+              "thresholds": {"mode": "absolute", "steps": [ {"color": "green", "value": null}, {"color": "yellow", "value": 10}, {"color": "red", "value": 50} ]} 
+            },
+            "overrides": []
+          }
+        }
+      ]
+    }
+
+---
+# ----------------------------
+# 3) ConfigMap: Prometheus rules
+# ----------------------------
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: default
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+
+    scrape_configs:
+      # Scrapear métricas del OTEL Collector
+      - job_name: 'otel-collector'
+        static_configs:
+          - targets: ['otel-collector:9464']
+      
+      # Scrapear métricas directamente de los pods de la aplicación
+      - job_name: 'espectaculos-app'
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: true
+          - source_labels: [__meta_kubernetes_pod_ip, __meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: (.+);(.+)
+            replacement: $1:$2
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: kubernetes_namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: kubernetes_pod_name
+          - source_labels: [__meta_kubernetes_pod_label_app]
+            target_label: app
+      
+      # Scrapear métricas de los nodos de Kubernetes
+      - job_name: 'kubernetes-nodes'
+        kubernetes_sd_configs:
+          - role: node
+        relabel_configs:
+          - action: labelmap
+            regex: __meta_kubernetes_node_label_(.+)
+
+    rule_files:
+      - /etc/prometheus/rules/*.yml
+---
+# ----------------------------
+# 4) Grafana Deployment (patched) - mounts provisioning + dashboards
+# ----------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        fsGroup: 472
+      containers:
+        - name: grafana
+          image: grafana/grafana:11.2.0
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: "admin"
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - name: grafana-provisioning
+              mountPath: /etc/grafana/provisioning
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards
+      volumes:
+        - name: grafana-provisioning
+          configMap:
+            name: grafana-provisioning
+            items:
+              - key: dashboards.yml
+                path: dashboards/dashboards.yml
+              - key: datasources.yml
+                path: datasources/datasources.yml
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
+            items:
+              - key: espectaculos-observability.json
+                path: espectaculos-observability.json
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: default
+spec:
+  type: LoadBalancer
+  selector:
+    app: grafana
+  ports:
+    - port: 3000
+      targetPort: 3000
+
+---
+# ----------------------------
+# 5) Prometheus Deployment (minimal) + Service
+# ----------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.54.1
+          args:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--storage.tsdb.path=/prometheus"
+          ports:
+            - containerPort: 9090
+          volumeMounts:
+            - name: prometheus-config
+              mountPath: /etc/prometheus/prometheus.yml
+              subPath: prometheus.yml
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/rules
+      volumes:
+        - name: prometheus-config
+          configMap:
+            name: prometheus-config
+        - name: prometheus-rules
+          configMap:
+            name: prometheus-rules
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
