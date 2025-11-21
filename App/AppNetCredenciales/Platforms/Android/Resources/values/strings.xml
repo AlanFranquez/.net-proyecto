@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AppNetCredenciales</string>
+    <string name="servicedesc">Credencial de acceso mediante NFC</string>
+    <string name="aiddescription">Credencial de acceso</string>
+</resources>

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using AppNetCredenciales.ViewModel;
 using AppNetCredenciales.Views;
 using AppNetCredenciales.services;
+using AppNetCredenciales.Services;
 using AppNetCredenciales.Data;
 using SQLitePCL;
 using System;
@@ -14,13 +15,15 @@ namespace AppNetCredenciales
     {
         private readonly AuthService _auth;
         private readonly LocalDBService _db;
+        private readonly NfcService _nfcService;
 
         public static IServiceProvider Services { get; set; }
 
-        public App(LocalDBService db, AuthService auth, LoginView loginView, LoginViewModel loginViewModel)
+        public App(LocalDBService db, AuthService auth, NfcService nfcService, LoginView loginView, LoginViewModel loginViewModel)
         {
             InitializeComponent();
             this._db = db;
+            this._nfcService = nfcService;
             MainPage = new AppShell();
 
             _ = InitializeAppAsync();
@@ -48,10 +51,14 @@ namespace AppNetCredenciales
             try
             {
                 await _db.InitializeAsync();
+                
+                // Inicializar NFC Service
+                _nfcService.Initialize();
+                System.Diagnostics.Debug.WriteLine("[App] ✅ NfcService inicializado");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"DB initialization failed: {ex}");
+                Debug.WriteLine($"[App] ❌ Initialization failed: {ex}");
             }
         }
     }

@@ -2,29 +2,95 @@
 using Android.Content.PM;
 using Android.OS;
 using Android.Content;
-using Android.Nfc;
 using AppNetCredenciales.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Plugin.NFC;
 
 namespace AppNetCredenciales
 {
     [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true, LaunchMode = LaunchMode.SingleTop, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density)]
-    [IntentFilter(new[] { NfcAdapter.ActionNdefDiscovered, NfcAdapter.ActionTagDiscovered, NfcAdapter.ActionTechDiscovered }, Categories = new[] { Intent.CategoryDefault })]
     public class MainActivity : MauiAppCompatActivity
     {
         protected override void OnCreate(Bundle? savedInstanceState)
         {
             base.OnCreate(savedInstanceState);
             
+            // ═══════════════════════════════════════════════════════════
+            // CRÍTICO: Inicializar Plugin.NFC
+            // ═══════════════════════════════════════════════════════════
+            try
+            {
+                CrossNFC.Init(this);
+                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Plugin.NFC inicializado correctamente");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error inicializando Plugin.NFC: {ex.Message}");
+            }
+            
             // INICIALIZAR SERVICIOS DE NOTIFICACIONES PARA ANDROID
             InitializeNotificationServices();
+        }
+
+        protected override void OnResume()
+        {
+            base.OnResume();
             
-            // Inicializar NFCService con la Activity
-            var nfcService = App.Services?.GetService<NFCService>();
-            if (nfcService != null)
+            // Reanudar Plugin.NFC cuando la app vuelve al primer plano
+            try
             {
-                nfcService.Initialize(this);
-                System.Diagnostics.Debug.WriteLine("[MainActivity] NFCService inicializado");
+                CrossNFC.OnResume();
+                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Plugin.NFC resumido");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainActivity] ⚠️ Error resumiendo Plugin.NFC: {ex.Message}");
+            }
+        }
+
+        protected override void OnNewIntent(Intent? intent)
+        {
+            base.OnNewIntent(intent);
+            
+            // Manejar intents NFC
+            try
+            {
+                // Primero, dejar que Plugin.NFC maneje el intent (para lectura)
+                CrossNFC.OnNewIntent(intent);
+                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Intent NFC manejado por Plugin.NFC");
+
+                // Si estamos en modo escritura, manejar la escritura NDEF nativa
+                var nfcService = App.Services?.GetService<NfcService>();
+                if (nfcService != null && nfcService.IsWritingMode && intent != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[MainActivity] 📝 Detectado modo escritura NDEF - Procesando...");
+                    
+                    // Ejecutar la escritura en el tag de forma asíncrona
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var success = await nfcService.WriteNdefToTag(intent);
+                            
+                            if (success)
+                            {
+                                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Escritura NDEF completada");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine("[MainActivity] ⚠️ Escritura NDEF falló");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error en escritura NDEF: {ex.Message}");
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainActivity] ⚠️ Error manejando intent NFC: {ex.Message}");
             }
         }
 
@@ -118,26 +184,6 @@ namespace AppNetCredenciales
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[MainActivity] ERROR manejando respuesta de permisos: {ex.Message}");
-            }
-        }
-
-        protected override void OnNewIntent(Intent? intent)
-        {
-            base.OnNewIntent(intent);
-            
-            if (intent != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainActivity] OnNewIntent - Action: {intent.Action}");
-                
-                // Procesar intent NFC
-                var nfcService = App.Services?.GetService<NFCService>();
-                if (nfcService != null && 
-                    (intent.Action == NfcAdapter.ActionNdefDiscovered ||
-                     intent.Action == NfcAdapter.ActionTagDiscovered ||
-                     intent.Action == NfcAdapter.ActionTechDiscovered))
-                {
-                    nfcService.ProcessNfcIntent(intent);
-                }
             }
         }
     }
