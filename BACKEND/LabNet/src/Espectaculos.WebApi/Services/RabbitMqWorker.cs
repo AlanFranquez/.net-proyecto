@@ -29,7 +29,13 @@ public class RabbitMqWorker : BackgroundService
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 
-        // ❌ NO declarar la cola aquí
+        channel.QueueDeclare(
+            queue: "usuarios",
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null
+        );
         // La cola ya debe existir, creada por RabbitMqService
 
         var consumer = new EventingBasicConsumer(channel);

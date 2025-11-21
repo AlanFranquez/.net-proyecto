@@ -7,7 +7,7 @@ using Espectaculos.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Dashboard
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Dashboard
 {
     public class IndexModel : PageModel
     {

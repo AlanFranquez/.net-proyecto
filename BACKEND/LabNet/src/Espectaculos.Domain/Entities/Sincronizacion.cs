@@ -10,5 +10,5 @@ public class Sincronizacion
     public string? DetalleError { get; set; }
     public string? Checksum { get; set; }
     public Guid DispositivoId { get; set; }
-    public Dispositivo Dispositivo { get; set; } = default!;
+    public Dispositivo Dispositivo { get; set; } = null!;
 }

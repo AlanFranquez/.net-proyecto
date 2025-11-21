@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Roles;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Roles;
 
 public class IndexModel : PageModel
 {

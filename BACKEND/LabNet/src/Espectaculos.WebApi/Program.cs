@@ -37,13 +37,11 @@ using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 using Espectaculos.Application.Services;
 
-using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
 using Espectaculos.Infrastructure.Persistence.Seed;
 using Espectaculos.Infrastructure.RealTime;
 using Espectaculos.Infrastructure.Repositories;
 
-using Espectaculos.WebApi.Endpoints;
 using Espectaculos.WebApi.Endpoints.Novedades;
 using Espectaculos.WebApi.Health;
 using Espectaculos.WebApi.Options;
@@ -60,15 +58,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
-using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using StackExchange.Redis;
-using Espectaculos.Application.Abstractions.Security;
+using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Security;
-
+using Espectaculos.WebApi.Endpoints;
 using RabbitMQ.Client;
 using Espectaculos.WebApi.Services;
 
@@ -88,8 +85,6 @@ var builder = WebApplication.CreateBuilder(args);
 
 // ---------- Logging (Serilog) ----------
 builder.AddSerilogLogging();
-
-builder.Services.AddSingleton<RabbitMqService>();
 
 // Configurar RabbitMQ en appsettings.json
 builder.Configuration.GetSection("RabbitMQ");
@@ -386,12 +381,16 @@ builder.Services.AddHealthChecks();
 builder.Services.AddPostgresHealthChecks(connectionString);
 
 // ---------- CORS (dev) ----------
-var devOrigins = ( builder.Configuration.GetSection("Cors:AllowedOrigins")
-                  ?? Environment.GetEnvironmentVariable("CORS_ORIGINS") 
-                  ?? config["Cors:AllowedOrigins"]
-                  ?? "http://localhost:5262,http://localhost:5173")
+var originsRaw =
+    builder.Configuration["Cors:AllowedOrigins"]
+    ?? Environment.GetEnvironmentVariable("CORS_ORIGINS")
+    ?? config["Cors:AllowedOrigins"]
+    ?? "http://localhost:5262,http://localhost:5173";
+
+var devOrigins = originsRaw
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-Console.WriteLine($"[CORS DEBUG] URLs: {devOrigins}");
+
+Console.WriteLine($"[CORS DEBUG] URLs: {string.Join(" | ", devOrigins)}");
 
 builder.Services.AddCors(o =>
 {

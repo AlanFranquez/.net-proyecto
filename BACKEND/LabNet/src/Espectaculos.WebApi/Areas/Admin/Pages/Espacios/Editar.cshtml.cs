@@ -11,7 +11,7 @@ using Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 using Espectaculos.Domain.Enums;
 using ValidationException = FluentValidation.ValidationException;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Espacios;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Espacios;
 
 public class EditarModel : PageModel
 {

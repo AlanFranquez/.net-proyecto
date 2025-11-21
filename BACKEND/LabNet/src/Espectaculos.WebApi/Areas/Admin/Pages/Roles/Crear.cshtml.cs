@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Espectaculos.Application.Roles.Commands.CreateRol;
 using System.ComponentModel.DataAnnotations;
 using ValidationException = FluentValidation.ValidationException;
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Roles;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Roles;
 
 public class CrearModel : PageModel
 {

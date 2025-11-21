@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Usuarios
 {
     public class AsignarBeneficiosModel : PageModel
     {

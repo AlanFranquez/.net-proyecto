@@ -6,9 +6,9 @@ public class Canje
 {
     public Guid CanjeId { get; set; }
     public Guid BeneficioId { get; set; }
-    public Beneficio Beneficio { get; set; } = default!;
+    public Beneficio Beneficio { get; set; } = null!;
     public Guid UsuarioId { get; set; }
-    public Usuario Usuario { get; set; } = default!;
+    public Usuario Usuario { get; set; } = null!;
     public DateTime Fecha { get; set; }
     public EstadoCanje Estado { get; set; }
     public bool? VerificacionBiometrica { get; set; }

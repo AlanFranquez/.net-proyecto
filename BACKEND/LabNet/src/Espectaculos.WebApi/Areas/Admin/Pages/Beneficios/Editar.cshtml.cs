@@ -12,7 +12,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Beneficios
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Beneficios
 {
     public class EditarModel : PageModel
     {

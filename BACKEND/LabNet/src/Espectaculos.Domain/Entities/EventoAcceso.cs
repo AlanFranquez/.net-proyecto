@@ -7,9 +7,9 @@ public class EventoAcceso
     public Guid EventoId { get; set; }
     public DateTime MomentoDeAcceso { get; set; }
     public Guid? CredencialId { get; set; }
-    public Credencial? Credencial { get; set; } = default!;
+    public Credencial? Credencial { get; set; } = null!;
     public Guid EspacioId { get; set; }
-    public Espacio Espacio { get; set; } = default!;
+    public Espacio Espacio { get; set; } = null!;
     public AccesoTipo Resultado { get; set; }
     public string? Motivo { get; set; }
     public Modo Modo { get; set; }

@@ -10,7 +10,7 @@ using Espectaculos.Application.Roles.Queries.GetRolById;
 using Espectaculos.Application.Usuarios.Queries.ListarUsuarios;
 using ValidationException = FluentValidation.ValidationException;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Roles;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Roles;
 
 public class EditarModel : PageModel
 {

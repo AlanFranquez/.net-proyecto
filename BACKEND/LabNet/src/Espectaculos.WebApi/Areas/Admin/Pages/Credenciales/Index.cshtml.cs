@@ -3,7 +3,7 @@ using Espectaculos.Domain.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Credenciales;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Credenciales;
 
 public class IndexModel : PageModel
 {

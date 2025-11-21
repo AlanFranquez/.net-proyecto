@@ -37,11 +37,26 @@ spec:
         - name: AWS__Region
           value: "us-east-1"
         - name: AWS__Cognito__UserPoolId
-          value: "us-east-1_yeXrzBRpQ"
+          value: "us-east-1_ARdRnYoWQ"
         - name: AWS__Cognito__ClientId
-          value: "u8j0u22ms9kr3osmg86jef1t"
+          value: "5jhuda0lo3opkc8gtr9dtk1ibq"
         - name: AWS__Cognito__Region
           value: "us-east-1"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_secret_access_key
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_session_token
         - name: REDIS__ENDPOINT
           value: "redis-cluster.qatxfp.0001.use1.cache.amazonaws.com"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT

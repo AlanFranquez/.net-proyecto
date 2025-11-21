@@ -8,7 +8,7 @@ using Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 using Espectaculos.Application.DTOs;
 
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Beneficios
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Beneficios
 {
     public class IndexModel : PageModel
     {

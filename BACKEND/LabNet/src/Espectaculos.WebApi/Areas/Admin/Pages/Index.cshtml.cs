@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages
+namespace Espectaculos.WebApi.Areas.Admin.Pages
 {
     public class IndexModel : PageModel
     {

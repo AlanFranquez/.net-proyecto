@@ -99,7 +99,6 @@ public static class UsuariosEndpoints
     {
         var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
         return Results.BadRequest(new { message = "Validation failed", errors });
-        rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
 
     }
     catch (Exception ex)

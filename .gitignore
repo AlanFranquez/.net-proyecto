@@ -13,3 +13,4 @@ obj/
 terraform.tfstate
 terraform.tfstate.backup
 .env
+aws-creds-secrets

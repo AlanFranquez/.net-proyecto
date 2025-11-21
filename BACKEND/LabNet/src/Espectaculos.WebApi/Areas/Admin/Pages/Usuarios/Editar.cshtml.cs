@@ -1,4 +1,4 @@
-// File: Espectaculos.Backoffice/Areas/Admin/Pages/Usuarios/Editar.cshtml.cs
+// File: Espectaculos.WebApi/Areas/Admin/Pages/Usuarios/Editar.cshtml.cs
 using System.ComponentModel.DataAnnotations;
 using Espectaculos.Application.Abstractions.Repositories;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Usuarios;
 
 public class EditarModel : PageModel
 {

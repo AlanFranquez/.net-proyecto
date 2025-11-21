@@ -3,9 +3,8 @@
 public class BeneficioEspacio
 {
     public Guid BeneficioId { get; set; }
-    public 
-        Beneficio Beneficio { get; set; } = default!;
+    public Beneficio Beneficio { get; set; } = null!;
     public Guid EspacioId { get; set; }
-    public Espacio Espacio { get; set; } = default!;
+    public Espacio Espacio { get; set; } = null!;
 
 }
