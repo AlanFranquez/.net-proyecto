@@ -10,10 +10,8 @@ public class Dispositivo
     public string? HuellaDispositivo { get; set; }
     public bool BiometriaHabilitada { get; set; }
     public DispositivoTipo Estado { get; set; }
-
     public Guid UsuarioId { get; set; }
     public Usuario Usuario { get; set; } = default!;
-    
     public ICollection<Notificacion> Notificaciones { get; set; } = new List<Notificacion>();
     public ICollection<Sincronizacion> Sincronizaciones { get; set; } = new List<Sincronizacion>();
 }

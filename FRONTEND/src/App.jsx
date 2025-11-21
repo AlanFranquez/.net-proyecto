@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+// src/App.jsx
+import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "./services/AuthService.jsx";
 
 import Home from "./pages/Homepage.jsx";
 import Dispositivos from "./pages/Dispositivos.jsx";
@@ -11,104 +13,93 @@ import Credencial from "./pages/Credencial.jsx";
 import HistorialDeAccesos from "./pages/HistorialDeAccesos.jsx";
 import Autenticacion from "./pages/Autenticacion.jsx";
 import Registrarse from "./pages/Registrarse.jsx";
+import TestApi from "./pages/TestApi.jsx";
+import Novedades from "./pages/Novedades.jsx";
+import Notificaciones from "./pages/Notificaciones.jsx";
+
 
 export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  const Private = ({ children }) =>
-    isLoggedIn ? children : <Navigate to="/login" replace />;
-
-  const AnonOnly = ({ children }) =>
-    !isLoggedIn ? children : <Navigate to="/" replace />;
-
   return (
     <Routes>
-      <Route
-        path="/"
-        element={
-          <Home
-            isLoggedIn={isLoggedIn}
-            onToggle={() => setIsLoggedIn((v) => !v)}
-          />
-        }
-      />
-      <Route
-        path="/canjes"
-        element={
-          <Canjes
-            isLoggedIn={isLoggedIn}
-            onToggle={() => setIsLoggedIn((v) => !v)}
-          />
-        }
-      />
-      <Route
-  path="/registrarse"
-  element={
-    <AnonOnly>
-      <Registrarse
-        isLoggedIn={isLoggedIn}
-        onToggle={() => setIsLoggedIn((v) => !v)}
-      />
-    </AnonOnly>
-  }
-/>
-      <Route
-        path="/login"
-        element={
-          <AnonOnly>
-            <Login
-              isLoggedIn={isLoggedIn}
-              onToggle={() => setIsLoggedIn((v) => !v)}
-            />
-          </AnonOnly>
-        }
-      />
+      <Route path="/" element={<Home />} />
+
+      <Route path="/registrarse" element={<Registrarse />} />
+      <Route path="/login" element={<Login />} />
+
+      {/* Rutas protegidas */}
       <Route
         path="/perfil"
         element={
-          <Perfil
-            isLoggedIn={isLoggedIn}
-            onToggle={() => setIsLoggedIn((v) => !v)}
-          />
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Perfil />
+          </ProtectedRoute>
         }
       />
+
       <Route
         path="/dispositivos"
         element={
-          <Dispositivos
-            isLoggedIn={isLoggedIn}
-            onToggle={() => setIsLoggedIn((v) => !v)}
-          />
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Dispositivos />
+          </ProtectedRoute>
         }
       />
+
       <Route
         path="/credencial"
         element={
-          <Credencial
-            isLoggedIn={isLoggedIn}
-            onToggle={() => setIsLoggedIn((v) => !v)}
-          />
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Credencial />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/accesos"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <HistorialDeAccesos />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/autenticacion"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Autenticacion />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/beneficios"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Beneficios />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/novedades"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Novedades />
+          </ProtectedRoute>
         }
       />
       <Route
-  path="/accesos"
-  element={
-    <HistorialDeAccesos
-      isLoggedIn={isLoggedIn}
-      onToggle={() => setIsLoggedIn((v) => !v)}
-    />
-  }
-/><Route
-  path="/autenticacion"
-  element={
-    <Autenticacion
-      isLoggedIn={isLoggedIn}
-      onToggle={() => setIsLoggedIn(v => !v)}
-    />
-  }
-/>
-      <Route path="/beneficios" element={<Beneficios  isLoggedIn={isLoggedIn}
-      onToggle={() => setIsLoggedIn(v => !v)}/>} />
+        path="/notificaciones"
+        element={
+          <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+            <Notificaciones />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/canjes" element={<Canjes />} />
+      <Route path="/test-api" element={<TestApi />} />
+
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

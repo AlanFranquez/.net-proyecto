@@ -1,9 +1,12 @@
 ﻿using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Abstractions.Repositories;
+using Espectaculos.Application.Abstractions.Security;
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
 using Espectaculos.Infrastructure.Repositories;
+using Espectaculos.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
+using Espectaculos.Application.Abstractions.Security;
 using Microsoft.Extensions.DependencyInjection;
 namespace Espectaculos.Infrastructure;
 public static class DependencyInjection
@@ -32,6 +35,8 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioRolRepository, UsuarioRolRepository>();
         services.AddScoped<INovedadRepository, NovedadRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
+
         return services;
     }
 }

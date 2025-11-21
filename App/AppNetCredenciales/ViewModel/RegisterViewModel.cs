@@ -240,10 +240,10 @@ namespace AppNetCredenciales.ViewModel
             {
                 usuario.CredencialId = createdCredId;
                 await _db.SaveUsuarioAsync(usuario);
-                System.Diagnostics.Debug.WriteLine($"[Register] ✅ Credencial guardada con ID local: {createdCredId}");
+                System.Diagnostics.Debug.WriteLine($"[Register] Credencial guardada con ID local: {createdCredId}");
             }
 
-            await view.DisplayAlert("Éxito", "Usuario registrado correctamente", "OK");
+            await view.DisplayAlert("Exito", "Usuario registrado correctamente", "OK");
             await view.Navigation.PopAsync();
 
             Trabajando = false;

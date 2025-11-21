@@ -1,105 +1,343 @@
-import React, { useMemo, useState } from "react";
+// src/pages/HistorialDeAccesos.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
+import { useAuth, toApi } from "../services/AuthService.jsx";
 import "../styles/HistorialDeAccesos.css";
 
-const RAW = [
-  {
-    id: "a1",
-    fecha: "2025-10-10",
-    hora: "08:15",
-    espacio: "Biblioteca",
-    estado: "permitido",
-    detalle: {
-      costo: 0,
-      beneficio: "Sí",
-      motivo: "-",
-      punto: "Entrada B",
-      metodo: "NFC",
-    },
-  },
-  {
-    id: "a2",
-    fecha: "2025-10-09",
-    hora: "17:30",
-    espacio: "Lab. Informát.",
-    estado: "denegado",
-    detalle: {
-      costo: 200,
-      beneficio: "No",
-      motivo: "Fuera de horario",
-      punto: "Entrada A",
-      metodo: "QR",
-    },
-  },
-  {
-    id: "a3",
-    fecha: "2025-10-09",
-    hora: "12:10",
-    espacio: "Comedor",
-    estado: "permitido",
-    detalle: {
-      costo: 0,
-      beneficio: "Sí",
-      motivo: "-",
-      punto: "Puerta 1",
-      metodo: "NFC",
-    },
-  },
-  {
-    id: "a4",
-    fecha: "2025-10-08",
-    hora: "19:45",
-    espacio: "Biblioteca",
-    estado: "denegado",
-    detalle: {
-      costo: 0,
-      beneficio: "No",
-      motivo: "Saldo insuficiente",
-      punto: "Entrada C",
-      metodo: "QR",
-    },
-  },
-];
-
 export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
+  const { user, loading: authLoading } = useAuth();
+
   const [q, setQ] = useState("");
   const [fecha, setFecha] = useState("");
-  const [espacio, setEspacio] = useState("");
-  const [info, setInfo] = useState(null); // registro seleccionado
+  const [espacioFiltro, setEspacioFiltro] = useState("");
+  const [info, setInfo] = useState(null); // evento seleccionado
 
-  const items = useMemo(() => {
-    return RAW.filter((r) => {
+  const [eventos, setEventos] = useState([]);
+  const [espaciosById, setEspaciosById] = useState({}); // idEspacio -> nombre
+  const [loadingEventos, setLoadingEventos] = useState(true);
+  const [errorEventos, setErrorEventos] = useState(null);
+
+  const loggedIn = !!user;
+
+  // --------- Cargar eventos del usuario + espacios ----------
+  useEffect(() => {
+    setEventos([]);
+    setEspaciosById({});
+    setErrorEventos(null);
+    setLoadingEventos(true);
+
+    if (authLoading) return;
+
+    if (!user) {
+      setLoadingEventos(false);
+      return;
+    }
+
+    const fetchForUser = async () => {
+      try {
+        // 1) Pedimos credenciales, eventos y espacios en paralelo
+        const [credRes, evRes, espRes] = await Promise.all([
+          fetch(toApi("/credenciales"), {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+          fetch(toApi("/eventos"), {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+          fetch(toApi("/espacios"), {
+            method: "GET",
+            credentials: "include",
+            headers: { Accept: "application/json" },
+          }),
+        ]);
+
+        if (!credRes.ok) {
+          const txt = await credRes.text();
+          throw new Error(txt || `Error al cargar credenciales: ${credRes.status}`);
+        }
+        if (!evRes.ok) {
+          const txt = await evRes.text();
+          throw new Error(txt || `Error al cargar eventos: ${evRes.status}`);
+        }
+        if (!espRes.ok) {
+          const txt = await espRes.text();
+          throw new Error(txt || `Error al cargar espacios: ${espRes.status}`);
+        }
+
+        const credData = await credRes.json();
+        const evData = await evRes.json();
+        const espData = await espRes.json();
+
+        // 2) Filtrar credenciales del usuario actual
+        const uId = user.usuarioId ?? user.id;
+
+        let credencialesUsuario = [];
+        if (Array.isArray(credData)) {
+          credencialesUsuario = credData.filter((c) => {
+            const cUserId =
+              c.UsuarioId ??
+              c.usuarioId ??
+              c.userId ??
+              c.Usuario?.UsuarioId ??
+              c.usuario?.usuarioId ??
+              c.Usuario?.Id ??
+              c.usuario?.id;
+
+            const cEmail =
+              c.UsuarioEmail ??
+              c.usuarioEmail ??
+              c.Email ??
+              c.email ??
+              c.Usuario?.Email ??
+              c.usuario?.email;
+
+            const matchesId =
+              uId && cUserId && String(cUserId) === String(uId);
+
+            const matchesEmail =
+              user.email &&
+              cEmail &&
+              cEmail.toLowerCase() === user.email.toLowerCase();
+
+            return matchesId || matchesEmail;
+          });
+        }
+
+        const credIds = credencialesUsuario.map(
+          (c) =>
+            c.CredencialId ??
+            c.credencialId ??
+            c.Id ??
+            c.id ??
+            c.Codigo ??
+            c.codigo
+        );
+
+        // 3) Construimos índice de espacios: EspacioId -> Nombre
+        const espIndex = {};
+        if (Array.isArray(espData)) {
+          for (const esp of espData) {
+            const espId =
+              esp.EspacioId ??
+              esp.espacioId ??
+              esp.Id ??
+              esp.id;
+            const nombre =
+              esp.Nombre ??
+              esp.nombre ??
+              esp.NombreEspacio ??
+              esp.nombreEspacio ??
+              "Espacio";
+
+            if (espId) {
+              espIndex[String(espId).toLowerCase()] = nombre;
+            }
+          }
+        }
+        setEspaciosById(espIndex);
+
+        // 4) si el usuario no tiene credenciales, no habrá eventos
+        if (!credIds.length || !Array.isArray(evData)) {
+          setEventos([]);
+          setLoadingEventos(false);
+          return;
+        }
+
+        // 5) Filtrar eventos cuyas CredencialId estén dentro de las del usuario
+        const credIdSet = new Set(
+          credIds
+            .filter(Boolean)
+            .map((x) => String(x).toLowerCase())
+        );
+
+        const filtrados = evData.filter((e) => {
+          const eCredId =
+            e.CredencialId ??
+            e.credencialId ??
+            e.Credencial?.CredencialId ??
+            e.Credencial?.Id;
+
+          if (!eCredId) return false;
+          return credIdSet.has(String(eCredId).toLowerCase());
+        });
+
+        // 6) Ordenamos por MomentoDeAcceso descendente
+        const ordenados = filtrados
+          .slice()
+          .sort((a, b) => {
+            const da = new Date(
+              a.MomentoDeAcceso ?? a.momentoDeAcceso ?? 0
+            ).getTime();
+            const db = new Date(
+              b.MomentoDeAcceso ?? b.momentoDeAcceso ?? 0
+            ).getTime();
+            return db - da;
+          });
+
+        setEventos(ordenados);
+      } catch (err) {
+        console.error("Error cargando historial de accesos:", err);
+        setErrorEventos(err.message || "Error al cargar historial de accesos");
+        setEventos([]);
+        setEspaciosById({});
+      } finally {
+        setLoadingEventos(false);
+      }
+    };
+
+    fetchForUser();
+  }, [authLoading, user?.usuarioId, user?.email]);
+
+  // --------- Normalización para la UI ----------
+  function mapEventoToUI(e, espaciosById) {
+    const dtRaw = e.MomentoDeAcceso ?? e.momentoDeAcceso;
+    const d = dtRaw ? new Date(dtRaw) : null;
+
+    const fechaStr = d ? formatDateInput(d) : "";
+    const fechaDisplay = d ? formatDMY(d) : "Fecha desconocida";
+    const horaDisplay = d ? formatHM(d) : "--:--";
+
+    // EspacioId del evento
+    const eEspacioId =
+      e.EspacioId ??
+      e.espacioId ??
+      e.IdEspacio ??
+      e.idEspacio ??
+      e.Espacio?.EspacioId ??
+      e.Espacio?.Id;
+
+    let espacioNombre = "Acceso";
+    if (eEspacioId) {
+      const key = String(eEspacioId).toLowerCase();
+      if (espaciosById[key]) {
+        espacioNombre = espaciosById[key];
+      }
+    }
+    // fallback si viniera incluido el objeto espacio
+    if (espacioNombre === "Acceso") {
+      espacioNombre =
+        e.Espacio?.Nombre ??
+        e.Espacio?.nombre ??
+        e.espacioNombre ??
+        "Acceso";
+    }
+
+    const resultadoRaw =
+      (e.Resultado ?? e.resultado ?? "").toString().toLowerCase();
+    let estado = "otro";
+    if (resultadoRaw.includes("permit")) estado = "permitido";
+    else if (resultadoRaw.includes("deneg")) estado = "denegado";
+
+    const modo = e.Modo ?? e.modo ?? "Online";
+    const motivo = e.Motivo ?? e.motivo ?? "-";
+
+    const id =
+      e.EventoId ??
+      e.eventoId ??
+      e.Id ??
+      e.id ??
+      `${dtRaw}-${espacioNombre}-${modo}`;
+
+    return {
+      id,
+      fecha: fechaStr,
+      fechaDisplay,
+      horaDisplay,
+      espacio: espacioNombre,
+      estado,
+      modo,
+      motivo,
+      raw: e,
+    };
+  }
+
+  const eventosUI = useMemo(
+    () => eventos.map((e) => mapEventoToUI(e, espaciosById)),
+    [eventos, espaciosById]
+  );
+
+  // --------- Filtros (texto, fecha, espacio) ----------
+  const itemsFiltrados = useMemo(() => {
+    return eventosUI.filter((r) => {
       if (q.trim()) {
         const s = q.trim().toLowerCase();
         const hay =
           r.espacio.toLowerCase().includes(s) ||
           r.estado.toLowerCase().includes(s) ||
-          (r.fecha + " " + r.hora).includes(s);
+          (r.fechaDisplay + " " + r.horaDisplay).toLowerCase().includes(s) ||
+          r.modo?.toLowerCase().includes(s) ||
+          r.motivo?.toLowerCase().includes(s);
         if (!hay) return false;
       }
       if (fecha && r.fecha !== fecha) return false;
-      if (espacio && r.espacio !== espacio) return false;
+      if (espacioFiltro && r.espacio !== espacioFiltro) return false;
       return true;
     });
-  }, [q, fecha, espacio]);
+  }, [q, fecha, espacioFiltro, eventosUI]);
 
-  // espacios únicos para el filtro
   const espacios = useMemo(
-    () => Array.from(new Set(RAW.map((r) => r.espacio))),
-    []
+    () =>
+      Array.from(new Set(eventosUI.map((r) => r.espacio))).sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [eventosUI]
   );
+
+  const handleClickItem = (ui) => {
+    setInfo(ui);
+  };
+
+  // --------- Vistas globales de estado ----------
+  if (authLoading || loadingEventos) {
+    return (
+      <>
+        <Navbar isLoggedIn={loggedIn ?? isLoggedIn} onToggle={onToggle} />
+        <main className="ha-wrap">
+          <section className="ha-card">
+            <h1 className="ha-title">Historial de Accesos</h1>
+            <p className="ha-loading">Cargando historial...</p>
+          </section>
+        </main>
+      </>
+    );
+  }
+
+  if (!loggedIn) {
+    return (
+      <>
+        <Navbar isLoggedIn={false} onToggle={onToggle} />
+        <main className="ha-wrap">
+          <section className="ha-card ha-card--center">
+            <h1 className="ha-title">Historial de Accesos</h1>
+            <p className="ha-empty">
+              Debes iniciar sesión para ver el historial de accesos.
+            </p>
+          </section>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
-      <Navbar isLoggedIn={isLoggedIn} onToggle={onToggle} />
+      <Navbar isLoggedIn={true} onToggle={onToggle} />
 
       <main className="ha-wrap">
         <section className="ha-card">
           <h1 className="ha-title">Historial de Accesos</h1>
 
+          {errorEventos && (
+            <p className="ha-error">
+              Error al cargar el historial: {errorEventos}
+            </p>
+          )}
+
           <div className="ha-filters">
             <div className="f-col">
-              <div className="f-icon">🔎</div>
+              <div className="f-icon"></div>
               <label>Buscar</label>
               <input
                 type="text"
@@ -110,7 +348,7 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
             </div>
 
             <div className="f-col">
-              <div className="f-icon">📅</div>
+              <div className="f-icon"></div>
               <label>Filtro por fecha</label>
               <input
                 type="date"
@@ -120,11 +358,11 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
             </div>
 
             <div className="f-col">
-              <div className="f-icon">⤵️</div>
+              <div className="f-icon"></div>
               <label>Espacio</label>
               <select
-                value={espacio}
-                onChange={(e) => setEspacio(e.target.value)}
+                value={espacioFiltro}
+                onChange={(e) => setEspacioFiltro(e.target.value)}
               >
                 <option value="">Todos</option>
                 {espacios.map((e) => (
@@ -137,60 +375,93 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
           </div>
 
           <ul className="ha-list">
-            {items.map((r) => (
-              <li key={r.id} className="ha-item" onClick={() => setInfo(r)}>
+            {itemsFiltrados.map((r) => (
+              <li
+                key={r.id}
+                className="ha-item"
+                onClick={() => handleClickItem(r)}
+              >
                 <div className="ha-main">
                   <div className="ha-when">
-                    {formatDMY(r.fecha)} {r.hora}
+                    {r.fechaDisplay} {r.horaDisplay}
                   </div>
                   <div className="ha-space">{r.espacio}</div>
                 </div>
                 <span className={`ha-chip ${r.estado}`}>
-                  {r.estado === "permitido" ? "✔ Permitado" : "✖ Denegado"}
+                  {r.estado === "permitido"
+                    ? "✔ Permitido"
+                    : r.estado === "denegado"
+                    ? "✖ Denegado"
+                    : "• Otro"}
                 </span>
               </li>
             ))}
-            {items.length === 0 && (
+            {itemsFiltrados.length === 0 && (
               <li className="ha-empty">Sin resultados con los filtros.</li>
             )}
           </ul>
         </section>
       </main>
 
+      {/* Modal de detalle */}
       {info && (
-        <div className="ha-modal-overlay" onClick={() => setInfo(null)}>
-          <div className="ha-modal" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="ha-modal-overlay"
+          onClick={() => setInfo(null)}
+        >
+          <div
+            className="ha-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="ha-modal-head">
-              <h3>Información</h3>
-              <button className="close" onClick={() => setInfo(null)}>
+              <h3>Información del acceso</h3>
+              <button
+                className="close"
+                onClick={() => setInfo(null)}
+              >
                 ✕
               </button>
             </div>
 
             <div className="ha-grid">
-              <span className="k">Costo</span>
-              <span>${info.detalle.costo}</span>
-
-              <span className="k">Beneficio</span>
-              <span>{info.detalle.beneficio}</span>
+              <span className="k">Fecha</span>
+              <span>
+                {info.fechaDisplay} {info.horaDisplay}
+              </span>
 
               <span className="k">Estado</span>
-              <span>{info.estado === "permitido" ? "Permitido" : "Denegado"}</span>
+              <span>
+                {info.estado === "permitido"
+                  ? "Permitido"
+                  : info.estado === "denegado"
+                  ? "Denegado"
+                  : info.estado}
+              </span>
+
+              <span className="k">Modo</span>
+              <span>{info.modo}</span>
 
               <span className="k">Motivo</span>
-              <span>{info.detalle.motivo}</span>
+              <span>{info.motivo || "-"}</span>
 
               <span className="k">Espacio</span>
               <span>{info.espacio}</span>
 
-              <span className="k">Punto de control</span>
-              <span>{info.detalle.punto}</span>
+              <span className="k">ID Evento</span>
+              <span>{info.id}</span>
 
-              <span className="k">Método</span>
-              <span>{info.detalle.metodo}</span>
+              <span className="k">Firma</span>
+              <span>
+                {info.raw?.Firma ??
+                  info.raw?.firma ??
+                  "—"}
+              </span>
             </div>
 
-            <button className="ha-btn" onClick={() => setInfo(null)}>
+            <button
+              className="ha-btn"
+              onClick={() => setInfo(null)}
+            >
               Cerrar
             </button>
           </div>
@@ -200,10 +471,23 @@ export default function HistorialDeAccesos({ isLoggedIn = true, onToggle }) {
   );
 }
 
-function formatDMY(iso) {
-  const d = new Date(iso + "T00:00:00");
+// --------- Helpers de fecha/hora ----------
+function formatDateInput(d) {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatDMY(d) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd}/${mm}/${yyyy}`;
+}
+
+function formatHM(d) {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 }

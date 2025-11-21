@@ -1,9 +1,17 @@
-﻿using Espectaculos.Application.Abstractions;
-using Espectaculos.Application.services;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using Espectaculos.Application.Abstractions;
+using Espectaculos.Application.Abstractions.Security;
+using Espectaculos.Application.Services;
 using Espectaculos.Domain.Entities;
 using Espectaculos.Domain.Enums;
 using FluentValidation;
 using MediatR;
+using Microsoft.Extensions.Configuration;
+
 
 namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
 {
@@ -11,21 +19,46 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
     {
         private readonly IUnitOfWork _uow;
         private readonly IValidator<CreateUsuarioCommand> _validator;
-        private readonly ICognitoService _cognito;
+        private readonly ICognitoService _cognitoService;
+        private readonly IConfiguration _config;
+        private readonly IPasswordHasher _passwordHasher;
 
-        public CreateUsuarioHandler(IUnitOfWork uow, IValidator<CreateUsuarioCommand> validator, ICognitoService cognito)
+        public CreateUsuarioHandler(
+            IUnitOfWork uow,
+            IValidator<CreateUsuarioCommand> validator,
+            ICognitoService cognitoService,
+            IConfiguration config,
+            IPasswordHasher passwordHasher)
         {
             _uow = uow;
             _validator = validator;
-            _cognito = cognito;
+            _cognitoService = cognitoService;
+            _config = config;
+            _passwordHasher = passwordHasher;
         }
 
         public async Task<Guid> Handle(CreateUsuarioCommand command, CancellationToken ct)
         {
             await _validator.ValidateAndThrowAsync(command, ct);
-            
-            var cognitoSub = await _cognito.RegisterUserAsync(command.Email, command.Password, ct);
 
+            // 1) Register user in Cognito (still uses the raw password)
+            var cognitoSub = await _cognitoService.RegisterUserAsync(command.Email, command.Password, ct);
+
+            // 2) Decide estado (special-case Backoffice admin)
+            var backofficeAdminEmail = _config["Backoffice:AdminEmail"];
+            var estado = UsuarioEstado.Activo;
+
+            if (!string.IsNullOrWhiteSpace(backofficeAdminEmail) &&
+                string.Equals(command.Email, backofficeAdminEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                estado = UsuarioEstado.Admin;
+            }
+
+            // 3) Hash password for local persistence
+            var trimmedPassword = command.Password?.Trim() ?? string.Empty;
+            var passwordHash = _passwordHasher.Hash(trimmedPassword);
+
+            // 4) Create domain user
             var usuario = new Usuario
             {
                 UsuarioId = Guid.NewGuid(),
@@ -33,8 +66,8 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Apellido = command.Apellido,
                 Email = command.Email,
                 Documento = command.Documento,
-                PasswordHash = command.Password,
-                Estado = UsuarioEstado.Activo,
+                PasswordHash = passwordHash,  // <- hashed, not plain text
+                Estado = estado,
                 Credencial = null,
                 CredencialId = null,
                 UsuarioRoles = new List<UsuarioRol>(),
@@ -42,13 +75,14 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Beneficios = new List<BeneficioUsuario>(),
                 Canjes = new List<Canje>()
             };
-            
-            if (command.RolesIDs is not null)
+
+            // 5) Roles
+            if (command.RolesIDs is not null && command.RolesIDs.Any())
             {
                 var rolesExistentes = await _uow.Roles.ListByIdsAsync(command.RolesIDs, ct);
                 if (rolesExistentes.Count() != command.RolesIDs.Distinct().Count())
                     throw new KeyNotFoundException("Algun rol enviado no existe.");
-                
+
                 usuario.UsuarioRoles = command.RolesIDs
                     .Distinct()
                     .Select(rid => new UsuarioRol

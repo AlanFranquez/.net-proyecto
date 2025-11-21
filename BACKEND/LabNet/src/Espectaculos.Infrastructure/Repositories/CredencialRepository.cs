@@ -16,21 +16,29 @@ namespace Espectaculos.Infrastructure.Repositories
         public CredencialRepository(EspectaculosDbContext db) : base(db) { }
 
         public async Task<IReadOnlyList<Credencial>> ListVigentesAsync(DateTime onDateUtc, CancellationToken ct = default)
-            => await _set.AsNoTracking()
-                         .Where(c => (!c.FechaExpiracion.HasValue || c.FechaExpiracion >= onDateUtc)
-                                  &&  c.FechaEmision <= onDateUtc)
-                         .ToListAsync(ct);
+            => await _set
+                .Include(c => c.Usuario) 
+                .AsNoTracking()
+                .Where(c => (!c.FechaExpiracion.HasValue || c.FechaExpiracion >= onDateUtc)
+                         &&  c.FechaEmision <= onDateUtc)
+                .ToListAsync(ct);
         
-        public virtual async Task<IReadOnlyList<Credencial>> ListAsync(CancellationToken ct = default)
-            => await _set.AsNoTracking().Include(r => r.EventosAcceso).ToListAsync(ct);
+        public override async Task<IReadOnlyList<Credencial>> ListAsync(CancellationToken ct = default)
+            => await _set
+                .Include(c => c.Usuario)                 // <-- ADDED
+                .Include(c => c.EventosAcceso)
+                .AsNoTracking()
+                .ToListAsync(ct);
+
         public async Task AddAsync(Credencial credencial, CancellationToken ct = default)
             => await _db.Set<Credencial>().AddAsync(credencial, ct);
 
-    
         public async Task<Credencial?> GetByIdAsync(Guid id, CancellationToken ct = default)
-            => await _db.Set<Credencial>().FirstOrDefaultAsync(e => e.CredencialId == id, ct);
+            => await _db.Set<Credencial>()
+                .Include(c => c.Usuario)                 // <-- ADDED
+                .Include(c => c.EventosAcceso)
+                .FirstOrDefaultAsync(e => e.CredencialId == id, ct);
 
-        
         public async Task UpdateAsync(Credencial credencial, CancellationToken ct = default)
         {
             _db.Set<Credencial>().Update(credencial);
@@ -47,8 +55,11 @@ namespace Espectaculos.Infrastructure.Repositories
         public async Task<IReadOnlyList<Credencial>> ListByIdsAsync(IEnumerable<Guid> ids, CancellationToken ct = default)
         {
             var idArray = ids.Distinct().ToArray();
-            return await _db.Set<Credencial>().Where(r => idArray.Contains(r.CredencialId)).ToListAsync(ct);
+            return await _db.Set<Credencial>()
+                .Include(c => c.Usuario) 
+                .Where(r => idArray.Contains(r.CredencialId))
+                .AsNoTracking()
+                .ToListAsync(ct);
         }
-       
     }
 }

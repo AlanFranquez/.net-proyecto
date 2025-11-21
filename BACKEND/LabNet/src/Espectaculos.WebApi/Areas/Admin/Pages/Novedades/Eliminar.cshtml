@@ -1,0 +1,16 @@
+﻿@page "{id:guid}"
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Novedades.EliminarModel
+@{
+    ViewData["Title"] = "Eliminar novedad";
+}
+<h1 class="h4 mb-3">Eliminar novedad</h1>
+
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> ¿Confirmás eliminar <strong>@Model.Titulo</strong>?
+</div>
+
+<form method="post" class="d-flex gap-2">
+    @Html.AntiForgeryToken()
+    <button class="btn btn-danger"><i class="bi bi-trash"></i> Eliminar</button>
+    <a asp-area="Admin" asp-page="/Novedades/Index" class="btn btn-outline-secondary">Cancelar</a>
+</form>

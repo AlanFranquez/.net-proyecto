@@ -3,8 +3,13 @@ using System.Reflection;
 using System.Text.Json.Serialization;
 using Amazon.CognitoIdentityProvider;
 using DotNetEnv;
+using Amazon.Runtime;
+using System.Security.Claims;
+using Espectaculos.Application;
 using Espectaculos.Application.Abstractions;
+using Espectaculos.Application.Abstractions.Security;
 using Espectaculos.Application.Abstractions.Repositories;
+using Espectaculos.Application.Common.Behaviors;
 using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Application.Credenciales.Commands.DeleteCredencial;
 using Espectaculos.Application.Credenciales.Commands.UpdateCredencial;
@@ -30,19 +35,22 @@ using Espectaculos.Application.Sincronizaciones.Commands.UpdateSincronizacion;
 using Espectaculos.Application.Usuarios.Commands.CreateUsuario;
 using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
-using Espectaculos.Application.services;          // ICognitoService, CognitoService
-using Espectaculos.Application.Services;         // IAccesosRealtimeNotifier
+using Espectaculos.Application.Services;
+
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
 using Espectaculos.Infrastructure.Persistence.Seed;
-using Espectaculos.Infrastructure.RealTime;      // AccesosSignalRNotifier, AccesosHub
+using Espectaculos.Infrastructure.RealTime;
 using Espectaculos.Infrastructure.Repositories;
+
 using Espectaculos.WebApi.Endpoints;
+using Espectaculos.WebApi.Endpoints.Novedades;
 using Espectaculos.WebApi.Health;
 using Espectaculos.WebApi.Options;
 using Espectaculos.WebApi.Security;
 using Espectaculos.WebApi.SerilogConfig;
 using Espectaculos.WebApi.Utils;
+using Microsoft.AspNetCore.Authorization; 
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -58,6 +66,9 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using StackExchange.Redis;
+using Espectaculos.Application.Abstractions.Security;
+using Espectaculos.Infrastructure.Security;
+
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
@@ -93,14 +104,13 @@ string connectionString =
     ?? "Host=localhost;Port=5432;Database=espectaculosdb;Username=postgres;Password=postgres";
 
 Console.WriteLine($"[DB DEBUG] Path: {connectionString}");
+builder.Services.AddScoped<IPasswordHasher, Pbkdf2PasswordHasher>();
 
 // ---------- AWS Cognito ----------
 builder.Services.Configure<AwsCognitoSettings>(builder.Configuration.GetSection("AWS:Cognito"));
 var cognitoSection = builder.Configuration.GetSection("AWS:Cognito");
-var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>();
-
-if (cognitoSettings == null)
-    throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
+var cognitoSettings = cognitoSection.Get<AwsCognitoSettings>()
+    ?? throw new InvalidOperationException("Falta la sección AWS:Cognito en la configuración.");
 
 if (string.IsNullOrWhiteSpace(cognitoSettings.Region) ||
     string.IsNullOrWhiteSpace(cognitoSettings.UserPoolId) ||
@@ -129,6 +139,7 @@ builder.Services
         {
             OnMessageReceived = ctx =>
             {
+                // If no Authorization header, get token from cookie
                 if (string.IsNullOrEmpty(ctx.Request.Headers["Authorization"]))
                 {
                     if (ctx.Request.Cookies.TryGetValue("espectaculos_session", out var tokenFromCookie))
@@ -136,13 +147,78 @@ builder.Services
                         ctx.Token = tokenFromCookie;
                     }
                 }
+                return Task.CompletedTask;
+            },
 
+            // 401 - not authenticated
+            OnChallenge = ctx =>
+            {
+                ctx.HandleResponse();
+                var path = ctx.HttpContext.Request.Path;
+
+                if (!path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.Redirect("/Admin/Account/Login");
+                    return Task.CompletedTask;
+                }
+
+                ctx.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return Task.CompletedTask;
+            },
+
+            // 403 - authenticated but fails policy
+            OnForbidden = ctx =>
+            {
+                var path = ctx.HttpContext.Request.Path;
+
+                if (!path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase) &&
+                    !path.StartsWithSegments("/health", StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.Redirect("/Admin/Account/Login");
+                    return Task.CompletedTask;
+                }
+
+                ctx.Response.StatusCode = StatusCodes.Status403Forbidden;
                 return Task.CompletedTask;
             }
         };
     });
 
-builder.Services.AddAuthorization();
+
+// ---------- Authorization: ONLY configured admin can access Backoffice ----------
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("BackofficeAdminOnly", policy =>
+    {
+        policy.RequireAuthenticatedUser();
+        policy.RequireAssertion(ctx =>
+        {
+            var adminEmail = config["Backoffice:AdminEmail"];
+
+            if (string.IsNullOrWhiteSpace(adminEmail))
+                return false;
+
+            var email =
+                ctx.User.FindFirst("email")?.Value ??
+                ctx.User.FindFirst(ClaimTypes.Email)?.Value;
+
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            return string.Equals(
+                email.Trim(),
+                adminEmail.Trim(),
+                StringComparison.OrdinalIgnoreCase
+            );
+        });
+    });
+});
+
+
+
 
 // Log de diagnóstico en Development
 if (builder.Environment.IsDevelopment())
@@ -153,6 +229,21 @@ if (builder.Environment.IsDevelopment())
 
 // ---------- Servicios básicos ----------
 builder.Services.AddEndpointsApiExplorer();
+
+// ---------- BACKOFFICE: Razor Pages + ruta por defecto ----------
+builder.Services.AddRazorPages()
+    .AddRazorPagesOptions(o =>
+    {
+        // Default route: / → Admin/Dashboard/Index
+        o.Conventions.AddAreaPageRoute("Admin", "/Dashboard/Index", "");
+
+        // Protect entire Admin area with BackofficeAdminOnly
+        o.Conventions.AuthorizeAreaFolder("Admin", "/", "BackofficeAdminOnly");
+
+        // Allow anonymous access to login + logout pages
+        o.Conventions.AllowAnonymousToAreaPage("Admin", "/Account/Login");
+        o.Conventions.AllowAnonymousToAreaPage("Admin", "/Account/Logout");
+    });
 
 // ---------- OpenTelemetry ----------
 var serviceName = "Espectaculos.WebApi";
@@ -304,7 +395,7 @@ if (isDev)
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
 
-// ---------- FluentValidation (validators explícitos) ----------
+// ---------- FluentValidation ----------
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();
 builder.Services.AddScoped<IValidator<UpdateEspacioCommand>, UpdateEspacioValidator>();
 builder.Services.AddScoped<IValidator<DeleteEspacioCommand>, DeleteEspacioValidator>();
@@ -330,14 +421,15 @@ builder.Services.AddScoped<IValidator<CreateDispositivoCommand>, CreateDispositi
 builder.Services.AddScoped<IValidator<UpdateDispositivoCommand>, UpdateDispositivoValidator>();
 builder.Services.AddScoped<IValidator<DeleteDispositivoCommand>, DeleteDispositivoValidator>();
 
-
 builder.Services.AddValidatorsFromAssembly(Assembly.Load("Espectaculos.Application"));
 
-// ---------- MediatR ----------
+// ---------- MediatR + pipeline de validación ----------
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssembly(Assembly.Load("Espectaculos.Application"));
+    cfg.RegisterServicesFromAssembly(ApplicationAssembly.Value);
 });
+
+builder.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 
 // ---------- Repositorios + UnitOfWork ----------
 builder.Services.AddScoped<IEspacioRepository, EspacioRepository>();
@@ -356,7 +448,7 @@ builder.Services.AddScoped<IDispositivoRepository, DispositivoRepository>();
 builder.Services.AddScoped<INovedadRepository, NovedadRepository>();
 
 // Notificador realtime de accesos (SignalR)
-builder.Services.AddSingleton<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
+builder.Services.AddScoped<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
 
 builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.Notifications.LoggingNotificationSender>();
 
@@ -365,10 +457,30 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 // ---------- Amazon Cognito client + servicio ----------
 builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
 {
+    var cfg = sp.GetRequiredService<IConfiguration>();
     var opts = sp.GetRequiredService<IOptions<AwsCognitoSettings>>().Value;
-    var region = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
-    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region);
+    var logger = sp.GetRequiredService<ILogger<Program>>();
 
+    var regionName = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
+    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(regionName);
+
+    var accessKey = cfg["AWS:AccessKeyId"] ?? Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+    var secretKey = cfg["AWS:SecretAccessKey"] ?? Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+
+    logger.LogInformation("AWS DEBUG: Region={Region}, AccessKeyPresent={HasAccessKey}",
+        regionName,
+        !string.IsNullOrEmpty(accessKey));
+
+    if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
+    {
+        var creds = new BasicAWSCredentials(accessKey, secretKey);
+        return new AmazonCognitoIdentityProviderClient(creds, new AmazonCognitoIdentityProviderConfig
+        {
+            RegionEndpoint = regionEndpoint
+        });
+    }
+
+    logger.LogWarning("Using fallback AWS credential chain (no explicit access/secret key found).");
     return new AmazonCognitoIdentityProviderClient(regionEndpoint);
 });
 
@@ -415,6 +527,15 @@ builder.Services.AddHostedService<SincronizacionesMetrics>();
 
 var app = builder.Build();
 
+// ---------- Middleware típico web (incluyendo Backoffice) ----------
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+
 // ---------- Archivos estáticos ----------
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".dat"] = "application/octet-stream";
@@ -456,8 +577,12 @@ api.MapRolesEndpoints();
 api.MapUsuariosEndpoints();
 api.MapSincronizacionEndpoints();
 api.MapDispositivosEndpoints();
+api.MapNovedades();
 
-// ---------- SignalR hubs ----------
+// ---------- Razor Pages (Backoffice UI) ----------
+app.MapRazorPages();
+
+// ---------- SignalR hubs compartidos ----------
 app.MapHub<AccesosHub>("/hubs/accesos");
 
 // ---------- Health ----------

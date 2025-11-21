@@ -1,0 +1,145 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios.IndexModel
+@{
+    ViewData["Title"] = "Usuarios";
+}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h1 class="h3 mb-0">Usuarios</h1>
+    <small class="text-muted">Listado, búsqueda y navegación</small>
+  </div>
+  <a asp-area="Admin" asp-page="/Usuarios/Crear" class="btn btn-primary">
+    <i class="bi bi-person-plus"></i> Nuevo
+  </a>
+</div>
+
+@if (TempData["Ok"] is string ok) {
+  <div class="alert alert-success alert-dismissible fade show"><i class="bi bi-check-circle"></i> @ok
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+}
+@if (TempData["Error"] is string err) {
+  <div class="alert alert-danger alert-dismissible fade show"><i class="bi bi-exclamation-triangle"></i> @err
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+}
+
+<form method="post" asp-page-handler="Buscar" class="card mb-3 shadow-sm border-0">
+  @Html.AntiForgeryToken()
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-lg-6">
+        <label class="form-label">Buscar</label>
+        <div class="input-group">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input class="form-control" name="Q" value="@Model.Q" placeholder="Nombre, email o documento..." />
+        </div>
+      </div>
+      <div class="col-lg-2">
+        <label class="form-label">Por página</label>
+        <select class="form-select" name="PageSize">
+          <option value="10" selected="@(Model.PageSize==10)">10</option>
+          <option value="20" selected="@(Model.PageSize==20)">20</option>
+          <option value="50" selected="@(Model.PageSize==50)">50</option>
+        </select>
+      </div>
+      <div class="col-lg-4 d-flex gap-2">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i> Buscar</button>
+        <a class="btn btn-outline-secondary" href="@Url.Page(null, new { q = (string?)null, page = 1, pageSize = Model.PageSize })">
+          <i class="bi bi-x-circle"></i> Limpiar
+        </a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div class="card shadow-sm border-0">
+  <div class="card-header bg-white d-flex justify-content-between">
+    <strong><i class="bi bi-people"></i> Usuarios</strong>
+    <span class="text-muted small">Página @Model.Paged.Page de @Model.Paged.TotalPages · Total @Model.Paged.TotalCount</span>
+  </div>
+  <div class="card-body p-0">
+    @if (Model.Paged.TotalCount == 0)
+    {
+      <div class="p-4"><div class="alert alert-info mb-0">No hay resultados.</div></div>
+    }
+    else
+    {
+      <div class="table-responsive">
+        <table class="table table-hover table-striped mb-0 align-middle">
+          <thead class="table-light">
+          <tr>
+            <th>Documento</th>
+            <th>Nombre</th>
+            <th>Email</th>
+            <th>Estado</th>
+            <th class="text-end" style="width:260px;">Acciones</th>
+          </tr>
+          </thead>
+          <tbody>
+          @foreach (var u in Model.Paged.Items)
+          {
+            <tr>
+              <td class="text-nowrap">@u.Documento</td>
+              <td class="text-nowrap">@u.Nombre @u.Apellido</td>
+              <td class="text-nowrap">@u.Email</td>
+              <td>
+                @if (u.Estado == Espectaculos.Domain.Enums.UsuarioEstado.Activo)
+                { <span class="badge bg-success-subtle text-success border border-success-subtle">Activo</span> }
+                else
+                { <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">@u.Estado</span> }
+              </td>
+              <td class="text-end">
+                <a asp-area="Admin" asp-page="/Usuarios/Editar" asp-route-id="@u.UsuarioId"
+                   class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-pencil"></i> Editar
+                </a>
+
+                <a asp-area="Admin" asp-page="/Usuarios/AsignarBeneficios" asp-route-id="@u.UsuarioId"
+                   class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-gift"></i> Beneficios
+                </a>
+
+                <a asp-area="Admin" asp-page="/Usuarios/Eliminar" asp-route-id="@u.UsuarioId"
+                   class="btn btn-sm btn-outline-danger">
+                  <i class="bi bi-trash"></i> Eliminar
+                </a>
+              </td>
+            </tr>
+          }
+          </tbody>
+
+        </table>
+      </div>
+    }
+  </div>
+
+  @if (Model.Paged.TotalPages > 1)
+  {
+    <div class="card-footer bg-white">
+      <nav aria-label="Paginación">
+        <ul class="pagination mb-0">
+          @{
+              int current = Model.Paged.Page;
+              int totalPages = Model.Paged.TotalPages;
+              var pageUrl = (int p) => Url.Page(null, new { q = Model.Q, page = p, pageSize = Model.PageSize });
+          }
+          <li class="page-item @(current<=1?"disabled":"")">
+            <a class="page-link" href="@(current<=1?"#":pageUrl(current-1))">«</a>
+          </li>
+          @for (int p = 1; p <= totalPages; p++)
+          {
+            <li class="page-item @(p==current?"active":"")">
+              <a class="page-link" href="@pageUrl(p)">@p</a>
+            </li>
+          }
+          <li class="page-item @(current>=totalPages?"disabled":"")">
+            <a class="page-link" href="@(current>=totalPages?"#":pageUrl(current+1))">»</a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  }
+</div>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

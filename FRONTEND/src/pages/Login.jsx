@@ -1,51 +1,59 @@
+// src/pages/Login.jsx
 import React, { useState } from "react";
 import { useAuth } from "../services/AuthService.jsx";
 import Navbar from "../components/Navbar";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 
 export default function Login({ isLoggedIn, onToggle }) {
   const [form, setForm] = useState({
     email: "",
-    password: ""
+    password: "",
   });
-  const { login, error } = useAuth()
-  const navigate = useNavigate()
-  
+
+  const [localError, setLocalError] = useState(null);
+
+  const { login, error: authError } = useAuth();
+  const navigate = useNavigate();
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+    setLocalError(null);
   };
-    const handleSubmit = async (e) => {
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // setLoading(true);
-    //setError("");
-    // setSuccess("");
 
     const obj = {
-      "Email": form.email,
-      "Password": form.password
-    }
+      email: form.email,
+      password: form.password,
+      // si prefieres las propiedades en mayúscula:
+      // Email: form.email,
+      // Password: form.password,
+    };
 
-    console.log("Registrando usuario:", obj);
+    console.log("Iniciando sesión:", obj);
 
     try {
-      const ok = await login("http://localhost:8080/api/usuarios/login", obj)
-      if(!ok){
-        throw new Error(ok || "Error en el login");
+      const ok = await login(obj);
+      if (!ok) {
+        setLocalError("Error en el login");
+        return;
       }
-      // setSuccess("Usuario registrado con éxito ✅");
-      setForm({ 
+
+      setForm({
         email: "",
-        password: ""
+        password: "",
       });
+
       navigate("/");
     } catch (err) {
       console.log(err);
-      //setError(err.message);
-    } finally {
-      // setLoading(false);
+      setLocalError(err.message || "Error en el login");
     }
   };
+
+  const combinedError = localError || authError;
 
   return (
     <>
@@ -55,10 +63,11 @@ export default function Login({ isLoggedIn, onToggle }) {
         <section className="login-card">
           <h1 className="login-title">Login</h1>
 
-          <form
-            onSubmit={handleSubmit}
-            className="login-form"
-          >
+          {combinedError && (
+            <p className="login-error">{combinedError}</p>
+          )}
+
+          <form onSubmit={handleSubmit} className="login-form">
             <label className="field">
               <span className="label">Email</span>
               <input
@@ -68,6 +77,8 @@ export default function Login({ isLoggedIn, onToggle }) {
                 type="email"
                 className="input"
                 placeholder="you@example.com"
+                autoComplete="email"
+                required
               />
             </label>
 
@@ -80,14 +91,18 @@ export default function Login({ isLoggedIn, onToggle }) {
                 name="password"
                 className="input"
                 placeholder="••••••••"
+                autoComplete="current-password"
+                required
               />
             </label>
 
-            <button type="submit" className="login-btn">Ingresar</button>
+            <button type="submit" className="login-btn">
+              Ingresar
+            </button>
           </form>
 
           <p className="signup">
-            ¿No tienes cuenta? <a href="/registrarse">Crea una.</a>
+            ¿No tienes cuenta? <Link to="/registrarse">Crea una.</Link>
           </p>
         </section>
       </main>

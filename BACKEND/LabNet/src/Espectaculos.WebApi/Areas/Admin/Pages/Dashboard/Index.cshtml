@@ -1,0 +1,39 @@
+﻿@page
+@model Espectaculos.Backoffice.Areas.Admin.Pages.Dashboard.IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<div class="hdr">
+    <h1>Dashboard</h1>
+</div>
+
+<div class="grid kpi">
+    <div class="card">
+        <h3>Usuarios activos</h3>
+        <p><strong>@Model.Data.UsuariosActivos</strong></p>
+    </div>
+    <div class="card">
+        <h3>Reservas hoy</h3>
+        <p><strong>@Model.Data.ReservasHoy</strong></p>
+    </div>
+    <div class="card">
+        <h3>Beneficios usados</h3>
+        <p><strong>@Model.Data.BeneficiosUsados</strong></p>
+    </div>
+    <div class="card">
+        <h3>Eventos del mes</h3>
+        <p><strong>@Model.Data.EventosDelMes</strong></p>
+    </div>
+</div>
+
+<br />
+
+<div class="card">
+    <h3>Actividad reciente</h3>
+    <p class="text-muted mb-2">
+        Última actualización: @Model.Data.GeneratedAtLocal.ToString("dd/MM/yyyy HH:mm")
+    </p>
+    <div id="chart-placeholder" style="height:300px; border:1px dashed #cbd5e1; display:flex; align-items:center; justify-content:center;">
+        <em>@Model.Data.EventosDelMes eventos registrados este mes.</em>
+    </div>
+</div>
