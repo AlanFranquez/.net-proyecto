@@ -57,8 +57,13 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <AndroidResource Remove="Platforms\Android\Resources\xml\nfc_tech_filter.xml" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<!-- Android HCE Service Configuration -->
 		<AndroidResource Include="Platforms\Android\Resources\xml\apduservice.xml" />
+		<!-- Android NFC Tech Filter Configuration for Mifare Classic, NfcA, and NDEF -->
 	</ItemGroup>
 
 	<ItemGroup>

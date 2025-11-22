@@ -55,37 +55,100 @@ namespace AppNetCredenciales
             // Manejar intents NFC
             try
             {
-                // Primero, dejar que Plugin.NFC maneje el intent (para lectura)
-                CrossNFC.OnNewIntent(intent);
-                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Intent NFC manejado por Plugin.NFC");
+                if (intent == null) return;
 
-                // Si estamos en modo escritura, manejar la escritura NDEF nativa
-                var nfcService = App.Services?.GetService<NfcService>();
-                if (nfcService != null && nfcService.IsWritingMode && intent != null)
+                var action = intent.Action;
+                System.Diagnostics.Debug.WriteLine($"[MainActivity] ✅ OnNewIntent - Action: {action}");
+
+                // Verificar si es un intent NFC
+                if (Android.Nfc.NfcAdapter.ActionNdefDiscovered.Equals(action) ||
+                    Android.Nfc.NfcAdapter.ActionTechDiscovered.Equals(action) ||
+                    Android.Nfc.NfcAdapter.ActionTagDiscovered.Equals(action))
                 {
-                    System.Diagnostics.Debug.WriteLine("[MainActivity] 📝 Detectado modo escritura NDEF - Procesando...");
-                    
-                    // Ejecutar la escritura en el tag de forma asíncrona
-                    _ = Task.Run(async () =>
+                    var nfcService = App.Services?.GetService<NfcService>();
+                    if (nfcService == null)
                     {
-                        try
+                        System.Diagnostics.Debug.WriteLine("[MainActivity] ⚠️ NfcService no disponible");
+                        return;
+                    }
+
+                    System.Diagnostics.Debug.WriteLine("[MainActivity] 📡 Tag NFC detectado - Procesando...");
+
+                    // Si estamos en modo escritura NDEF, manejar escritura
+                    if (nfcService.IsWritingMode)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[MainActivity] 📝 Modo escritura NDEF - Procesando...");
+                        
+                        _ = Task.Run(async () =>
                         {
-                            var success = await nfcService.WriteNdefToTag(intent);
-                            
-                            if (success)
+                            try
                             {
-                                System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Escritura NDEF completada");
+#if ANDROID
+                                var success = await nfcService.WriteNdefToTag(intent);
+                                
+                                if (success)
+                                {
+                                    System.Diagnostics.Debug.WriteLine("[MainActivity] ✅ Escritura NDEF completada");
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine("[MainActivity] ⚠️ Escritura NDEF falló");
+                                }
+#endif
                             }
-                            else
+                            catch (Exception ex)
                             {
-                                System.Diagnostics.Debug.WriteLine("[MainActivity] ⚠️ Escritura NDEF falló");
+                                System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error en escritura NDEF: {ex.Message}");
                             }
-                        }
-                        catch (Exception ex)
+                        });
+                    }
+                    // Si estamos en modo lectura, usar lectura nativa con prioridad Mifare
+                    else if (nfcService.IsListening)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[MainActivity] 📖 Modo lectura - Intentando lectura nativa...");
+                        
+                        _ = Task.Run(async () =>
                         {
-                            System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error en escritura NDEF: {ex.Message}");
-                        }
-                    });
+                            try
+                            {
+#if ANDROID
+                                // Intentar lectura nativa (Mifare > NfcA > NDEF)
+                                var data = await nfcService.ReadNativeTagAsync(intent);
+                                
+                                if (!string.IsNullOrEmpty(data))
+                                {
+                                    System.Diagnostics.Debug.WriteLine($"[MainActivity] ✅ Lectura nativa completada: {data}");
+                                }
+                                else
+                                {
+                                    System.Diagnostics.Debug.WriteLine("[MainActivity] ⚠️ Lectura nativa no retornó datos, usando Plugin.NFC");
+                                    // Dejar que Plugin.NFC maneje el intent como fallback
+                                    CrossNFC.OnNewIntent(intent);
+                                }
+#else
+                                // En otras plataformas, usar Plugin.NFC
+                                CrossNFC.OnNewIntent(intent);
+#endif
+                            }
+                            catch (Exception ex)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[MainActivity] ❌ Error en lectura: {ex.Message}");
+                                // Fallback a Plugin.NFC
+                                CrossNFC.OnNewIntent(intent);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        // Si no estamos en ningún modo específico, usar Plugin.NFC
+                        System.Diagnostics.Debug.WriteLine("[MainActivity] 📱 Usando Plugin.NFC (modo por defecto)");
+                        CrossNFC.OnNewIntent(intent);
+                    }
+                }
+                else
+                {
+                    // No es un intent NFC, pero dejamos que Plugin.NFC lo revise
+                    CrossNFC.OnNewIntent(intent);
                 }
             }
             catch (Exception ex)

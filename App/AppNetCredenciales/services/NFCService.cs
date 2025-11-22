@@ -4,8 +4,9 @@ using System.Text;
 namespace AppNetCredenciales.Services
 {
     /// <summary>
-    /// Servicio NFC usando Plugin.NFC (NDEF) + API nativa de Android para escritura
-    /// Soporta lectura y escritura de tags NFC
+    /// Servicio NFC usando Plugin.NFC (NDEF) + API nativa de Android para Mifare Classic
+    /// Prioridad: MifareClassic > NfcA > NDEF
+    /// Soporta lectura de tags ISO 14443-3A (Mifare Classic 1k)
     /// </summary>
     public class NfcService
     {
@@ -26,6 +27,9 @@ namespace AppNetCredenciales.Services
         public bool IsPublishing => _isPublishing;
         public bool IsWritingMode => _isWritingMode;
 
+        // Mifare Classic default key (factory default)
+        private static readonly byte[] DEFAULT_KEY = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
         public NfcService()
         {
             _logger = new DebugLogger();
@@ -38,12 +42,12 @@ namespace AppNetCredenciales.Services
         {
             try
             {
-                _logger.Log("???????????????????????????????????");
-                _logger.Log("?? Inicializando NfcService");
+                _logger.Log("???????????????????????????????????????");
+                _logger.Log("? Inicializando NfcService");
                 _logger.Log($"? NFC Soportado: {CrossNFC.IsSupported}");
                 _logger.Log($"? NFC Disponible: {IsAvailable}");
                 _logger.Log($"? NFC Habilitado: {IsEnabled}");
-                _logger.Log("???????????????????????????????????");
+                _logger.Log("???????????????????????????????????????");
 
                 if (!CrossNFC.IsSupported)
                 {
@@ -65,6 +69,370 @@ namespace AppNetCredenciales.Services
                 _logger.Log($"StackTrace: {ex.StackTrace}");
             }
         }
+
+#if ANDROID
+        /// <summary>
+        /// Lee un tag NFC usando tecnologías nativas de Android
+        /// Prioridad: MifareClassic > NfcA > NDEF
+        /// </summary>
+        public async Task<string?> ReadNativeTagAsync(Android.Content.Intent intent)
+        {
+            try
+            {
+                _logger.Log("???????????????????????????????????????");
+                _logger.Log("? LECTURA NFC NATIVA - MIFARE CLASSIC");
+                _logger.Log("???????????????????????????????????????");
+
+                var tag = intent.GetParcelableExtra(Android.Nfc.NfcAdapter.ExtraTag) as Android.Nfc.Tag;
+                if (tag == null)
+                {
+                    _logger.Log("? No se pudo obtener el tag del intent");
+                    return null;
+                }
+
+                // Obtener tecnologías disponibles
+                var techList = tag.GetTechList();
+                _logger.Log($"? Tecnologías disponibles: {string.Join(", ", techList.Select(t => t.Split('.').Last()))}");
+
+                // PRIORIDAD 1: Intentar leer como Mifare Classic
+                if (techList.Contains("android.nfc.tech.MifareClassic"))
+                {
+                    _logger.Log("? ? Detectado: MifareClassic");
+                    var data = await ReadMifareClassicTag(tag);
+                    if (!string.IsNullOrEmpty(data))
+                    {
+                        _logger.Log($"? ? Datos leídos de MifareClassic: {data}");
+                        TagRead?.Invoke(this, data);
+                        return data;
+                    }
+                }
+
+                // PRIORIDAD 2: Intentar leer como NfcA
+                if (techList.Contains("android.nfc.tech.NfcA"))
+                {
+                    _logger.Log("? ? Detectado: NfcA");
+                    var data = await ReadNfcATag(tag);
+                    if (!string.IsNullOrEmpty(data))
+                    {
+                        _logger.Log($"? ? Datos leídos de NfcA: {data}");
+                        TagRead?.Invoke(this, data);
+                        return data;
+                    }
+                }
+
+                // PRIORIDAD 3: Intentar leer como NDEF (fallback)
+                if (techList.Contains("android.nfc.tech.Ndef"))
+                {
+                    _logger.Log("? ? Detectado: NDEF (fallback)");
+                    var data = await ReadNdefTag(tag);
+                    if (!string.IsNullOrEmpty(data))
+                    {
+                        _logger.Log($"? ? Datos leídos de NDEF: {data}");
+                        TagRead?.Invoke(this, data);
+                        return data;
+                    }
+                }
+
+                // Si no se pudo leer con ninguna tecnología, usar UID
+                _logger.Log("? ? No se pudo leer con tecnologías específicas, usando UID");
+                var uid = BitConverter.ToString(tag.GetId()).Replace("-", "");
+                _logger.Log($"? UID: {uid}");
+                TagRead?.Invoke(this, uid);
+                return uid;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"? Error leyendo tag nativo: {ex.Message}");
+                Error?.Invoke(this, ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Lee datos de un tag Mifare Classic
+        /// </summary>
+        private async Task<string?> ReadMifareClassicTag(Android.Nfc.Tag tag)
+        {
+            Android.Nfc.Tech.MifareClassic? mifare = null;
+            try
+            {
+                mifare = Android.Nfc.Tech.MifareClassic.Get(tag);
+                if (mifare == null)
+                {
+                    _logger.Log("  ? No se pudo obtener MifareClassic");
+                    return null;
+                }
+
+                await Task.Run(() => mifare.Connect());
+                _logger.Log($"  ? Tipo: {mifare.Type}");
+                _logger.Log($"  ? Tamaño: {mifare.Size} bytes");
+                _logger.Log($"  ? Sectores: {mifare.SectorCount}");
+                _logger.Log($"  ? Bloques: {mifare.BlockCount}");
+
+                // Intentar leer el sector 1, bloque 4 (después del sector de manufactura)
+                // Sector 0 es solo lectura (manufacturer block)
+                int targetSector = 1;
+                int targetBlock = mifare.SectorToBlock(targetSector);
+
+                _logger.Log($"  ? Intentando autenticar sector {targetSector} (bloque {targetBlock})...");
+
+                // Intentar con clave A (default key)
+                bool authenticated = await Task.Run(() => 
+                    mifare.AuthenticateSectorWithKeyA(targetSector, DEFAULT_KEY));
+
+                if (!authenticated)
+                {
+                    _logger.Log("  ? ? Autenticación con Key A falló, intentando Key B...");
+                    authenticated = await Task.Run(() => 
+                        mifare.AuthenticateSectorWithKeyB(targetSector, DEFAULT_KEY));
+                }
+
+                if (!authenticated)
+                {
+                    _logger.Log("  ? ? No se pudo autenticar - usando UID como identificador");
+                    var uid = BitConverter.ToString(tag.GetId()).Replace("-", "");
+                    return uid;
+                }
+
+                _logger.Log("  ? ? Autenticación exitosa");
+
+                // Leer bloques del sector (cada sector tiene 4 bloques en Mifare Classic 1k)
+                var data = new StringBuilder();
+                int blocksInSector = mifare.GetBlockCountInSector(targetSector);
+                
+                for (int i = 0; i < blocksInSector; i++)
+                {
+                    int blockIndex = targetBlock + i;
+                    
+                    // Saltar el último bloque (sector trailer con claves)
+                    if (i == blocksInSector - 1)
+                        continue;
+
+                    try
+                    {
+                        byte[] blockData = await Task.Run(() => mifare.ReadBlock(blockIndex));
+                        _logger.Log($"  ? Bloque {blockIndex}: {BitConverter.ToString(blockData)}");
+
+                        // Convertir a string, eliminando bytes nulos
+                        string blockText = Encoding.UTF8.GetString(blockData).TrimEnd('\0');
+                        if (!string.IsNullOrWhiteSpace(blockText))
+                        {
+                            data.Append(blockText);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Log($"  ? ? Error leyendo bloque {blockIndex}: {ex.Message}");
+                    }
+                }
+
+                var result = data.ToString().Trim();
+                if (!string.IsNullOrEmpty(result))
+                {
+                    _logger.Log($"  ? ? Datos extraídos: {result}");
+                    return result;
+                }
+
+                // Si no hay datos legibles, usar UID
+                _logger.Log("  ? ? No hay datos legibles, usando UID");
+                var uidFallback = BitConverter.ToString(tag.GetId()).Replace("-", "");
+                return uidFallback;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"  ? Error leyendo Mifare Classic: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                try
+                {
+                    mifare?.Close();
+                    _logger.Log("  ? Conexión cerrada");
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// Lee datos de un tag NfcA
+        /// </summary>
+        private async Task<string?> ReadNfcATag(Android.Nfc.Tag tag)
+        {
+            Android.Nfc.Tech.NfcA? nfca = null;
+            try
+            {
+                nfca = Android.Nfc.Tech.NfcA.Get(tag);
+                if (nfca == null)
+                {
+                    _logger.Log("  ? No se pudo obtener NfcA");
+                    return null;
+                }
+
+                await Task.Run(() => nfca.Connect());
+                
+                _logger.Log($"  ? ATQA: {BitConverter.ToString(nfca.GetAtqa())}");
+                _logger.Log($"  ? SAK: {nfca.Sak}");
+                _logger.Log($"  ? Max Transceive Length: {nfca.MaxTransceiveLength}");
+
+                // Obtener UID
+                var uid = BitConverter.ToString(tag.GetId()).Replace("-", "");
+                _logger.Log($"  ? UID: {uid}");
+
+                // Para NfcA, normalmente usamos el UID como identificador
+                // También podríamos intentar comandos personalizados si es necesario
+                
+                return uid;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"  ? Error leyendo NfcA: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                try
+                {
+                    nfca?.Close();
+                    _logger.Log("  ? Conexión cerrada");
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// Lee datos de un tag NDEF (fallback)
+        /// </summary>
+        private async Task<string?> ReadNdefTag(Android.Nfc.Tag tag)
+        {
+            Android.Nfc.Tech.Ndef? ndef = null;
+            try
+            {
+                ndef = Android.Nfc.Tech.Ndef.Get(tag);
+                if (ndef == null)
+                {
+                    _logger.Log("  ? No se pudo obtener NDEF");
+                    return null;
+                }
+
+                await Task.Run(() => ndef.Connect());
+
+                var ndefMessage = ndef.CachedNdefMessage;
+                if (ndefMessage == null)
+                {
+                    _logger.Log("  ? ? No hay mensaje NDEF cacheado");
+                    return null;
+                }
+
+                var records = ndefMessage.GetRecords();
+                _logger.Log($"  ? Registros NDEF: {records.Length}");
+
+                foreach (var record in records)
+                {
+                    var payload = record.GetPayload();
+                    if (payload != null && payload.Length > 0)
+                    {
+                        try
+                        {
+                            // Decodificar NDEF Text Record
+                            // Formato: [Status Byte][Language Code][Text]
+                            int languageCodeLength = payload[0] & 0x3F;
+                            string text = Encoding.UTF8.GetString(payload, languageCodeLength + 1, 
+                                payload.Length - languageCodeLength - 1);
+                            
+                            _logger.Log($"  ? Texto NDEF: {text}");
+                            
+                            if (!string.IsNullOrWhiteSpace(text))
+                            {
+                                return text.Trim();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Log($"  ? ? Error decodificando NDEF: {ex.Message}");
+                        }
+                    }
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"  ? Error leyendo NDEF: {ex.Message}");
+                return null;
+            }
+            finally
+            {
+                try
+                {
+                    ndef?.Close();
+                    _logger.Log("  ? Conexión cerrada");
+                }
+                catch { }
+            }
+        }
+
+        /// <summary>
+        /// Escribe datos en un tag Mifare Classic
+        /// </summary>
+        public async Task<bool> WriteMifareClassicTag(Android.Content.Intent intent, string data)
+        {
+            Android.Nfc.Tech.MifareClassic? mifare = null;
+            try
+            {
+                var tag = intent.GetParcelableExtra(Android.Nfc.NfcAdapter.ExtraTag) as Android.Nfc.Tag;
+                if (tag == null) return false;
+
+                mifare = Android.Nfc.Tech.MifareClassic.Get(tag);
+                if (mifare == null)
+                {
+                    _logger.Log("? No es un tag Mifare Classic");
+                    return false;
+                }
+
+                await Task.Run(() => mifare.Connect());
+                
+                int targetSector = 1;
+                bool authenticated = await Task.Run(() => 
+                    mifare.AuthenticateSectorWithKeyA(targetSector, DEFAULT_KEY));
+
+                if (!authenticated)
+                {
+                    _logger.Log("? No se pudo autenticar para escritura");
+                    return false;
+                }
+
+                // Preparar datos (16 bytes por bloque)
+                byte[] dataBytes = Encoding.UTF8.GetBytes(data);
+                int targetBlock = mifare.SectorToBlock(targetSector);
+
+                // Escribir en el primer bloque de datos del sector
+                byte[] blockData = new byte[16];
+                Array.Copy(dataBytes, 0, blockData, 0, Math.Min(dataBytes.Length, 16));
+
+                await Task.Run(() => mifare.WriteBlock(targetBlock, blockData));
+                
+                _logger.Log($"? Datos escritos en bloque {targetBlock}");
+                TagWritten?.Invoke(this, data);
+                
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"? Error escribiendo Mifare Classic: {ex.Message}");
+                Error?.Invoke(this, ex.Message);
+                return false;
+            }
+            finally
+            {
+                try
+                {
+                    mifare?.Close();
+                }
+                catch { }
+            }
+        }
+#endif
 
         /// <summary>
         /// Escribe el IdCriptografico en un tag NFC (para USUARIO)
@@ -474,6 +842,7 @@ namespace AppNetCredenciales.Services
 
         /// <summary>
         /// Inicia el modo lector (para FUNCIONARIO)
+        /// Configurado para detectar Mifare Classic, NfcA y NDEF
         /// </summary>
         public void StartListening()
         {
@@ -492,10 +861,15 @@ namespace AppNetCredenciales.Services
                     StopPublishing();
                 }
 
-                _logger.Log("???????????????????????????????????????????");
-                _logger.Log("?? INICIANDO MODO LECTOR NFC");
-                _logger.Log("???????????????????????????????????????????");
+                _logger.Log("???????????????????????????????????????");
+                _logger.Log("? INICIANDO MODO LECTOR NFC");
+                _logger.Log("? Tecnologías: MifareClassic, NfcA, NDEF");
+                _logger.Log("???????????????????????????????????????");
 
+#if ANDROID
+                // Activar lectura nativa con prioridad en Mifare
+                EnableNativeReaderMode();
+#endif
                 CrossNFC.Current.StartListening();
                 _isListening = true;
 
@@ -507,6 +881,108 @@ namespace AppNetCredenciales.Services
                 Error?.Invoke(this, ex.Message);
             }
         }
+
+#if ANDROID
+        /// <summary>
+        /// Activa el modo lector nativo para detectar todas las tecnologías
+        /// </summary>
+        private void EnableNativeReaderMode()
+        {
+            try
+            {
+                var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+                if (activity == null)
+                {
+                    _logger.Log("? Activity no disponible para ReaderMode");
+                    return;
+                }
+
+                var adapter = Android.Nfc.NfcAdapter.GetDefaultAdapter(activity);
+                if (adapter == null || !adapter.IsEnabled)
+                {
+                    _logger.Log("? NFC Adapter no disponible");
+                    return;
+                }
+
+                // Configurar ReaderMode para detectar múltiples tecnologías
+                var flags = Android.Nfc.NfcReaderFlags.NfcA | 
+                           Android.Nfc.NfcReaderFlags.NfcB | 
+                           Android.Nfc.NfcReaderFlags.NfcF | 
+                           Android.Nfc.NfcReaderFlags.NfcV;
+
+                var callback = new NfcReaderCallback(this);
+                
+                adapter.EnableReaderMode(activity, callback, flags, null);
+                
+                _logger.Log("? ReaderMode nativo activado");
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"? Error activando ReaderMode: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Callback para ReaderMode nativo
+        /// </summary>
+        private class NfcReaderCallback : Java.Lang.Object, Android.Nfc.NfcAdapter.IReaderCallback
+        {
+            private readonly NfcService _service;
+
+            public NfcReaderCallback(NfcService service)
+            {
+                _service = service;
+            }
+
+            public void OnTagDiscovered(Android.Nfc.Tag? tag)
+            {
+                if (tag == null) return;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // Crear intent simulado para usar el método de lectura existente
+                        var intent = new Android.Content.Intent();
+                        intent.PutExtra(Android.Nfc.NfcAdapter.ExtraTag, tag);
+
+                        var data = await _service.ReadNativeTagAsync(intent);
+                        
+                        if (!string.IsNullOrEmpty(data))
+                        {
+                            _service._logger.Log($"? Tag leído exitosamente: {data}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _service._logger.Log($"? Error en ReaderCallback: {ex.Message}");
+                    }
+                });
+            }
+        }
+
+        /// <summary>
+        /// Desactiva el modo lector nativo
+        /// </summary>
+        private void DisableNativeReaderMode()
+        {
+            try
+            {
+                var activity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+                if (activity == null) return;
+
+                var adapter = Android.Nfc.NfcAdapter.GetDefaultAdapter(activity);
+                if (adapter == null) return;
+
+                adapter.DisableReaderMode(activity);
+                _logger.Log("? ReaderMode nativo desactivado");
+            }
+            catch (Exception ex)
+            {
+                _logger.Log($"? Error desactivando ReaderMode: {ex.Message}");
+            }
+        }
+#endif
 
         /// <summary>
         /// Detiene el modo lector
