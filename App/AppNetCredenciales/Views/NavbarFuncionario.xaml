@@ -60,12 +60,12 @@
                         VerticalOptions="Center"
                         Spacing="8">
                 
-                <!-- Botón para lector NFC -->
-                <ImageButton x:Name="NfcButton"
+                <!-- Botón para lector NFC/HCE -->
+                <ImageButton x:Name="ReaderButton"
                             Style="{StaticResource NavIconButton}"
                             Command="{Binding NavigateCommand}"
-                            CommandParameter="nfcReader"
-                            AutomationId="nfcButton"
+                            CommandParameter="readerSpaceSelection"
+                            AutomationId="readerButton"
                             ToolTipProperties.Text="Lector NFC">
                     <ImageButton.Source>
                         <FontImageSource 

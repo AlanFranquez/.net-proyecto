@@ -46,10 +46,9 @@ namespace AppNetCredenciales.Views
         {
             base.OnAppearing();
 
-            // Resetear autenticaci�n biom�trica cada vez que aparece la vista
             _biometricAuthenticated = false;
 
-            // Solicitar autenticaci�n biom�trica PRIMERO usando DisplayAlert
+           
             bool userWantsToAuthenticate = await DisplayAlert(
                 "Autenticaci�n Requerida",
                 "Debes verificar tu identidad con huella digital antes de escanear credenciales.\n\n�Deseas continuar?",
@@ -65,22 +64,21 @@ namespace AppNetCredenciales.Views
                 return;
             }
 
-            // Realizar autenticaci�n biom�trica real
             var biometricResult = await _biometricService.AuthenticateAsync(
                 "Verificar tu identidad para escanear credenciales");
 
-            if (!biometricResult.Success)
-            {
-                await DisplayAlert("Autenticaci�n Fallida", 
-                    biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.", 
-                    "OK");
-                await Shell.Current.GoToAsync("..");
-                return;
-            }
+            //if (!biometricResult.Success)
+            //{
+            //    await DisplayAlert("Autenticaci�n Fallida", 
+            //        biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.", 
+            //        "OK");
+            //    await Shell.Current.GoToAsync("..");
+            //    return;
+            //}
 
             _biometricAuthenticated = true;
 
-            // Ahora s�, solicitar permisos de c�mara
+     
             var status = await Permissions.CheckStatusAsync<Permissions.Camera>();
             if (status != PermissionStatus.Granted)
                 status = await Permissions.RequestAsync<Permissions.Camera>();
@@ -91,7 +89,7 @@ namespace AppNetCredenciales.Views
             }
             else
             {
-                await DisplayAlert("Permission required", "Camera permission is required to scan QR codes.", "OK");
+                await DisplayAlert("Permission required", "Son requeridos permisos de camara para escanear el QR", "OK");
             }
         }
 
@@ -138,7 +136,6 @@ namespace AppNetCredenciales.Views
                 }
             }
 
-            // final fallback: inform the user
             MainThread.BeginInvokeOnMainThread(async () =>
             {
                 await DisplayAlert("Camera error", "Unable to start the camera. Try reopening the page or using a physical device.", "OK");
@@ -147,7 +144,7 @@ namespace AppNetCredenciales.Views
 
         protected async void BarcodesDetected(object? sender, ZXing.Net.Maui.BarcodeDetectionEventArgs e)
         {
-            // Verificar que el usuario est� autenticado biom�tricamente
+            
             if (!_biometricAuthenticated)
             {
                 System.Diagnostics.Debug.WriteLine("[Scan] Intento de escaneo sin autenticaci�n biom�trica");
@@ -233,25 +230,7 @@ namespace AppNetCredenciales.Views
                     }
                 }
 
-                // Debug información encontrada
-                System.Diagnostics.Debug.WriteLine($"[Scan] === RESULTS ===");
-                if (cred != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Scan] ✅ Credencial found: ID={cred.CredencialId}, idApi='{cred.idApi}', IdCriptografico='{cred.IdCriptografico}'");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Scan] ❌ No credencial found for cryptoId: '{cryptoId}'");
-                }
-
-                if (espacio != null)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Scan] ✅ Espacio found: ID={espacio.EspacioId}, idApi='{espacio.idApi}', Nombre='{espacio.Nombre}'");
-                }
-                else
-                {
-                    System.Diagnostics.Debug.WriteLine($"[Scan] ❌ No espacio found for eventoId: '{eventoId}'");
-                }
+                
 
                 // Validaciones
                 if (cred == null && espacio == null)
@@ -263,8 +242,6 @@ namespace AppNetCredenciales.Views
 
                 if (cred == null || espacio == null)
                 {
-                    System.Diagnostics.Debug.WriteLine($"[Scan] ❌ Access denied - Missing: {(cred == null ? "Credencial" : "Espacio")}");
-
                     await DisplayAlert("Acceso Denegado",
                         $"No se encontró {(cred == null ? "la credencial" : "el espacio")}.", "Cerrar");
 
@@ -287,7 +264,6 @@ namespace AppNetCredenciales.Views
                     return;
                 }
 
-                // Validar que la credencial tiene idApi
                 if (string.IsNullOrEmpty(cred.idApi))
                 {
                     System.Diagnostics.Debug.WriteLine($"[Scan] ⚠️ Credencial sin idApi - ID: {cred.CredencialId}");
@@ -296,8 +272,28 @@ namespace AppNetCredenciales.Views
                     return;
                 }
 
-                // ✅ Todo correcto - Permitir acceso
-                System.Diagnostics.Debug.WriteLine($"[Scan] ✅ Access granted!");
+
+                if (cred.FechaExpiracion.HasValue && cred.FechaExpiracion.Value.Date < DateTime.Today)
+                {
+                    await DisplayAlert("Credencial Expirada",
+                        $"La credencial expiró el {cred.FechaExpiracion.Value:dd/MM/yyyy}.\nAcceso denegado.",
+                        "Cerrar");
+
+                   
+                    var eventoExpirado = new EventoAcceso
+                    {
+                        MomentoDeAcceso = DateTime.UtcNow,
+                        CredencialIdApi = cred.idApi,
+                        EspacioIdApi = espacio.idApi,
+                        Credencial = cred,
+                        Espacio = espacio,
+                        Resultado = AccesoTipo.Denegar,
+                        Motivo = $"Credencial expirada el {cred.FechaExpiracion.Value:dd/MM/yyyy}"
+                    };
+
+                    await _db.SaveAndPushEventoAccesoAsync(eventoExpirado);
+                    return;
+                }
 
                 var popupOk = new ScanResultPopup("Credencial reconocida",
                     $"El usuario tiene permiso para acceder al espacio '{espacio.Nombre}'.", true);
@@ -305,7 +301,7 @@ namespace AppNetCredenciales.Views
 
                 var ev = new EventoAcceso
                 {
-                    MomentoDeAcceso = DateTime.UtcNow, // ✅ UTC
+                    MomentoDeAcceso = DateTime.UtcNow, 
 
                     CredencialId = cred.CredencialId,
                     EspacioId = espacio.EspacioId,

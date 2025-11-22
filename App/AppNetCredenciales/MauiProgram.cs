@@ -61,10 +61,13 @@ namespace AppNetCredenciales
             
             // Nuevos servicios de seguridad
             builder.Services.AddSingleton<BiometricService>();
-            builder.Services.AddSingleton<NFCService>();
             
-            // Vista del lector NFC
-            builder.Services.AddSingleton<NFCReaderView>();
+            // Servicio NFC (NDEF - más simple que HCE)
+            builder.Services.AddSingleton<NfcService>();
+            
+            // Vistas del lector NFC
+            builder.Services.AddSingleton<ReaderSpaceSelectionView>();
+            builder.Services.AddSingleton<NfcReaderActiveView>();
             
 #if DEBUG
             builder.Logging.AddDebug();

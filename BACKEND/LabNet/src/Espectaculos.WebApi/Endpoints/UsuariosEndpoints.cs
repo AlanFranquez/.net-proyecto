@@ -61,8 +61,9 @@ public static class UsuariosEndpoints
     [FromBody] CreateUsuarioDto dto,
     HttpContext http,
     IMediator mediator,
-    ICognitoService cognito,
-    RabbitMqService rabbitMqService) =>
+    ICognitoService cognito
+    // RabbitMqService deshabilitado temporalmente
+    /* RabbitMqService rabbitMqService */) =>
 {
     Serilog.Log.Information("DTO recibido: {@Dto}", dto);
 
@@ -81,8 +82,8 @@ public static class UsuariosEndpoints
         var id = await mediator.Send(cmd);
         var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
 
-        // Publicar un mensaje en RabbitMQ
-        rabbitMqService.SendMessage($"Usuario registrado: {dto.Email}");
+        // Publicar un mensaje en RabbitMQ (deshabilitado)
+        // rabbitMqService.SendMessage($"Usuario registrado: {dto.Email}");
 
         http.Response.Cookies.Append("espectaculos_session", idToken,
             new CookieOptions
@@ -98,13 +99,14 @@ public static class UsuariosEndpoints
     catch (FluentValidation.ValidationException vf)
     {
         var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
+        // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
         return Results.BadRequest(new { message = "Validation failed", errors });
 
     }
     catch (Exception ex)
     {
         Serilog.Log.Error(ex, "Error en registro");
-        rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {ex.Message}");
+        // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {ex.Message}");
         
         return Results.StatusCode(500);
     }

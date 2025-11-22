@@ -1,8 +1,8 @@
-﻿using AppNetCredenciales.Views;
-using Microsoft.Maui.ApplicationModel;
-using AppNetCredenciales.Services;
-using AppNetCredenciales.Data;
+﻿using AppNetCredenciales.Data;
 using AppNetCredenciales.models;
+using AppNetCredenciales.Services;
+using AppNetCredenciales.Views;
+using Microsoft.Maui.ApplicationModel;
 
 namespace AppNetCredenciales
 {
@@ -23,11 +23,35 @@ namespace AppNetCredenciales
             Routing.RegisterRoute("scan", typeof(AppNetCredenciales.Views.ScanView));
             Routing.RegisterRoute("historial", typeof(AppNetCredenciales.Views.HistorialView));
             Routing.RegisterRoute("accesoPerfil", typeof(AppNetCredenciales.Views.AccesoPerfilView));
-            Routing.RegisterRoute("nfcReader", typeof(AppNetCredenciales.Views.NFCReaderView));
+            Routing.RegisterRoute("readerSpaceSelection", typeof(AppNetCredenciales.Views.ReaderSpaceSelectionView));
+            Routing.RegisterRoute("nfcReaderActive", typeof(AppNetCredenciales.Views.NfcReaderActiveView));
 
             _connectivityService = App.Services.GetRequiredService<ConnectivityService>();
             _localDBService = App.Services.GetRequiredService<LocalDBService>();
             _connectivityService.ConnectivityChanged += ConnectivityService_ConnectivityChanged;
+
+
+            _ = syncDatos();
+
+            
+        }
+
+        private async Task syncDatos()
+        {
+            try
+            {
+                await _localDBService.SincronizarUsuariosFromBack();
+                await _localDBService.SincronizarRolesFromBack();
+                await _localDBService.SincronizarEspaciosFromBack();
+                await _localDBService.SincronizarCredencialesFromBack();
+
+                System.Diagnostics.Debug.WriteLine("[AppShell] Sincronización inicial completada.");   
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Error en sincronización inicial: {ex.Message}");
+               
+            }
         }
 
         private void ConnectivityService_ConnectivityChanged(object? sender, bool isConnected)

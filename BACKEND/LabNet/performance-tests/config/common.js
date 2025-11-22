@@ -4,7 +4,18 @@
 
 import { sleep } from 'k6';
 
-// URL base de la API (modificar según entorno)
+// URL base de la API según entorno
+// 
+// DETECCIÓN AUTOMÁTICA:
+// 1. Si existe BASE_URL en variable de entorno → usa ese valor
+// 2. Si no, usa 'http://localhost:8080' por defecto
+// 
+// Los scripts de PowerShell (run-all.ps1, run-aws.ps1) detectan automáticamente
+// el backend desde Terraform y setean BASE_URL antes de ejecutar k6.
+//
+// Uso manual:
+//   k6 run -e BASE_URL=http://mi-alb-123.us-east-1.elb.amazonaws.com scenarios/01-baseline.js
+//   k6 run scenarios/01-baseline.js  (usa localhost:8080)
 export const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 
 // Configuración de headers comunes

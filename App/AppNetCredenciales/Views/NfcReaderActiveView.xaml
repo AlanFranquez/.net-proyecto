@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="AppNetCredenciales.Views.NfcReaderActiveView"
+             Title="Lector NFC Activo">
+    
+    <Grid RowDefinitions="Auto,*,Auto" Padding="20">
+        
+        <!-- Header -->
+        <Frame Grid.Row="0"
+               BackgroundColor="#4CAF50" 
+               CornerRadius="12" 
+               Padding="20"
+               HasShadow="True">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Lector Activo"
+                       FontSize="28"
+                       FontAttributes="Bold"
+                       TextColor="White"
+                       HorizontalOptions="Center"/>
+                <Label Text="{Binding EspacioNombre}"
+                       FontSize="16"
+                       TextColor="White"
+                       HorizontalOptions="Center"
+                       HorizontalTextAlignment="Center"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <!-- Contenido central -->
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Spacing="20" Padding="0,20">
+                
+                <!-- Animacion NFC -->
+                <Frame BackgroundColor="White"
+                       CornerRadius="20"
+                       Padding="40"
+                       HasShadow="True"
+                       HeightRequest="300">
+                    <Grid>
+                        <!-- Ondas NFC -->
+                        <Label x:Name="WaveLabel1"
+                               Text="O"
+                               FontSize="100"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               Opacity="0"/>
+                        <Label x:Name="WaveLabel2"
+                               Text="O"
+                               FontSize="100"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               Opacity="0"/>
+                        <Label x:Name="WaveLabel3"
+                               Text="O"
+                               FontSize="100"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center"
+                               Opacity="0"/>
+                        
+                        <!-- Icono principal -->
+                        <VerticalStackLayout HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           Spacing="10">
+                            <Label Text="NFC"
+                                   FontSize="60"
+                                   HorizontalOptions="Center"
+                                   FontAttributes="Bold"/>
+                            <Label Text="Esperando dispositivo..."
+                                   FontSize="16"
+                                   FontAttributes="Bold"
+                                   HorizontalOptions="Center"
+                                   TextColor="#757575"/>
+                        </VerticalStackLayout>
+                    </Grid>
+                </Frame>
+
+                <!-- Estado -->
+                <Frame x:Name="StatusFrame"
+                       BackgroundColor="#E3F2FD"
+                       CornerRadius="12"
+                       Padding="20"
+                       HasShadow="False">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Instrucciones"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="#2196F3"/>
+                        <Label Text="El lector esta activo y esperando"
+                               FontSize="14"
+                               TextColor="#424242"/>
+                        <Label Text="Solicita al usuario que acerque su dispositivo"
+                               FontSize="14"
+                               TextColor="#424242"/>
+                        <Label Text="La lectura se realizara automaticamente"
+                               FontSize="14"
+                               TextColor="#424242"/>
+                        <Label Text="Recibiras una notificacion del resultado"
+                               FontSize="14"
+                               TextColor="#424242"/>
+                    </VerticalStackLayout>
+                </Frame>
+
+                <!-- Estadisticas -->
+                <Frame BackgroundColor="White"
+                       CornerRadius="12"
+                       Padding="20"
+                       HasShadow="True">
+                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+                        
+                        <Label Grid.Row="0" Grid.Column="0"
+                               Text="Lecturas"
+                               FontSize="12"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Grid.Column="0"
+                               Text="{Binding TotalReads}"
+                               FontSize="24"
+                               FontAttributes="Bold"
+                               TextColor="#2196F3"
+                               HorizontalOptions="Center"/>
+
+                        <Label Grid.Row="0" Grid.Column="1"
+                               Text="Permitidos"
+                               FontSize="12"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Grid.Column="1"
+                               Text="{Binding SuccessReads}"
+                               FontSize="24"
+                               FontAttributes="Bold"
+                               TextColor="#4CAF50"
+                               HorizontalOptions="Center"/>
+
+                        <Label Grid.Row="0" Grid.Column="2"
+                               Text="Denegados"
+                               FontSize="12"
+                               TextColor="Gray"
+                               HorizontalOptions="Center"/>
+                        <Label Grid.Row="1" Grid.Column="2"
+                               Text="{Binding FailedReads}"
+                               FontSize="24"
+                               FontAttributes="Bold"
+                               TextColor="#F44336"
+                               HorizontalOptions="Center"/>
+                    </Grid>
+                </Frame>
+
+                <!-- Tiempo activo -->
+                <Frame BackgroundColor="#F5F5F5"
+                       CornerRadius="8"
+                       Padding="15"
+                       HasShadow="False">
+                    <HorizontalStackLayout Spacing="10" HorizontalOptions="Center">
+                        <Label Text="Tiempo activo:"/>
+                        <Label Text="{Binding ActiveTime}"
+                               FontAttributes="Bold"
+                               TextColor="#2196F3"/>
+                    </HorizontalStackLayout>
+                </Frame>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- Botones de accion -->
+        <VerticalStackLayout Grid.Row="2" Spacing="10" Padding="0,20,0,0">
+            
+            <Button Text="Desactivar Lector"
+                    BackgroundColor="#F44336"
+                    TextColor="White"
+                    CornerRadius="12"
+                    Padding="0,15"
+                    FontSize="16"
+                    FontAttributes="Bold"
+                    Command="{Binding DeactivateCommand}"/>
+
+            <Button Text="Volver"
+                    BackgroundColor="#757575"
+                    TextColor="White"
+                    CornerRadius="12"
+                    Padding="0,12"
+                    Command="{Binding BackCommand}"/>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

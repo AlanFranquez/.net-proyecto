@@ -585,142 +585,72 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
 
         // Evento Acceso CRUD
 
-        public async Task<List<models.EventoAcceso>> GetEventosAccesoAsync()
-        {
-            return await _connection.Table<models.EventoAcceso>().ToListAsync();
-        }
-
-        public async Task<int> SaveEventoAccesoAsync(models.EventoAcceso evento) { 
+        // CRUD operaciones para EventoAcceso
         
-
-            if (evento.EventoId == 0)
-            {
-                return await _connection.InsertAsync(evento);
-            }
-            else
-            {
-                return await _connection.UpdateAsync(evento);
-            }
-        }
-
-        public async Task<bool> existeEventoAcceso(int id)
+        public async Task<List<EventoAcceso>> GetEventosAccesoAsync()
         {
-            EventoAcceso ea = await _connection.GetAsync<EventoAcceso>(id);
-
-            if (ea.Equals(null)) return false;
-
-            return true;
+            return await _connection.Table<EventoAcceso>().ToListAsync();
         }
 
-        public async Task<int> DeleteEventoAccesoAsync(models.EventoAcceso evento)
+        public async Task<int> SaveEventoAccesoAsync(EventoAcceso evento)
+        {
+            if (evento == null) throw new ArgumentNullException(nameof(evento));
+
+            // Asegurar que la fecha esté en UTC
+            if (evento.MomentoDeAcceso.Kind != DateTimeKind.Utc)
+            {
+                evento.MomentoDeAcceso = evento.MomentoDeAcceso.ToUniversalTime();
+            }
+
+            // Si tiene ID de API y ya existe localmente, actualizar
+            if (!string.IsNullOrWhiteSpace(evento.idApi))
+            {
+                var existing = await _connection.Table<EventoAcceso>()
+                    .Where(e => e.idApi == evento.idApi)
+                    .FirstOrDefaultAsync();
+
+                if (existing != null)
+                {
+                    existing.MomentoDeAcceso = evento.MomentoDeAcceso;
+                    existing.CredencialIdApi = evento.CredencialIdApi;
+                    existing.EspacioIdApi = evento.EspacioIdApi;
+                    existing.Resultado = evento.Resultado;
+                    existing.Motivo = evento.Motivo;
+                    existing.Modo = evento.Modo;
+                    existing.Firma = evento.Firma;
+                    return await _connection.UpdateAsync(existing);
+                }
+            }
+
+            // Si no existe, insertar
+            return await _connection.InsertAsync(evento);
+        }
+
+        public async Task<int> DeleteEventoAccesoAsync(EventoAcceso evento)
         {
             return await _connection.DeleteAsync(evento);
         }
 
-        public async Task<int> DeleteEventoBeneficioAsync(models.Beneficio evento)
+        public async Task<EventoAcceso?> GetEventoAccesoByIdAsync(string idApi)
         {
-            return await _connection.DeleteAsync(evento);
-        }
-
-        public async Task<models.EventoAcceso> GetEventoAccesoByIdAsync(int id)
-        {
-            return await _connection.Table<models.EventoAcceso>()
-                .Where(e => e.EventoId == id)
+            return await _connection.Table<EventoAcceso>()
+                .Where(e => e.idApi == idApi)
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<int> ModifyEventoAcceso(int id, EventoAcceso e)
+        public async Task<EventoAcceso?> GetEventoAccesoByIdAsync(int eventoId)
         {
-            var ev = await _connection.Table<models.EventoAcceso>()
-                .Where(e => e.EventoId == id)
+            return await _connection.Table<EventoAcceso>()
+                .Where(e => e.EventoId == eventoId)
                 .FirstOrDefaultAsync();
-
-            return await _connection.UpdateAsync(ev);
         }
 
-
-        // Rol
-
-        public async Task<bool> UsuarioRolExistsAsync(int usuarioId, int rolId)
-        {
-            var ur = await _connection.Table<UsuarioRol>()
-                .Where(x => x.UsuarioId == usuarioId && x.RolId == rolId)
-                .FirstOrDefaultAsync();
-            return ur != null;
-        }
-
-        public async Task ChangeUserSelectedRole(string email, int idRole)
-        {
-            var user = await GetUsuarioByEmailAsync(email);
-            if (user == null) return;
-
-            // if the UsuarioRol relation does not exist, create it
-            if (!await UsuarioRolExistsAsync(user.UsuarioId, idRole))
-            {
-                return;
-            }
-
-            user.RolId = idRole;
-            await SaveUsuarioAsync(user);
-
-            if (await SessionManager.IsLoggedAsync())
-            {
-                var emailLogged = await SessionManager.GetUserEmailAsync();
-                if (emailLogged == email)
-                {
-                    await SessionManager.SaveUserRoleAsync(idRole);
-                }
-            }
-        }
-
-        public async Task<models.Rol> GetLoggedUserRoleAsync()
-        {
-            var user = await GetLoggedUserAsync();
-            if (user != null && user.RolId != null)
-            {
-                return await GetRolByIdAsync(user.RolId.Value);
-            }
-            return null;
-        }
-
-        public async Task<List<Rol>> GetRolsByUserAsync(int id)
-        {
-            var usuario = await GetUsuarioByIdAsync(id);
-
-            var usuarioRols = await _connection.Table<UsuarioRol>()
-                .Where(ur => ur.UsuarioId == usuario.UsuarioId)
-                .ToListAsync();
-
-
-            var listarTodosUsuariosRols = await _connection.Table<UsuarioRol>()
-                .ToListAsync();
-
-            foreach (var ur in listarTodosUsuariosRols)
-            {
-                
-                System.Diagnostics.Debug.WriteLine($"UsuarioRol - Id: {ur.Id}, UsuarioId: {ur.UsuarioId}, RolId: {ur.RolId}, FechaAsignado: {ur.FechaAsignado}");
-            }
-
-            var rolIds = usuarioRols.Select(ur => ur.RolId).ToList();
-
-            var roles = new List<Rol>();
-            foreach (var rolId in rolIds)
-            {
-                var rol = await GetRolByIdAsync(rolId);
-                if (rol != null)
-                {
-                    roles.Add(rol);
-                }
-            }
-            return roles;
-        }
-
+        // CRUD operaciones para Roles
 
         public async Task<List<models.Rol>> GetRolesAsync()
         {
             return await _connection.Table<models.Rol>().ToListAsync();
         }
-
 
         public async Task<int> SaveRolAsync(models.Rol rol)
         {
@@ -739,15 +669,55 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
             return await _connection.DeleteAsync(rol);
         }
 
-        public async Task<models.Rol> GetRolByIdAsync(int id)
+        public async Task<models.Rol?> GetRolByIdAsync(int id)
         {
             return await _connection.Table<models.Rol>()
                 .Where(r => r.RolId == id)
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<List<Rol>> GetRolsByUserAsync(int usuarioId)
+        {
+            var usuarioRols = await _connection.Table<UsuarioRol>()
+                .Where(ur => ur.UsuarioId == usuarioId)
+                .ToListAsync();
+                
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService] GetRolsByUserAsync - UsuarioId: {usuarioId}, UsuarioRols encontrados: {usuarioRols.Count}");
 
-        // CRUD operaciones para Espacios
+            foreach (var ur in usuarioRols)
+            {
+                System.Diagnostics.Debug.WriteLine($"UsuarioRol - Id: {ur.Id}, UsuarioId: {ur.UsuarioId}, RolId: {ur.RolId}, FechaAsignado: {ur.FechaAsignado}");
+            }
+
+            var rolIds = usuarioRols.Select(ur => ur.RolId).ToList();
+
+            var roles = new List<Rol>();
+            foreach (var rolId in rolIds)
+            {
+                var rol = await GetRolByIdAsync(rolId);
+                if (rol != null)
+                {
+                    roles.Add(rol);
+                }
+            }
+            return roles;
+        }
+
+        public async Task ChangeUserSelectedRole(string email, int newRoleId)
+        {
+            var usuario = await _connection.Table<Usuario>()
+                .Where(u => u.Email == email)
+                .FirstOrDefaultAsync();
+
+            if (usuario != null)
+            {
+                usuario.RolId = newRoleId;
+                await _connection.UpdateAsync(usuario);
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Changed user {email} to role {newRoleId}");
+            }
+        }
+
+        // CRUD operaciones para espacios
 
         public async Task<List<models.Espacio>> GetEspaciosAsync()
         {
