@@ -41,7 +41,7 @@ namespace AppNetCredenciales
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine("[App] DB migration error: " + ex);
+                    System.Diagnostics.Debug.WriteLine("[App] DB error: " + ex);
                 }
             });
         }
@@ -52,13 +52,12 @@ namespace AppNetCredenciales
             {
                 await _db.InitializeAsync();
                 
-                // Inicializar NFC Service
                 _nfcService.Initialize();
-                System.Diagnostics.Debug.WriteLine("[App] ✅ NfcService inicializado");
+              
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[App] ❌ Initialization failed: {ex}");
+                Debug.WriteLine($"[App]: {ex}");
             }
         }
     }

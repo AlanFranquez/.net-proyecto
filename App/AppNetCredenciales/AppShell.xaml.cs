@@ -12,6 +12,7 @@ namespace AppNetCredenciales
         private readonly LocalDBService _localDBService;
         private bool _offlineAlertShown;
         private bool _isSyncing = false;
+        private readonly ApiService _apiService;
 
         public AppShell()
         {
@@ -28,6 +29,7 @@ namespace AppNetCredenciales
 
             _connectivityService = App.Services.GetRequiredService<ConnectivityService>();
             _localDBService = App.Services.GetRequiredService<LocalDBService>();
+            _apiService = App.Services.GetRequiredService<ApiService>();
             _connectivityService.ConnectivityChanged += ConnectivityService_ConnectivityChanged;
 
 
@@ -82,13 +84,11 @@ namespace AppNetCredenciales
 
                 var syncResults = new SyncResults();
 
-                await SyncUsuariosOfflineAsync(syncResults);
+                
 
-                await SyncEventosAccesoOfflineAsync(syncResults);
 
                 await SyncBeneficiosOfflineAsync(syncResults);
 
-                await ShowSyncResultsAsync(syncResults);
 
             }
             catch (Exception ex)
@@ -129,9 +129,7 @@ namespace AppNetCredenciales
                         if (!string.IsNullOrWhiteSpace(apiId))
                         {
                             results.UsuariosSuccess++;
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Usuario creado exitosamente: {usuario.Email} -> API ID: {apiId}");
-
-                            // Actualizar credenciales relacionadas
+                            
                             var credenciales = await _localDBService.GetCredencialesAsync();
                             System.Diagnostics.Debug.WriteLine($"[AppShell] Verificando {credenciales.Count} credenciales para actualizar...");
 
@@ -208,10 +206,32 @@ namespace AppNetCredenciales
 
                 System.Diagnostics.Debug.WriteLine($"[AppShell] Sincronizando {results.EventosTotal} eventos de acceso...");
 
+                
+                var eventosEnApi = new List<string>();
+                try
+                {
+                    var eventosApiDto = await _localDBService.GetEventosAccesoAsync();
+                    eventosEnApi = eventosApiDto?.Select(e => e.idApi).Where(id => !string.IsNullOrWhiteSpace(id)).ToList() ?? new List<string>();
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos existentes en API: {eventosEnApi.Count}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error obteniendo eventos de API: {ex.Message}");
+           
+                }
+
                 foreach (var evento in eventosPendientes)
                 {
                     try
                     {
+                       
+                        if (!string.IsNullOrWhiteSpace(evento.idApi) && eventosEnApi.Contains(evento.idApi))
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] Evento {evento.idApi} ya existe en API, omitiendo...");
+                            results.EventosSuccess++;
+                            continue;
+                        }
+
                         var eventoActualizado = await _localDBService.SaveAndPushEventoAccesoAsync(evento);
 
                         if (!string.IsNullOrWhiteSpace(eventoActualizado.idApi))
@@ -236,81 +256,69 @@ namespace AppNetCredenciales
             }
         }
 
+
+
         private async Task SyncBeneficiosOfflineAsync(SyncResults results)
         {
             try
             {
-                var beneficiosPendientes = await _localDBService.GetBeneficiosPendientesSyncAsync();
-                results.BeneficiosTotal = beneficiosPendientes.Count;
+         
+                var beneficiosLocalesConCanje = await _localDBService.GetBeneficiosPendientesSyncAsync();
 
-                System.Diagnostics.Debug.WriteLine($"[AppShell] Sincronizando {results.BeneficiosTotal} beneficios...");
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Beneficios locales con canjes pendientes: {beneficiosLocalesConCanje.Count}");
 
-                var beneficiosEnApi = await _localDBService.GetBeneficiosAsync();
+                results.BeneficiosTotal = beneficiosLocalesConCanje.Count;
 
-                foreach (var beneficio in beneficiosPendientes)
+                foreach (var beneficioLocal in beneficiosLocalesConCanje)
                 {
                     try
                     {
-                        if (string.IsNullOrWhiteSpace(beneficio.idApi))
+                        if (beneficioLocal.UsuariosIDs != null && beneficioLocal.UsuariosIDs.Length > 0)
                         {
-                            continue;
-                        }
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] === PROCESANDO BENEFICIO: {beneficioLocal.Nombre} ===");
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] Usuarios con canjes pendientes: [{string.Join(", ", beneficioLocal.UsuariosIDs)}]");
 
-                        var existeEnApi = beneficiosEnApi?.Any(b => b.idApi == beneficio.idApi) ?? false;
-
-                        if (existeEnApi)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] Actualizando beneficio existente: {beneficio.idApi}");
-
-                            var beneficioDto = new ApiService.BeneficioDto
+                            foreach (var usuarioId in beneficioLocal.UsuariosIDs)
                             {
-                                Id = beneficio.idApi,
-                                Descripcion = beneficio.Descripcion ?? string.Empty,
-                                Tipo = beneficio.Tipo ?? string.Empty,
-                                Nombre = beneficio.Nombre ?? string.Empty,
-                                VigenciaInicio = beneficio.VigenciaInicio,
-                                VigenciaFin = beneficio.VigenciaFin,
-                                CupoTotal = beneficio.CupoTotal,
-                                CupoPorUsuario = beneficio.CupoPorUsuario,
-                                RequiereBiometria = beneficio.RequiereBiometria,
-                                EspaciosIDs = beneficio.EspaciosIDs ?? Array.Empty<string>(),
-                                UsuariosIDs = beneficio.UsuariosIDs ?? Array.Empty<string>()
-                            };
+                                if (!string.IsNullOrWhiteSpace(usuarioId))
+                                {
+                                    try
+                                    {
+                                        
+                                        
+                                        var resultado = await _localDBService.CanjearBeneficio(usuarioId, beneficioLocal.idApi);
 
-                            var beneficioActualizado = await _localDBService.updateBeneficio(beneficioDto);
-
-                            if (beneficioActualizado != null)
-                            {
-                                results.BeneficiosSuccess++;
-                                System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Beneficio actualizado exitosamente: {beneficio.idApi}");
-                            }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error actualizando beneficio: {beneficio.idApi}");
+                                        if (resultado != null && !resultado.FaltaCarga)
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Canje sincronizado exitosamente: usuario {usuarioId} -> beneficio {beneficioLocal.Nombre}");
+                                            results.BeneficiosSuccess++;
+                                        }
+                                        else
+                                        {
+                                            System.Diagnostics.Debug.WriteLine($"[AppShell] ⚠️ Canje aún pendiente para usuario {usuarioId}");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error sincronizando canje usuario {usuarioId}: {ex.Message}");
+                                    }
+                                }
                             }
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] Creando nuevo beneficio en API: {beneficio.idApi}");
-
-                            var nuevoBeneficioCreado = await _localDBService.CrearBeneficioEnApiAsync(beneficio);
-
-                            if (nuevoBeneficioCreado)
-                            {
-                                results.BeneficiosSuccess++;
-                                System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Beneficio creado exitosamente: {beneficio.idApi}");
-                            }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error creando beneficio: {beneficio.idApi}");
-                            }
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] Beneficio {beneficioLocal.Nombre} no tiene usuarios para sincronizar");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Excepción beneficio {beneficio?.idApi ?? "unknown"}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error procesando beneficio {beneficioLocal.Nombre}: {ex.Message}");
                     }
                 }
+
+                System.Diagnostics.Debug.WriteLine($"[AppShell] === RESUMEN SINCRONIZACIÓN BENEFICIOS ===");
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Total beneficios procesados: {results.BeneficiosTotal}");
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Canjes sincronizados exitosamente: {results.BeneficiosSuccess}");
             }
             catch (Exception ex)
             {
