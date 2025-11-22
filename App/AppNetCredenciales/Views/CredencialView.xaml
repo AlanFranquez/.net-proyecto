@@ -28,10 +28,7 @@
                             <Label Text="{Binding Credencial.TipoStr}" Grid.Column="1" TextColor="#222"/>
                         </Grid>
 
-                        <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto">
-                            <Label Text="Estado:" FontAttributes="Bold" TextColor="#555"/>
-                            <Label Text="{Binding Credencial.EstadoStr}" Grid.Column="1" TextColor="{Binding Credencial.EstadoStr, Converter={StaticResource EstadoColorConverter}}"/>
-                        </Grid>
+                       
                         <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto">
                             <Label Text="ID Criptográfico:" FontAttributes="Bold" TextColor="#555"/>
                             <Label Text="{Binding Credencial.IdCriptografico}" Grid.Column="1" TextColor="#222"/>

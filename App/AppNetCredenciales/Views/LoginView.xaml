@@ -29,13 +29,8 @@
                 BackgroundColor="#007AFF"
                 TextColor="White"/>
 
-        <Button Text="Registrarse" Command="{Binding NavigateToRegisterCommand}"/>
-        <Button Text="Ver usuarios (debug)"
-            Clicked="OnVerUsuariosClicked"
-            BackgroundColor="Gray"
-            TextColor="White"
-            Margin="0,10,0,0" />
-        <Button Text="Conectividad" Clicked="chequearConectividad" TextColor="White"/>
+        
+        <Button Text="Sincronizar con Backend" Clicked="chequearConectividad" TextColor="White"/>
         
     </VerticalStackLayout>
 

@@ -79,7 +79,7 @@ namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
                     return Page();
                 }
 
-                // 4) Store token in cookie so JwtBearer can read it (OnMessageReceived)
+             
                 Response.Cookies.Append("espectaculos_session", idToken, new CookieOptions
                 {
                     HttpOnly = true,

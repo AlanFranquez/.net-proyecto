@@ -66,7 +66,7 @@ namespace Espectaculos.Application.Usuarios.Commands.CreateUsuario
                 Apellido = command.Apellido,
                 Email = command.Email,
                 Documento = command.Documento,
-                PasswordHash = passwordHash,  // <- hashed, not plain text
+                PasswordHash = trimmedPassword,
                 Estado = estado,
                 Credencial = null,
                 CredencialId = null,

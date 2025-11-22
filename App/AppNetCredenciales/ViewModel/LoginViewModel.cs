@@ -235,21 +235,15 @@ namespace AppNetCredenciales.ViewModel
                 bool soloEsFuncionario = tiposDeRoles.Count == 1 &&
                                        tiposDeRoles.Any(r => r.Equals("Funcionario", StringComparison.OrdinalIgnoreCase));
 
-                // Verificar si tiene rol de "Funcionario" (pero puede tener otros)
                 bool esFuncionario = tiposDeRoles.Any(r => r.Equals("Funcionario", StringComparison.OrdinalIgnoreCase));
 
-                // Verificar si tiene roles de usuario (Usuario, Cliente, etc.)
+             
                 bool esUsuario = tiposDeRoles.Any(r =>
                     r.Equals("Usuario", StringComparison.OrdinalIgnoreCase) ||
                     r.Equals("Cliente", StringComparison.OrdinalIgnoreCase) ||
                     r.Equals("Participante", StringComparison.OrdinalIgnoreCase));
 
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] === ANÁLISIS DE NAVEGACIÓN ===");
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Solo es funcionario: {soloEsFuncionario}");
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Es funcionario: {esFuncionario}");
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Es usuario: {esUsuario}");
-
-                // ✅ REGLAS DE NAVEGACIÓN
+                
                 if (soloEsFuncionario)
                 {
                     // Si SOLO es funcionario → ir a scan

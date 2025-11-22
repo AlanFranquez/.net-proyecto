@@ -1,15 +1,16 @@
-using System;
-using System.Windows.Input;
-using System.Collections.ObjectModel;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System.Diagnostics;
+﻿using AppNetCredenciales.Data;
+using AppNetCredenciales.models;
+using AppNetCredenciales.services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
-using AppNetCredenciales.services;
-using AppNetCredenciales.models;
-using AppNetCredenciales.Data;
+using SQLitePCL;
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Windows.Input;
 
 namespace AppNetCredenciales.Views
 {
@@ -17,6 +18,8 @@ namespace AppNetCredenciales.Views
     {
         public ICommand NavigateCommand { get; private set; }
         public ICommand LogoutCommand { get; private set; }
+
+        public ICommand SyncCommand { get; private set; }
 
         // Bindable property so XAML can react to role changes
         public static readonly BindableProperty IsFuncionarioProperty =
@@ -66,14 +69,42 @@ namespace AppNetCredenciales.Views
                 }
             });
 
-            // Set BindingContext FIRST
+            SyncCommand = new Command(async () =>
+            {
+                bool confirm = await Application.Current.MainPage.DisplayAlert(
+                    "Sincronizar",
+                    "¿Deseas sincronizar datos?",
+                    "Sí",
+                    "No"
+                );
+
+                if (!confirm)
+                    return;
+
+                try
+                {
+                    
+                    await _db.SincronizarRolesFromBack();
+                    await _db.SincronizarUsuariosFromBack();
+                    await _db.SincronizarEspaciosFromBack();
+                    await _db.SincronizarEventosFromBack();
+                    await _db.SincronizarBeneficiosFromBack();
+
+                    await Application.Current.MainPage.DisplayAlert("Éxito", "Sincronización completada", "OK");
+                    var current = Shell.Current.CurrentState.Location.ToString();
+                    await Shell.Current.GoToAsync(current, true);
+                }
+                catch (Exception ex)
+                {
+                    await Application.Current.MainPage.DisplayAlert("Sync error", ex.Message, "OK");
+                }
+            });
+
+
+
             BindingContext = this;
 
-            // Add debug logging
-            Debug.WriteLine($"[Navbar] Constructor - BindingContext set: {BindingContext != null}");
-            Debug.WriteLine($"[Navbar] Constructor - Initial IsFuncionario: {IsFuncionario}");
 
-            // Check user roles (fire-and-forget)
             _ = CheckIfFuncionarioAsync();
         }
 
@@ -81,82 +112,153 @@ namespace AppNetCredenciales.Views
         {
             try
             {
+                System.Diagnostics.Debug.WriteLine("[Navbar] === INICIANDO VERIFICACIÓN DE ROL FUNCIONARIO ===");
+
                 var usuario = await _db.GetLoggedUserAsync();
                 if (usuario == null)
                 {
+                    System.Diagnostics.Debug.WriteLine("[Navbar] ❌ No hay usuario logueado");
                     IsFuncionario = false;
                     return;
                 }
 
-                Debug.WriteLine("[Navbar] Checking roles for user ID: " + usuario.idApi);
-                Debug.WriteLine($"[Navbar] User RolesIDs: {string.Join(", ", usuario.RolesIDs ?? Array.Empty<string>())}");
-                Debug.WriteLine($"[Navbar] User RolesIDs: {usuario.RolesIDsJson}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] === DATOS DEL USUARIO ===");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Email: {usuario.Email}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] idApi: {usuario.idApi}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] RolId principal: {usuario.RolId}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] RolesIDsJson: '{usuario.RolesIDsJson}'");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] RolesIDs array length: {usuario.RolesIDs?.Length ?? 0}");
 
-
-
-
-                var userRoleIds = usuario.RolesIDs ?? Array.Empty<string>();
-                bool hasFuncionarioFromArray = false;
-
-                Debug.WriteLine($"USUARIOS ROLES {userRoleIds.ToString()}");
-
-                foreach(var roleId in userRoleIds)
+                if (usuario.RolesIDs != null && usuario.RolesIDs.Length > 0)
                 {
-                    Debug.WriteLine($"[Navbar] User Role ID: {roleId}");
-                }
-
-                if (userRoleIds.Length > 0)
-                {
-                    var roles = await _db.GetRolesAsync();
-                    
-                    Debug.WriteLine($"[Navbar] Available roles from DB:");
-                    foreach (var role in roles)
+                    System.Diagnostics.Debug.WriteLine($"[Navbar] RolesIDs contenido:");
+                    for (int i = 0; i < usuario.RolesIDs.Length; i++)
                     {
-                        Debug.WriteLine($"[Navbar] - Role: {role.Tipo}, idApi: {role.idApi}");
-                    }
-
-
-                    hasFuncionarioFromArray = roles.Any(r =>
-                        string.Equals(r.Tipo?.Trim(), "Funcionario", StringComparison.OrdinalIgnoreCase)
-                        && !string.IsNullOrWhiteSpace(r.idApi)
-                        && userRoleIds.Contains(r.idApi, StringComparer.OrdinalIgnoreCase));
-
-                }
-
-                bool hasFuncionarioFromLocal = false;
-                var localRoles = await _db.GetRolesAsync();
-
-                if (userRoleIds?.Length > 0)
-                {
-                    foreach (var roleId in userRoleIds)
-                    {
-                        foreach (var localRole in localRoles)
-                        {
-                            if (string.Equals(localRole.idApi, roleId, StringComparison.OrdinalIgnoreCase) 
-                                && string.Equals(localRole.Tipo, "Funcionario", StringComparison.OrdinalIgnoreCase))
-                            {
-                                hasFuncionarioFromLocal = true;
-                                break;
-                            }
-                        }
-                        if (hasFuncionarioFromLocal) break;
+                        System.Diagnostics.Debug.WriteLine($"[Navbar]   [{i}]: '{usuario.RolesIDs[i]}'");
                     }
                 }
 
-                IsFuncionario = hasFuncionarioFromArray || hasFuncionarioFromLocal;
-                
-                Debug.WriteLine($"[Navbar] Final IsFuncionario result: {IsFuncionario}");
+                // ✅ OBTENER TODOS LOS ROLES DE LA BASE DE DATOS
+                var todosLosRoles = await _db.GetRolesAsync();
+                System.Diagnostics.Debug.WriteLine($"[Navbar] === ROLES EN BASE DE DATOS ===");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Total roles en DB: {todosLosRoles.Count}");
+
+                foreach (var rol in todosLosRoles)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Navbar] Rol DB: ID={rol.RolId}, Tipo='{rol.Tipo}', idApi='{rol.idApi}'");
+                }
+
+                // ✅ VERIFICACIÓN SIMPLIFICADA
+                bool esFuncionario = await VerificarSiEsFuncionario(usuario, todosLosRoles);
+
+                System.Diagnostics.Debug.WriteLine($"[Navbar] === RESULTADO FINAL ===");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Es Funcionario: {esFuncionario}");
+
+                IsFuncionario = esFuncionario;
 
                 MainThread.BeginInvokeOnMainThread(() =>
                 {
                     OnPropertyChanged(nameof(IsFuncionario));
-                    Debug.WriteLine($"[Navbar] UI Updated - IsFuncionario: {IsFuncionario}");
+                    System.Diagnostics.Debug.WriteLine($"[Navbar] ✅ UI Actualizada - IsFuncionario: {IsFuncionario}");
                 });
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"CheckIfFuncionarioAsync error: {ex}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] ❌ Error en CheckIfFuncionarioAsync: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] StackTrace: {ex.StackTrace}");
                 IsFuncionario = false;
+            }
+        }
+
+        private async Task<bool> VerificarSiEsFuncionario(Usuario usuario, List<Rol> todosLosRoles)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[Navbar] === VERIFICANDO SI ES FUNCIONARIO ===");
+
+                // Método 1: Verificar RolId principal
+                bool esFuncionarioPorRolPrincipal = false;
+                if (usuario.RolId.HasValue)
+                {
+                    var rolPrincipal = todosLosRoles.FirstOrDefault(r => r.RolId == usuario.RolId.Value);
+                    if (rolPrincipal != null)
+                    {
+                        esFuncionarioPorRolPrincipal = string.Equals(rolPrincipal.Tipo, "Funcionario", StringComparison.OrdinalIgnoreCase);
+                        System.Diagnostics.Debug.WriteLine($"[Navbar] Rol principal: {rolPrincipal.Tipo} -> Es Funcionario: {esFuncionarioPorRolPrincipal}");
+                    }
+                }
+
+                // Método 2: Verificar RolesIDs array
+                bool esFuncionarioPorRolesArray = false;
+                if (usuario.RolesIDs != null && usuario.RolesIDs.Length > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[Navbar] Verificando roles en array...");
+
+                    foreach (var roleIdApi in usuario.RolesIDs)
+                    {
+                        if (string.IsNullOrWhiteSpace(roleIdApi)) continue;
+
+                        System.Diagnostics.Debug.WriteLine($"[Navbar] Buscando rol con idApi: '{roleIdApi}'");
+
+                        var rolEncontrado = todosLosRoles.FirstOrDefault(r =>
+                            string.Equals(r.idApi, roleIdApi, StringComparison.OrdinalIgnoreCase));
+
+                        if (rolEncontrado != null)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Navbar] Rol encontrado: Tipo='{rolEncontrado.Tipo}', idApi='{rolEncontrado.idApi}'");
+
+                            if (string.Equals(rolEncontrado.Tipo, "Funcionario", StringComparison.OrdinalIgnoreCase))
+                            {
+                                esFuncionarioPorRolesArray = true;
+                                System.Diagnostics.Debug.WriteLine($"[Navbar] ✅ ES FUNCIONARIO por array de roles");
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[Navbar] ❌ No se encontró rol con idApi: '{roleIdApi}'");
+                        }
+                    }
+                }
+
+                // Método 3: Verificar usando GetRolsByUserAsync
+                bool esFuncionarioPorMetodo = false;
+                try
+                {
+                    var rolesDelUsuario = await _db.GetRolsByUserAsync(usuario.UsuarioId);
+                    System.Diagnostics.Debug.WriteLine($"[Navbar] Roles obtenidos por método GetRolsByUserAsync: {rolesDelUsuario.Count}");
+
+                    foreach (var rol in rolesDelUsuario)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[Navbar] Rol del usuario: {rol.Tipo}");
+                        if (string.Equals(rol.Tipo, "Funcionario", StringComparison.OrdinalIgnoreCase))
+                        {
+                            esFuncionarioPorMetodo = true;
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[Navbar] Error en GetRolsByUserAsync: {ex.Message}");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[Navbar] === RESUMEN DE VERIFICACIONES ===");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Por Rol Principal: {esFuncionarioPorRolPrincipal}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Por Array de Roles: {esFuncionarioPorRolesArray}");
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Por Método GetRolsByUser: {esFuncionarioPorMetodo}");
+
+                // Resultado final: ES funcionario si CUALQUIERA de los métodos lo confirma
+                bool resultadoFinal = esFuncionarioPorRolPrincipal || esFuncionarioPorRolesArray || esFuncionarioPorMetodo;
+
+                System.Diagnostics.Debug.WriteLine($"[Navbar] ===== RESULTADO FINAL: {resultadoFinal} =====");
+
+                return resultadoFinal;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Navbar] Error en VerificarSiEsFuncionario: {ex.Message}");
+                return false;
             }
         }
 
