@@ -64,8 +64,8 @@ namespace AppNetCredenciales.Views
                 return;
             }
 
-            //var biometricResult = await _biometricService.AuthenticateAsync(
-            //    "Verificar tu identidad para escanear credenciales");
+            var biometricResult = await _biometricService.AuthenticateAsync(
+                "Verificar tu identidad para escanear credenciales");
 
             //if (!biometricResult.Success)
             //{
