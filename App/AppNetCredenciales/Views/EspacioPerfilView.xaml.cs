@@ -219,36 +219,36 @@ public partial class EspacioPerfilView : ContentPage
     {
         try
         {
-            Debug.WriteLine("[EspacioPerfil] OnShowQRClicked - Starting...");
+            //Debug.WriteLine("[EspacioPerfil] OnShowQRClicked - Starting...");
 
-            // PASO 1: Solicitar confirmación para autenticación biométrica
-            bool userConfirmed = await DisplayAlert(
-                "Verificación de Identidad",
-                "Debes verificar tu identidad con huella digital para mostrar tu código QR.\n\n¿Deseas continuar?",
-                "Autenticar",
-                "Cancelar");
+            //// PASO 1: Solicitar confirmación para autenticación biométrica
+            //bool userConfirmed = await DisplayAlert(
+            //    "Verificación de Identidad",
+            //    "Debes verificar tu identidad con huella digital para mostrar tu código QR.\n\n¿Deseas continuar?",
+            //    "Autenticar",
+            //    "Cancelar");
 
-            if (!userConfirmed)
-            {
-                Debug.WriteLine("[EspacioPerfil] User cancelled biometric authentication");
-                return;
-            }
+            //if (!userConfirmed)
+            //{
+            //    Debug.WriteLine("[EspacioPerfil] User cancelled biometric authentication");
+            //    return;
+            //}
 
-            // PASO 2: Realizar autenticación biométrica
-            var biometricResult = await _biometricService.AuthenticateAsync(
-                "Verificar tu identidad para mostrar tu código QR");
+            //// PASO 2: Realizar autenticación biométrica
+            //var biometricResult = await _biometricService.AuthenticateAsync(
+            //    "Verificar tu identidad para mostrar tu código QR");
 
-            if (!biometricResult.Success)
-            {
-                Debug.WriteLine($"[EspacioPerfil] Biometric authentication failed: {biometricResult.ErrorMessage}");
-                await DisplayAlert(
-                    "Autenticación Fallida",
-                    biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.",
-                    "OK");
-                return;
-            }
+            //if (!biometricResult.Success)
+            //{
+            //    Debug.WriteLine($"[EspacioPerfil] Biometric authentication failed: {biometricResult.ErrorMessage}");
+            //    await DisplayAlert(
+            //        "Autenticación Fallida",
+            //        biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.",
+            //        "OK");
+            //    return;
+            //}
 
-            Debug.WriteLine("[EspacioPerfil] Biometric authentication successful");
+            //Debug.WriteLine("[EspacioPerfil] Biometric authentication successful");
 
             // PASO 3: Obtener usuario logueado
             var usuario = await _db.GetLoggedUserAsync();

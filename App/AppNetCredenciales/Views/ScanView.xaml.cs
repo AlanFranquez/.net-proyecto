@@ -179,8 +179,6 @@ namespace AppNetCredenciales.Views
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine($"[Scan] === PROCESSING SCANNED PAYLOAD ===");
-                System.Diagnostics.Debug.WriteLine($"[Scan] Payload: '{payload}'");
 
                 var parts = payload?.Split('|');
                 if (parts == null || parts.Length < 2)

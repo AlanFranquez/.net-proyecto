@@ -23,7 +23,7 @@ namespace AppNetCredenciales.Services
         {
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri("https://8192dc99e8de.ngrok-free.app/api/")
+                BaseAddress = new Uri("https://6f9f8ef46b0e.ngrok-free.app/api/")
             };
         }
 
@@ -121,6 +121,11 @@ namespace AppNetCredenciales.Services
         {
             try
             {
+
+                foreach(var u in beneficio.UsuariosIDs)
+                {
+                    Debug.WriteLine($"USUARIO ID EN BENEFICIO: {u}");
+                }
                 var requestJson = JsonSerializer.Serialize(beneficio, _jsonOptions);
 
                 var response = await _httpClient.PutAsJsonAsync($"beneficios/{beneficio.Id}", beneficio, _jsonOptions);
@@ -138,6 +143,7 @@ namespace AppNetCredenciales.Services
                 if (string.IsNullOrWhiteSpace(content))
                     return beneficio; 
 
+                
                 try
                 {
                     var updatedBeneficio = JsonSerializer.Deserialize<BeneficioDto>(content, _jsonOptions);
@@ -818,16 +824,16 @@ namespace AppNetCredenciales.Services
             
 
             [JsonPropertyName("tipo")]
-            public string Tipo { get; set; }
+            public string? Tipo { get; set; }
 
             [JsonPropertyName("nombre")]
-            public string Nombre { get; set; }
+            public string? Nombre { get; set; }
 
             [JsonPropertyName("vigenciaInicio")]
-            public DateTime VigenciaInicio { get; set; }
+            public DateTime? VigenciaInicio { get; set; }
 
             [JsonPropertyName("VigenciaFin")]
-            public DateTime VigenciaFin { get; set; }
+            public DateTime? VigenciaFin { get; set; }
 
             [JsonPropertyName("cupoTotal")]
             public int? CupoTotal { get; set; }

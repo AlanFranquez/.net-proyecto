@@ -45,57 +45,124 @@ namespace AppNetCredenciales.Data
 
         }
 
-        
 
-public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBeneficio)
-    {
-            var beneficios = await apiService.GetBeneficiosAsync();
-            var beneficio = new Beneficio();
 
-            foreach(var b in beneficios)
+        public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBeneficio)
+        {
+            Beneficio beneficio = null;
+
+            // Intentar obtener beneficios de la API si hay conexión
+            if (connectivityService.IsConnected)
             {
-                if (b.Id == idBeneficio)
+                try
                 {
-                    beneficio = await _connection.Table<Beneficio>()
-                        .Where(ben => ben.idApi == b.Id)
-                        .FirstOrDefaultAsync();
+                    var beneficios = await apiService.GetBeneficiosAsync();
+                    foreach (var b in beneficios)
+                    {
+                        if (b.Id == idBeneficio)
+                        {
+                            beneficio = await _connection.Table<Beneficio>()
+                                .Where(ben => ben.idApi == b.Id)
+                                .FirstOrDefaultAsync();
+                            break;
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Error obteniendo beneficios de API: {ex.Message}");
                 }
             }
 
-            var lista = string.IsNullOrWhiteSpace(beneficio.UsuariosIDsJson)
-            ? new List<string>()
-            : JsonSerializer.Deserialize<List<string>>(beneficio.UsuariosIDsJson);
-
-        if (!lista.Contains(idUsuario))
-            lista.Add(idUsuario);
-
-        beneficio.UsuariosIDsJson = JsonSerializer.Serialize(lista);
-
-        
-
-        // 5. llamar al API
-        if (connectivityService.IsConnected)
-        {
-            var canje = new ApiService.CanjeDto
+            // Si no se encontró en API o no hay conexión, buscar en local
+            if (beneficio == null)
             {
-                beneficioId = idBeneficio,
-                usuarioId = idUsuario
-            };
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] Buscando beneficio en base local...");
+                beneficio = await _connection.Table<Beneficio>()
+                    .Where(ben => ben.idApi == idBeneficio)
+                    .FirstOrDefaultAsync();
+            }
 
-            await apiService.CanjearBeneficio(canje);
-        } else
+            // Si aún no se encuentra, crear un registro temporal
+            if (beneficio == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ⚠️ Beneficio {idBeneficio} no encontrado, creando registro temporal");
+                beneficio = new Beneficio
+                {
+                    idApi = idBeneficio,
+                    Nombre = "Beneficio Temporal",
+                    Descripcion = "Canje offline pendiente de sincronización",
+                    UsuariosIDsJson = "[]",
+                    FaltaCarga = true,
+                    VigenciaInicio = DateTime.Now,
+                    VigenciaFin = DateTime.Now.AddYears(1)
+                };
+                await SaveBeneficioAsync(beneficio);
+            }
+
+            // Procesar el canje local
+            var lista = string.IsNullOrWhiteSpace(beneficio.UsuariosIDsJson)
+                ? new List<string>()
+                : JsonSerializer.Deserialize<List<string>>(beneficio.UsuariosIDsJson);
+
+            if (!lista.Contains(idUsuario))
+            {
+                lista.Add(idUsuario);
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario {idUsuario} agregado al beneficio {beneficio.Nombre}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario {idUsuario} ya tenía el beneficio {beneficio.Nombre}");
+            }
+
+            beneficio.UsuariosIDsJson = JsonSerializer.Serialize(lista);
+
+            // Intentar llamar al API si hay conexión
+            if (connectivityService.IsConnected)
+            {
+                try
+                {
+                    var canje = new ApiService.CanjeDto
+                    {
+                        beneficioId = idBeneficio,
+                        usuarioId = idUsuario
+                    };
+
+                    var resultadoCanje = await apiService.CanjearBeneficio(canje);
+
+                    if (resultadoCanje != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Canje enviado exitosamente al API");
+                        beneficio.FaltaCarga = false;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Error enviando canje al API, marcando para sincronización posterior");
+                        beneficio.FaltaCarga = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Excepción enviando canje al API: {ex.Message}");
+                    beneficio.FaltaCarga = true;
+                }
+            }
+            else
             {
                 System.Diagnostics.Debug.WriteLine("[LocalDBService] Offline: beneficio canjeado locally, will sync later.");
                 beneficio.FaltaCarga = true;
             }
 
-                await _connection.UpdateAsync(beneficio);
+            // Guardar cambios localmente
+            await _connection.UpdateAsync(beneficio);
 
-        return beneficio;
-    }
+            System.Diagnostics.Debug.WriteLine($"[LocalDBService] Canje completado para usuario {idUsuario} en beneficio {beneficio.Nombre} (FaltaCarga: {beneficio.FaltaCarga})");
+
+            return beneficio;
+        }
 
 
-    public async Task<Beneficio> updateBeneficio(ApiService.BeneficioDto beneficio)
+        public async Task<Beneficio> updateBeneficio(ApiService.BeneficioDto beneficio)
         {
             var ben = new Beneficio
             {
@@ -103,8 +170,8 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
                 Descripcion = beneficio.Descripcion,
                 Tipo = beneficio.Tipo,
                 Nombre = beneficio.Nombre,
-                VigenciaInicio = beneficio.VigenciaInicio,
-                VigenciaFin = beneficio.VigenciaFin,
+                VigenciaInicio = beneficio.VigenciaInicio ?? default(DateTime),
+                VigenciaFin = beneficio.VigenciaFin ?? default(DateTime),
                 CupoTotal = beneficio.CupoTotal,
                 CupoPorUsuario = beneficio.CupoPorUsuario,
                 RequiereBiometria = beneficio.RequiereBiometria,
@@ -227,8 +294,8 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
                     Descripcion = dto.Descripcion,
                     Tipo = dto.Tipo,
                     Nombre = dto.Nombre,
-                    VigenciaInicio = dto.VigenciaInicio,
-                    VigenciaFin = dto.VigenciaFin,
+                    VigenciaInicio = dto.VigenciaInicio ?? default(DateTime),
+                    VigenciaFin = dto.VigenciaFin ?? default(DateTime),
                     CupoTotal = dto.CupoTotal,
                     CupoPorUsuario = dto.CupoPorUsuario,
                     RequiereBiometria = dto.RequiereBiometria,
@@ -275,8 +342,8 @@ public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBenefic
                     Descripcion = api.Descripcion,
                     Tipo = api.Tipo,
                     Nombre = api.Nombre,
-                    VigenciaInicio = api.VigenciaInicio,
-                    VigenciaFin = api.VigenciaFin,
+                    VigenciaInicio = api.VigenciaInicio ?? default(DateTime),
+                    VigenciaFin = api.VigenciaFin ?? default(DateTime),
                     CupoTotal = api.CupoTotal,
                     CupoPorUsuario = api.CupoPorUsuario,
                     RequiereBiometria = api.RequiereBiometria,
