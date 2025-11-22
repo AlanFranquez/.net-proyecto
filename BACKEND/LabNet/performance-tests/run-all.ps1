@@ -34,8 +34,40 @@ try {
     exit 1
 }
 
-# Verificar que la API está disponible
-$apiUrl = if ($env:BASE_URL) { $env:BASE_URL } else { "http://localhost:8080" }
+# Detectar backend automáticamente
+if ($env:BASE_URL) {
+    $apiUrl = $env:BASE_URL
+    Write-ColorOutput "`n🎯 Usando BASE_URL de variable de entorno: $apiUrl" "Cyan"
+} else {
+    # Intentar obtener ALB de Terraform
+    $terraformDir = Resolve-Path "$PSScriptRoot\..\..\..\INFRA"
+    
+    if (Test-Path "$terraformDir\terraform.tfstate") {
+        Write-ColorOutput "`n🔍 Buscando backend en Terraform..." "Yellow"
+        
+        Push-Location $terraformDir
+        try {
+            $tfOutput = terraform output -json 2>$null | ConvertFrom-Json
+            
+            if ($tfOutput.alb_dns_name -and $tfOutput.alb_dns_name.value) {
+                $apiUrl = "http://$($tfOutput.alb_dns_name.value)"
+                Write-ColorOutput "✅ Backend AWS detectado: $apiUrl" "Green"
+            } else {
+                $apiUrl = "http://localhost:8080"
+                Write-ColorOutput "ℹ️  ALB no encontrado, usando local: $apiUrl" "Gray"
+            }
+        } catch {
+            $apiUrl = "http://localhost:8080"
+            Write-ColorOutput "ℹ️  Error leyendo Terraform, usando local: $apiUrl" "Gray"
+        } finally {
+            Pop-Location
+        }
+    } else {
+        $apiUrl = "http://localhost:8080"
+        Write-ColorOutput "`n🎯 Usando backend local: $apiUrl" "Cyan"
+    }
+}
+
 Write-ColorOutput "`n🔍 Verificando disponibilidad de la API en $apiUrl..." "Cyan"
 
 try {
