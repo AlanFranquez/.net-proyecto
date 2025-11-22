@@ -37,9 +37,9 @@ spec:
         - name: AWS__Region
           value: "us-east-1"
         - name: AWS__Cognito__UserPoolId
-          value: "us-east-1_ARdRnYoWQ"
+          value: "us-east-1_TBr5rbzDq"
         - name: AWS__Cognito__ClientId
-          value: "5jhuda0lo3opkc8gtr9dtk1ibq"
+          value: "4s35v2gjsnc6l2rgc8bh9tsbuj"
         - name: AWS__Cognito__Region
           value: "us-east-1"
         - name: AWS_ACCESS_KEY_ID
@@ -628,9 +628,7 @@ data:
     }
 
 ---
-# ----------------------------
-# 3) ConfigMap: Prometheus rules
-# ----------------------------
+# Prometheus rules
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -679,9 +677,7 @@ data:
     rule_files:
       - /etc/prometheus/rules/*.yml
 ---
-# ----------------------------
-# 4) Grafana Deployment (patched) - mounts provisioning + dashboards
-# ----------------------------
+# Grafana Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -743,9 +739,7 @@ spec:
       targetPort: 3000
 
 ---
-# ----------------------------
-# 5) Prometheus Deployment (minimal) + Service
-# ----------------------------
+# Prometheus Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -773,15 +767,10 @@ spec:
             - name: prometheus-config
               mountPath: /etc/prometheus/prometheus.yml
               subPath: prometheus.yml
-            - name: prometheus-rules
-              mountPath: /etc/prometheus/rules
       volumes:
         - name: prometheus-config
           configMap:
             name: prometheus-config
-        - name: prometheus-rules
-          configMap:
-            name: prometheus-rules
 
 ---
 apiVersion: v1
