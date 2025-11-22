@@ -64,17 +64,17 @@ namespace AppNetCredenciales.Views
                 return;
             }
 
-            var biometricResult = await _biometricService.AuthenticateAsync(
-                "Verificar tu identidad para escanear credenciales");
+            //var biometricResult = await _biometricService.AuthenticateAsync(
+            //    "Verificar tu identidad para escanear credenciales");
 
-            if (!biometricResult.Success)
-            {
-                await DisplayAlert("Autenticaci�n Fallida", 
-                    biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.", 
-                    "OK");
-                await Shell.Current.GoToAsync("..");
-                return;
-            }
+            //if (!biometricResult.Success)
+            //{
+            //    await DisplayAlert("Autenticaci�n Fallida", 
+            //        biometricResult.ErrorMessage ?? "No se pudo verificar tu identidad.", 
+            //        "OK");
+            //    await Shell.Current.GoToAsync("..");
+            //    return;
+            //}
 
             _biometricAuthenticated = true;
 
@@ -301,7 +301,7 @@ namespace AppNetCredenciales.Views
 
                 var ev = new EventoAcceso
                 {
-                    MomentoDeAcceso = DateTime.UtcNow, // ✅ UTC
+                    MomentoDeAcceso = DateTime.UtcNow, 
 
                     CredencialId = cred.CredencialId,
                     EspacioId = espacio.EspacioId,

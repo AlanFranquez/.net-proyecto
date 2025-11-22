@@ -89,6 +89,7 @@ namespace AppNetCredenciales.Views
                     await _db.SincronizarEspaciosFromBack();
                     await _db.SincronizarEventosFromBack();
                     await _db.SincronizarBeneficiosFromBack();
+                    await _db.SincronizarCredencialesFromBack();
 
                     await Application.Current.MainPage.DisplayAlert("Éxito", "Sincronización completada", "OK");
                     var current = Shell.Current.CurrentState.Location.ToString();

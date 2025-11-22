@@ -37,6 +37,7 @@ public partial class LoginView : ContentPage
         await _dbService.SincronizarEspaciosFromBack();
         await _dbService.SincronizarEventosFromBack();
         await _dbService.SincronizarBeneficiosFromBack();
+        await _dbService.SincronizarCredencialesFromBack();
         var raw = await _apiService.GetUsuariosRawAsync();
 
         await DisplayAlert("Raw response", (raw?.Length > 100 ? raw.Substring(0, 100) + "..." : raw) ?? "<null>", "OK");
