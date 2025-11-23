@@ -32,7 +32,6 @@ export default function Login({ isLoggedIn, onToggle }) {
       // Password: form.password,
     };
 
-    console.log("Iniciando sesión:", obj);
 
     try {
       const ok = await login(obj);
