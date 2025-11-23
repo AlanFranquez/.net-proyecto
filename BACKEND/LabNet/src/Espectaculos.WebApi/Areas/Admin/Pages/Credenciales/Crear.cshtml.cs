@@ -9,7 +9,7 @@ using Espectaculos.Application.Credenciales.Commands.CreateCredencial;
 using Espectaculos.Domain.Enums;
 using ValidationException = FluentValidation.ValidationException;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Credenciales
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Credenciales
 {
     public class CrearModel : PageModel
     {

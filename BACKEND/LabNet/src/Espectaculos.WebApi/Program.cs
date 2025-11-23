@@ -37,13 +37,11 @@ using Espectaculos.Application.Usuarios.Commands.DeleteUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 using Espectaculos.Application.Services;
 
-using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Persistence.Interceptors;
 using Espectaculos.Infrastructure.Persistence.Seed;
 using Espectaculos.Infrastructure.RealTime;
 using Espectaculos.Infrastructure.Repositories;
 
-using Espectaculos.WebApi.Endpoints;
 using Espectaculos.WebApi.Endpoints.Novedades;
 using Espectaculos.WebApi.Health;
 using Espectaculos.WebApi.Options;
@@ -60,17 +58,19 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
-using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
 using StackExchange.Redis;
-using Espectaculos.Application.Abstractions.Security;
+using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Security;
-
+using Espectaculos.WebApi.Endpoints;
 using RabbitMQ.Client;
 using Espectaculos.WebApi.Services;
+using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
@@ -231,7 +231,6 @@ builder.Services.AddAuthorization(options =>
 
 
 
-
 // Log de diagnóstico en Development
 if (builder.Environment.IsDevelopment())
 {
@@ -386,23 +385,25 @@ builder.Services.AddHealthChecks();
 builder.Services.AddPostgresHealthChecks(connectionString);
 
 // ---------- CORS (dev) ----------
-var isDev = builder.Environment.IsDevelopment();
-var devOrigins = (config["Cors:AllowedOrigins"]
-                  ?? Environment.GetEnvironmentVariable("CORS_ORIGINS")
-                  ?? "http://localhost:5262,http://localhost:5173")
+var originsRaw =
+    builder.Configuration["Cors:AllowedOrigins"]
+    ?? Environment.GetEnvironmentVariable("CORS_ORIGINS")
+    ?? config["Cors:AllowedOrigins"]
+    ?? "http://localhost:5262,http://localhost:5173";
+
+var devOrigins = originsRaw
     .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-if (isDev)
+Console.WriteLine($"[CORS DEBUG] URLs: {string.Join(" | ", devOrigins)}");
+
+builder.Services.AddCors(o =>
 {
-    builder.Services.AddCors(o =>
-    {
-        o.AddPolicy("DevCors", p =>
-            p.WithOrigins(devOrigins)
-             .AllowAnyHeader()
-             .AllowAnyMethod()
-             .AllowCredentials());
-    });
-}
+    o.AddPolicy("DevCors", p =>
+        p.WithOrigins(devOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+});
 
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
@@ -467,34 +468,16 @@ builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.N
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // ---------- Amazon Cognito client + servicio ----------
-builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(sp =>
-{
-    var cfg = sp.GetRequiredService<IConfiguration>();
-    var opts = sp.GetRequiredService<IOptions<AwsCognitoSettings>>().Value;
-    var logger = sp.GetRequiredService<ILogger<Program>>();
+var creds = new Amazon.Runtime.EnvironmentVariablesAWSCredentials();
+Console.WriteLine("AWS DEBUG: Using EnvironmentVariablesAWSCredentials for Cognito client.");
+Console.WriteLine($"AWS DEBUG: AccessKeyId: {creds.GetCredentials().AccessKey}");
 
-    var regionName = string.IsNullOrWhiteSpace(opts.Region) ? "us-east-1" : opts.Region;
-    var regionEndpoint = Amazon.RegionEndpoint.GetBySystemName(regionName);
+var _provider = new AmazonCognitoIdentityProviderClient(
+    creds,
+    Amazon.RegionEndpoint.USEast1
+);
 
-    var accessKey = cfg["AWS:AccessKeyId"] ?? Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
-    var secretKey = cfg["AWS:SecretAccessKey"] ?? Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
-
-    logger.LogInformation("AWS DEBUG: Region={Region}, AccessKeyPresent={HasAccessKey}",
-        regionName,
-        !string.IsNullOrEmpty(accessKey));
-
-    if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
-    {
-        var creds = new BasicAWSCredentials(accessKey, secretKey);
-        return new AmazonCognitoIdentityProviderClient(creds, new AmazonCognitoIdentityProviderConfig
-        {
-            RegionEndpoint = regionEndpoint
-        });
-    }
-
-    logger.LogWarning("Using fallback AWS credential chain (no explicit access/secret key found).");
-    return new AmazonCognitoIdentityProviderClient(regionEndpoint);
-});
+builder.Services.AddSingleton<IAmazonCognitoIdentityProvider>(_provider);
 
 builder.Services.AddScoped<ICognitoService, CognitoService>();
 
@@ -548,6 +531,13 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCookiePolicy(new CookiePolicyOptions
+{
+    MinimumSameSitePolicy = SameSiteMode.Unspecified,
+    HttpOnly = HttpOnlyPolicy.Always,
+    Secure = CookieSecurePolicy.None
+});
+
 // ---------- Archivos estáticos ----------
 var provider = new FileExtensionContentTypeProvider();
 provider.Mappings[".dat"] = "application/octet-stream";
@@ -557,12 +547,40 @@ provider.Mappings[".br"] = "application/octet-stream";
 app.UseDefaultFiles();
 app.UseStaticFiles(new StaticFileOptions { ContentTypeProvider = provider });
 
+// Servir frontend build en /frontend desde wwwroot/frontend
+var frontendPhysicalPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "frontend");
+if (Directory.Exists(frontendPhysicalPath))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(frontendPhysicalPath),
+        RequestPath = "/frontend",
+        ContentTypeProvider = provider
+    });
+}
+
+// Fallback para rutas SPA en /frontend (NO intercepta assets ni ficheros con extensión)
+app.MapWhen(context =>
+{
+    var p = context.Request.Path.Value ?? string.Empty;
+    // Solo hacer fallback para rutas que empiezan por /frontend y que no sean peticiones a assets/ ni tengan extensión
+    return p.StartsWith("/frontend", StringComparison.OrdinalIgnoreCase)
+           && !p.StartsWith("/frontend/assets", StringComparison.OrdinalIgnoreCase)
+           && !p.Contains('.');
+}, subApp =>
+{
+    subApp.Run(async ctx =>
+    {
+        ctx.Response.ContentType = "text/html";
+        await ctx.Response.SendFileAsync(Path.Combine(app.Environment.ContentRootPath, "wwwroot", "frontend", "index.html"));
+    });
+});
+
 // ---------- Middleware base ----------
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseSerilogRequestLogging();
 
-if (isDev)
-    app.UseCors("DevCors");
+app.UseCors("DevCors");
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>

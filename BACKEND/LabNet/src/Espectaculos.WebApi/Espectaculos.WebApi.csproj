@@ -47,8 +47,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Espectaculos.Application\Espectaculos.Application.csproj" />
     <ProjectReference Include="..\Espectaculos.Infrastructure\Espectaculos.Infrastructure.csproj" />
-      <ProjectReference Include="..\Espectaculos.Backoffice\Espectaculos.Backoffice.csproj" />
-
   </ItemGroup>
 
   <ItemGroup>

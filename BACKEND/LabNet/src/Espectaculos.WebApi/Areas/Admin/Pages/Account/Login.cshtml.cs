@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Account
 {
     public class LoginModel : PageModel
     {

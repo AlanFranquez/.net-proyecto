@@ -10,7 +10,7 @@ using Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso;
 using Espectaculos.Application.Beneficios.Queries.ListBeneficios;
 using ValidationException = FluentValidation.ValidationException;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Espacios;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Espacios;
 
 public class CrearModel : PageModel
 {

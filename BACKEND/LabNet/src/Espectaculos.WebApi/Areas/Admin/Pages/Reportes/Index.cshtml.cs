@@ -3,7 +3,7 @@ using Espectaculos.Application.EventoAcceso.Queries.ListarEventos;
 using MediatR;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Reportes
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Reportes
 {
     public class IndexModel : PageModel
     {

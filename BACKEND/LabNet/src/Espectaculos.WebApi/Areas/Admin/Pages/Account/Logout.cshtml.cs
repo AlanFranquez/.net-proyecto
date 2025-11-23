@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Account
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Account
 {
     public class LogoutModel : PageModel
     {

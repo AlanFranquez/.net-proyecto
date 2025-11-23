@@ -5,11 +5,11 @@ namespace Espectaculos.Domain.Entities;
 public class Usuario
 {
     public Guid UsuarioId { get; set; }
-    public string Documento { get; set; }
-    public string PasswordHash { get; set; }
-    public string Nombre { get; set; }
-    public string Apellido { get; set; }
-    public string Email { get; set; }
+    public string Documento { get; set; }  = "";
+    public string PasswordHash { get; set; } = "";
+    public string Nombre { get; set; } = "";
+    public string Apellido { get; set; } = "";
+    public string Email { get; set; } = "";
     public UsuarioEstado Estado { get; set; }
     public Credencial? Credencial { get; set; } = null;
     public Guid? CredencialId { get; set; } = null;

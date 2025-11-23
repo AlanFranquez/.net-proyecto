@@ -19,6 +19,8 @@ resource "aws_lb" "eks_alb" {
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_sg.id]
   subnets            = [aws_subnet.public_a.id, aws_subnet.public_b.id]
+  
+  idle_timeout = 2000
 
   tags = {
     Name = "eks-external-alb"

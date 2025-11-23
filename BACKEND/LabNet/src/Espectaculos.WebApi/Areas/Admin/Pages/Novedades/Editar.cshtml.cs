@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Novedades
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Novedades
 {
     public class EditarModel : PageModel
     {

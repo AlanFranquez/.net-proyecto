@@ -1,6 +1,6 @@
 ﻿@page
 @using Espectaculos.Domain.Enums   <!-- IMPORTANTE: para usar AccesoTipo -->
-@model Espectaculos.Backoffice.Areas.Admin.Pages.Reportes.IndexModel
+@model Espectaculos.WebApi.Areas.Admin.Pages.Reportes.IndexModel
 @{
     ViewData["Title"] = "Reportes y auditoría";
 }
@@ -88,7 +88,6 @@
                         <th>Motivo</th>
                     </tr>
                     </thead>
-                    @using Espectaculos.Domain.Enums
 
                     <tbody>
                     @foreach (var e in Model.Historico)

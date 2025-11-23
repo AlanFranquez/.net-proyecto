@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Espectaculos.Application.Espacios.Queries.ListarEspacios;
 using Espectaculos.Application.Espacios.Commands.DeleteEspacio;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Espacios;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Espacios;
 
 public class IndexModel : PageModel
 {

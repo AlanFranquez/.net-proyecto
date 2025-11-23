@@ -89,8 +89,8 @@ public static class UsuariosEndpoints
             new CookieOptions
             {
                 HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.None,
+                Secure = false,
+                SameSite = SameSiteMode.Lax,
                 Expires = DateTimeOffset.UtcNow.AddHours(8)
             });
 
@@ -101,6 +101,7 @@ public static class UsuariosEndpoints
         var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
         // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
         return Results.BadRequest(new { message = "Validation failed", errors });
+
     }
     catch (Exception ex)
     {
@@ -124,8 +125,8 @@ public static class UsuariosEndpoints
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
-                    Secure = true,
-                    SameSite = SameSiteMode.None,
+                    Secure = false,
+                    SameSite = SameSiteMode.Lax,
                     Expires = DateTimeOffset.UtcNow.AddHours(8)
                 };
 

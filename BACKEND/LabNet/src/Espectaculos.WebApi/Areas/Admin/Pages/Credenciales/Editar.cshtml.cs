@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using ValidationException = FluentValidation.ValidationException;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Credenciales;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Credenciales;
 
 public class EditarModel : PageModel
 {

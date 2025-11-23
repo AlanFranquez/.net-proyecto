@@ -29,7 +29,28 @@ public class RabbitMqWorker : BackgroundService
         using var connection = factory.CreateConnection();
         using var channel = connection.CreateModel();
 
-        // ❌ NO declarar la cola aquí
+        channel.QueueDeclare(queue: "usuarios-dlq", durable: true, exclusive: false, autoDelete: false, arguments: null);
+
+        // Declarar la cola principal con soporte para DLQ
+        channel.QueueDeclare(queue: "usuarios",
+            durable: true,
+            exclusive: false,
+            autoDelete: false,
+            arguments: new Dictionary<string, object>
+            {
+                { "x-dead-letter-exchange", "" }, // Enviar a la DLQ en caso de error
+                { "x-dead-letter-routing-key", "usuarios-dlq" },
+                { "x-max-length", 200 }
+            }
+        );
+
+        // channel.QueueDeclare(
+        //     queue: "usuarios",
+        //     durable: true,
+        //     exclusive: false,
+        //     autoDelete: false,
+        //     arguments: null
+        // );
         // La cola ya debe existir, creada por RabbitMqService
 
         var consumer = new EventingBasicConsumer(channel);

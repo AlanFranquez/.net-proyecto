@@ -21,9 +21,39 @@ spec:
         image: 466060356317.dkr.ecr.us-east-1.amazonaws.com/espectaculos-web:latest
         ports:
         - containerPort: 8080
+        # 1) Resource requests y limits (HPA necesita requests para calcular correctamente)
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+        # 2) Readiness probe (no recibir tráfico hasta estar listo)
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        # 3) Liveness probe (reiniciar si se queda colgado)
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
         env:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
+        - name: CORS_ORIGINS
+          value: "http://localhost:8080,http://mi-frontend-react-58b37209876tyg9.s3-website-us-east-1.amazonaws.com,http://localhost:5262"
+        - name: Cors__AllowedOrigins
+          value: "http://localhost:8080,http://mi-frontend-react-58b37209876tyg9.s3-website-us-east-1.amazonaws.com,http://localhost:5262"
         - name: ConnectionStrings__Default
           value: "Host=postgres-db.cb6u64euqqve.us-east-1.rds.amazonaws.com;Port=5432;Database=espectaculosdb;Username=postgres_user;Password=postgres_user"
         - name: DEFAULT_CONNECTION
@@ -33,11 +63,26 @@ spec:
         - name: AWS__Region
           value: "us-east-1"
         - name: AWS__Cognito__UserPoolId
-          value: "us-east-1_yeXrzBRpQ"
+          value: "us-east-1_TBr5rbzDq"
         - name: AWS__Cognito__ClientId
-          value: "u8j0u22ms9kr3osmg86jef1t"
+          value: "4s35v2gjsnc6l2rgc8bh9tsbuj"
         - name: AWS__Cognito__Region
           value: "us-east-1"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_access_key_id
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_secret_access_key
+        - name: AWS_SESSION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_session_token
         - name: REDIS__ENDPOINT
           value: "redis-cluster.qatxfp.0001.use1.cache.amazonaws.com"
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
@@ -58,6 +103,27 @@ spec:
           value: "http/protobuf"
         - name: OTEL_EXPORTER_OTLP_METRICS_PROTOCOL
           value: "http/protobuf"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: espectaculos-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: espectaculos-app
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60
+
 
 # SEQ
 ---
@@ -609,9 +675,7 @@ data:
     }
 
 ---
-# ----------------------------
-# 3) ConfigMap: Prometheus rules
-# ----------------------------
+# Prometheus rules
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -660,9 +724,7 @@ data:
     rule_files:
       - /etc/prometheus/rules/*.yml
 ---
-# ----------------------------
-# 4) Grafana Deployment (patched) - mounts provisioning + dashboards
-# ----------------------------
+# Grafana Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -724,9 +786,7 @@ spec:
       targetPort: 3000
 
 ---
-# ----------------------------
-# 5) Prometheus Deployment (minimal) + Service
-# ----------------------------
+# Prometheus Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -754,15 +814,10 @@ spec:
             - name: prometheus-config
               mountPath: /etc/prometheus/prometheus.yml
               subPath: prometheus.yml
-            - name: prometheus-rules
-              mountPath: /etc/prometheus/rules
       volumes:
         - name: prometheus-config
           configMap:
             name: prometheus-config
-        - name: prometheus-rules
-          configMap:
-            name: prometheus-rules
 
 ---
 apiVersion: v1
@@ -822,3 +877,607 @@ spec:
       port: 15672
       targetPort: 15672
   type: ClusterIP
+
+---
+# K6
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: k6-scripts
+  namespace: default
+data:
+  # 01-baseline.js - AGRESIVO: 50 VUs concurrentes
+  01-baseline.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        stages: [
+            { duration: '1m', target: 50 },   // Ramp-up a 50 VUs
+            { duration: '5m', target: 50 },   // Mantener 50 VUs
+            { duration: '30s', target: 0 },   // Ramp-down
+        ],
+        thresholds: {
+            'http_req_duration': ['p(95)<500', 'p(99)<1000'],
+            'http_req_failed': ['rate<0.01'],
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        
+        // Sin sleep entre requests - máxima presión
+        http.batch([
+            ['GET', `${BASE_URL}/health`, null, { headers }],
+            ['GET', `${BASE_URL}/api/espacios`, null, { headers }],
+            ['GET', `${BASE_URL}/api/usuarios`, null, { headers }],
+            ['GET', `${BASE_URL}/api/beneficios`, null, { headers }],
+        ]);
+        
+        check(http.get(`${BASE_URL}/api/credenciales`, { headers }), {
+            'status is 200': (r) => r.status === 200
+        });
+        
+        // Sleep muy corto - solo 100-300ms
+        sleep(Math.random() * 0.2 + 0.1);
+    }
+
+  # 02-peak-load.js - BRUTAL: 500 VUs
+  02-peak-load.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        stages: [
+            { duration: '2m', target: 200 },   // Calentamiento
+            { duration: '3m', target: 500 },   // Pico masivo
+            { duration: '5m', target: 500 },   // Mantener presión
+            { duration: '2m', target: 0 },     // Cooldown
+        ],
+        thresholds: {
+            'http_req_duration': ['p(95)<1000', 'p(99)<2000'],
+            'http_req_failed': ['rate<0.05'],  // Permitir 5% errores
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        const endpoints = [
+            `${BASE_URL}/health`,
+            `${BASE_URL}/api/espacios`,
+            `${BASE_URL}/api/usuarios`,
+            `${BASE_URL}/api/beneficios`,
+            `${BASE_URL}/api/credenciales`,
+            `${BASE_URL}/api/roles`,
+            `${BASE_URL}/api/dispositivos`,
+        ];
+        
+        // Hacer 3 requests en paralelo
+        const responses = http.batch([
+            ['GET', endpoints[Math.floor(Math.random() * endpoints.length)]],
+            ['GET', endpoints[Math.floor(Math.random() * endpoints.length)]],
+            ['GET', endpoints[Math.floor(Math.random() * endpoints.length)]],
+        ]);
+        
+        check(responses[0], {
+            'status is 200 or 500': (r) => r.status === 200 || r.status >= 500,
+        });
+        
+        // Sleep mínimo
+        sleep(0.05);  // 50ms
+    }
+
+  # 03-stress-test.js - INSANO: 1000 VUs
+  03-stress-test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        stages: [
+            { duration: '2m', target: 100 },    // Inicio suave
+            { duration: '3m', target: 500 },    // Aceleración
+            { duration: '5m', target: 1000 },   // MÁXIMA PRESIÓN
+            { duration: '5m', target: 1000 },   // Mantener estrés
+            { duration: '2m', target: 0 },      // Cooldown
+        ],
+        thresholds: {
+            'http_req_failed': ['rate<0.10'],  // Permitir 10% errores bajo estrés
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        
+        // Bombardeo de requests
+        const endpoints = [
+            `${BASE_URL}/api/espacios`,
+            `${BASE_URL}/api/usuarios`,
+            `${BASE_URL}/api/beneficios`,
+        ];
+        
+        // 5 requests en paralelo por VU
+        http.batch([
+            ['GET', endpoints[0]],
+            ['GET', endpoints[1]],
+            ['GET', endpoints[2]],
+            ['GET', endpoints[0]],
+            ['GET', endpoints[1]],
+        ]);
+        
+        // Sin sleep - presión continua
+    }
+
+  # 04-soak-test.js - RESISTENCIA: 200 VUs por 30 minutos
+  04-soak-test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        stages: [
+            { duration: '2m', target: 200 },    // Ramp-up
+            { duration: '30m', target: 200 },   // Mantener 30 minutos
+            { duration: '2m', target: 0 },      // Ramp-down
+        ],
+        thresholds: {
+            'http_req_duration': ['p(95)<500', 'p(99)<1000'],
+            'http_req_failed': ['rate<0.01'],
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        
+        // Mezcla de endpoints para simular uso real
+        const actions = [
+            () => http.get(`${BASE_URL}/api/espacios`, { headers }),
+            () => http.get(`${BASE_URL}/api/usuarios`, { headers }),
+            () => http.batch([
+                ['GET', `${BASE_URL}/api/beneficios`],
+                ['GET', `${BASE_URL}/api/credenciales`],
+            ]),
+        ];
+        
+        const randomAction = actions[Math.floor(Math.random() * actions.length)];
+        randomAction();
+        
+        sleep(Math.random() * 0.3 + 0.1);  // 100-400ms
+    }
+
+  # 05-spike-test.js - SPIKES EXTREMOS: 0→1000 en 10 segundos
+  05-spike-test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        stages: [
+            { duration: '10s', target: 50 },     // Base
+            { duration: '10s', target: 1000 },   // SPIKE BRUTAL
+            { duration: '1m', target: 1000 },    // Mantener spike
+            { duration: '10s', target: 50 },     // Bajar
+            { duration: '30s', target: 50 },     // Recuperación
+            { duration: '10s', target: 1500 },   // SEGUNDO SPIKE MÁS GRANDE
+            { duration: '1m', target: 1500 },    // Mantener
+            { duration: '10s', target: 50 },     // Bajar
+            { duration: '30s', target: 50 },     // Recuperación
+            { duration: '10s', target: 2000 },   // SPIKE FINAL MÁXIMO
+            { duration: '1m', target: 2000 },    // Mantener
+            { duration: '30s', target: 0 },      // Fin
+        ],
+        thresholds: {
+            'http_req_duration': ['p(95)<2000', 'p(99)<5000'],
+            'http_req_failed': ['rate<0.15'],  // Permitir 15% errores en spikes
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        
+        // Bombardeo de requests sin batch para máxima concurrencia
+        http.get(`${BASE_URL}/api/espacios`, { headers });
+        http.get(`${BASE_URL}/api/usuarios`, { headers });
+        
+        // Sin sleep - presión máxima
+    }
+
+  # 06-breakpoint-test.js - ENCONTRAR LÍMITE: Incremento progresivo hasta romper
+  06-breakpoint-test.js: |
+    import http from 'k6/http';
+    import { check, sleep } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        stages: [
+            { duration: '2m', target: 100 },
+            { duration: '2m', target: 200 },
+            { duration: '2m', target: 400 },
+            { duration: '2m', target: 600 },
+            { duration: '2m', target: 800 },
+            { duration: '2m', target: 1000 },
+            { duration: '2m', target: 1200 },
+            { duration: '2m', target: 1500 },
+            { duration: '2m', target: 2000 },
+            { duration: '2m', target: 2500 },
+            { duration: '2m', target: 3000 },   // Aquí probablemente rompa
+            { duration: '1m', target: 0 },
+        ],
+        thresholds: {
+            'http_req_failed': ['rate<0.25'],  // Permitir 25% errores al final
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        
+        // Request simple para medir capacidad pura
+        const res = http.get(`${BASE_URL}/api/espacios`, { headers });
+        
+        check(res, {
+            'not timeout': (r) => r.timings.duration < 30000,
+        });
+        
+        // Sin sleep - máxima presión
+    }
+
+  # 07-constant-arrival-rate.js - TASA CONSTANTE: 5000 RPS garantizados
+  07-constant-arrival-rate.js: |
+    import http from 'k6/http';
+    import { check } from 'k6';
+    
+    const BASE_URL = __ENV.BASE_URL || 'http://espectaculos-app:8080';
+    
+    export const options = {
+        scenarios: {
+            constant_request_rate: {
+                executor: 'constant-arrival-rate',
+                rate: 5000,           // 5000 requests por segundo
+                timeUnit: '1s',
+                duration: '5m',
+                preAllocatedVUs: 500,
+                maxVUs: 2000,
+            },
+        },
+        thresholds: {
+            'http_req_duration': ['p(95)<1000'],
+            'http_req_failed': ['rate<0.10'],
+        },
+    };
+    
+    export default function () {
+        const headers = { 'Content-Type': 'application/json' };
+        
+        const res = http.get(`${BASE_URL}/api/espacios`, { headers });
+        
+        check(res, {
+            'status is 200': (r) => r.status === 200,
+            'response time OK': (r) => r.timings.duration < 1000,
+        });
+    }
+
+  # server.py
+  server.py: |
+    from http.server import HTTPServer, BaseHTTPRequestHandler
+    import subprocess
+    import json
+    import os
+    import select
+    import time
+    
+    class K6Handler(BaseHTTPRequestHandler):
+        def log_message(self, format, *args):
+            print(f"[{self.log_date_time_string()}] {format % args}")
+        
+        def do_GET(self):
+            if self.path == '/health':
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"status": "healthy", "service": "k6-runner"}).encode())
+            
+            elif self.path == '/scenarios':
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                scenarios = [f for f in os.listdir('/scripts') if f.endswith('.js')]
+                self.wfile.write(json.dumps({"scenarios": sorted(scenarios)}).encode())
+            
+            else:
+                self.send_response(404)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Not found. Try /health or /scenarios"}).encode())
+        
+        def do_POST(self):
+            if self.path.startswith('/run/'):
+                scenario = self.path.split('/')[-1]
+                
+                if not scenario.endswith('.js'):
+                    scenario += '.js'
+                
+                script_path = f'/scripts/{scenario}'
+                
+                if not os.path.exists(script_path):
+                    self.send_response(404)
+                    self.send_header('Content-type', 'application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({
+                        "error": f"Scenario {scenario} not found",
+                        "available": [f for f in os.listdir('/scripts') if f.endswith('.js')]
+                    }).encode())
+                    return
+                
+                try:
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/event-stream')
+                    self.send_header('Cache-Control', 'no-cache')
+                    self.send_header('Connection', 'keep-alive')
+                    self.send_header('X-Accel-Buffering', 'no')
+                    self.end_headers()
+                    
+                    def send_event(data):
+                        try:
+                            self.wfile.write(f"data: {json.dumps(data)}\n\n".encode())
+                            self.wfile.flush()
+                        except:
+                            pass
+                    
+                    send_event({'status': 'started', 'scenario': scenario})
+                    
+                    print(f"Running k6 test: {scenario}")
+                    
+                    process = subprocess.Popen(
+                        ['k6', 'run', script_path],
+                        cwd='/scripts',
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=False,
+                        bufsize=0
+                    )
+                    
+                    last_heartbeat = time.time()
+                    output_buffer = b''
+                    
+                    while True:
+                        # Usar select para timeout de 30 segundos
+                        ready, _, _ = select.select([process.stdout], [], [], 30)
+                        
+                        if ready:
+                            # Hay datos disponibles
+                            chunk = process.stdout.read(1024)
+                            if not chunk:
+                                break
+                            
+                            output_buffer += chunk
+                            
+                            # Procesar líneas completas
+                            while b'\n' in output_buffer:
+                                line, output_buffer = output_buffer.split(b'\n', 1)
+                                try:
+                                    line_str = line.decode('utf-8', errors='replace').strip()
+                                    if line_str:
+                                        send_event({'output': line_str})
+                                except:
+                                    pass
+                            
+                            last_heartbeat = time.time()
+                        else:
+                            # Timeout - enviar heartbeat
+                            current_time = time.time()
+                            if current_time - last_heartbeat > 10:
+                                send_event({'heartbeat': int(current_time)})
+                                last_heartbeat = current_time
+                        
+                        # Verificar si el proceso terminó
+                        if process.poll() is not None:
+                            break
+                    
+                    # Procesar cualquier output restante
+                    if output_buffer:
+                        try:
+                            line_str = output_buffer.decode('utf-8', errors='replace').strip()
+                            if line_str:
+                                send_event({'output': line_str})
+                        except:
+                            pass
+                    
+                    process.wait()
+                    
+                    result = {
+                        'status': 'completed',
+                        'scenario': scenario,
+                        'exit_code': process.returncode,
+                        'success': process.returncode == 0
+                    }
+                    
+                    send_event(result)
+                    
+                    print(f"Test completed: {scenario} (exit code: {process.returncode})")
+                
+                except Exception as e:
+                    print(f"Error running test: {str(e)}")
+                    try:
+                        error_msg = {'status': 'error', 'error': str(e)}
+                        self.wfile.write(f"data: {json.dumps(error_msg)}\n\n".encode())
+                        self.wfile.flush()
+                    except:
+                        pass
+            
+            else:
+                self.send_response(404)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Use POST /run/{scenario}"}).encode())
+    
+    if __name__ == '__main__':
+        server = HTTPServer(('0.0.0.0', 8080), K6Handler)
+        print('K6 Runner API listening on port 8080')
+        print('Endpoints:')
+        print('  GET  /health - Health check')
+        print('  GET  /scenarios - List available scenarios')
+        print('  POST /run/{scenario} - Run test (Server-Sent Events with heartbeat)')
+        server.serve_forever()
+---
+# Deployment: k6 REST API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k6-runner
+  namespace: default
+  labels:
+    app: k6-runner
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k6-runner
+  template:
+    metadata:
+      labels:
+        app: k6-runner
+    spec:
+      securityContext:
+        runAsNonRoot: false
+        runAsUser: 0
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              echo "Installing dependencies..."
+              apk add --no-cache python3 curl
+              
+              echo "Starting k6 API server..."
+              python3 /config/server.py
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: BASE_URL
+              value: "http://backend-service:80"
+          volumeMounts:
+            - name: k6-scripts
+              mountPath: /scripts
+            - name: k6-server
+              mountPath: /config
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: k6-scripts
+          configMap:
+            name: k6-scripts
+            items:
+              - key: 01-baseline.js
+                path: 01-baseline.js
+              - key: 02-peak-load.js
+                path: 02-peak-load.js
+              - key: 03-stress-test.js
+                path: 03-stress-test.js
+              - key: 04-soak-test.js
+                path: 04-soak-test.js
+              - key: 05-spike-test.js
+                path: 05-spike-test.js
+        - name: k6-server
+          configMap:
+            name: k6-scripts
+            items:
+              - key: server.py
+                path: server.py
+
+---
+# Service: LoadBalancer con timeout extendido
+apiVersion: v1
+kind: Service
+metadata:
+  name: k6-runner
+  namespace: default
+  labels:
+    app: k6-runner
+  annotations:
+    # Timeout del ELB: 30 minutos (1800 segundos)
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "1800"
+    # Habilitar keep-alive
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout: "60"
+spec:
+  type: LoadBalancer
+  selector:
+    app: k6-runner
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP
+
+---
+# CronJob: Baseline diario
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: k6-baseline-daily
+  namespace: default
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: k6
+              image: grafana/k6:latest
+              command: ["k6"]
+              args:
+                - "run"
+                - "/scripts/01-baseline.js"
+              env:
+                - name: BASE_URL
+                  value: "http://backend-service:80"
+              volumeMounts:
+                - name: k6-scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "500m"
+                limits:
+                  memory: "1Gi"
+                  cpu: "1000m"
+          volumes:
+            - name: k6-scripts
+              configMap:
+                name: k6-scripts
+                items:
+                  - key: 01-baseline.js
+                    path: 01-baseline.js

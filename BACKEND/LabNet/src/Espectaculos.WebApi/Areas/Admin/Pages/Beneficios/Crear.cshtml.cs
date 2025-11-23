@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Beneficios;
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Beneficios;
 
 public class CrearModel : PageModel
 {

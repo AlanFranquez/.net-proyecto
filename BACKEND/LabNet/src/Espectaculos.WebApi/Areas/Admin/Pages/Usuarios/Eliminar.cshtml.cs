@@ -4,7 +4,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace Espectaculos.Backoffice.Areas.Admin.Pages.Usuarios
+namespace Espectaculos.WebApi.Areas.Admin.Pages.Usuarios
 {
     public class EliminarModel : PageModel
     {
