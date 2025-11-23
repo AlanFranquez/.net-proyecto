@@ -74,6 +74,7 @@ public class CrearModel : PageModel
                 VigenciaFin = vigFinUtc,
                 Prioridad = Vm.Prioridad,
                 Politica = Vm.Politica,
+                Rol = Vm.Rol,
                 RequiereBiometriaConfirmacion = Vm.RequiereBiometriaConfirmacion,
                 EspaciosIDs = Vm.EspaciosIDs ?? new List<Guid>()
             }, ct);
@@ -105,6 +106,7 @@ public class CrearModel : PageModel
         [BindProperty] public int Prioridad { get; set; }
         [BindProperty] public AccesoTipo Politica { get; set; }
         [BindProperty] public bool RequiereBiometriaConfirmacion { get; set; }
+        [BindProperty] public string? Rol { get; set; }
 
         // Lista de GUIDs para los espacios seleccionados
         [BindProperty] public List<Guid>? EspaciosIDs { get; set; } = new();

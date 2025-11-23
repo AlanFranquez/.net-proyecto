@@ -11,6 +11,6 @@ public class ReglaDeAccesoDTO
     public int Prioridad { get; set; }
     public AccesoTipo Politica { get; set; }
     public bool RequiereBiometriaConfirmacion { get; set; }
-
+    public string? Rol { get; set; }
     public ICollection<Guid>? EspaciosIDs { get; set; } = new List<Guid>();
 }

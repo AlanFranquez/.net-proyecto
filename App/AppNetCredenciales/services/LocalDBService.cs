@@ -45,6 +45,215 @@ namespace AppNetCredenciales.Data
 
         }
 
+        // CRUD y Sincronización para Reglas de Acceso
+
+        public async Task<List<ReglaDeAcceso>> SincronizarReglasAccesoFromBack(bool removeMissing = false)
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] === INICIANDO SINCRONIZACIÓN DE REGLAS DE ACCESO ===");
+
+                var apiReglas = await apiService.GetReglasAccesoAsync();
+                if (apiReglas == null || apiReglas.Count == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] No se obtuvieron reglas del API");
+                    return await GetReglasAccesoAsync();
+                }
+
+                var localList = await GetReglasAccesoAsync();
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Reglas en BD local: {localList.Count}");
+
+                // Eliminar todas las reglas locales para hacer una sincronización completa
+                foreach (var local in localList)
+                {
+                    await _connection.DeleteAsync(local);
+                }
+
+                int insertadas = 0;
+                foreach (var apiRegla in apiReglas)
+                {
+                    var nueva = new ReglaDeAcceso
+                    {
+                        idApi = apiRegla.ReglaId,
+                        VentanaHoraria = apiRegla.VentanaHoraria,
+                        VigenciaInicio = apiRegla.VigenciaInicio,
+                        VigenciaFin = apiRegla.VigenciaFin,
+                        Prioridad = apiRegla.Prioridad,
+                        PoliticaStr = apiRegla.Politica ?? "Denegar",
+                        RequiereBiometriaConfirmacion = apiRegla.RequiereBiometriaConfirmacion,
+                        Rol = apiRegla.Rol,
+                        EspaciosIDs = apiRegla.EspaciosIDs 
+                    };
+
+                    await SaveReglaAccesoAsync(nueva);
+                    insertadas++;
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Regla sincronizada: {nueva.VentanaHoraria} - {nueva.Rol} (API ID: {nueva.idApi})");
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ✅ Sincronización completada: {insertadas} reglas insertadas");
+                return await GetReglasAccesoAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] ❌ Error en SincronizarReglasAccesoFromBack: {ex.Message}");
+                return await GetReglasAccesoAsync();
+            }
+        }
+
+        // CRUD básico para ReglaDeAcceso
+        public async Task<List<ReglaDeAcceso>> GetReglasAccesoAsync()
+        {
+            return await _connection.Table<ReglaDeAcceso>().ToListAsync();
+        }
+
+        public async Task<int> SaveReglaAccesoAsync(ReglaDeAcceso regla)
+        {
+            if (regla == null) return 0;
+
+            if (regla.ReglaId == 0)
+            {
+                return await _connection.InsertAsync(regla);
+            }
+            else
+            {
+                return await _connection.UpdateAsync(regla);
+            }
+        }
+
+        public async Task<int> DeleteReglaAccesoAsync(ReglaDeAcceso regla)
+        {
+            return await _connection.DeleteAsync(regla);
+        }
+
+        public async Task<ReglaDeAcceso?> GetReglaAccesoByIdAsync(int id)
+        {
+            return await _connection.Table<ReglaDeAcceso>()
+                .Where(r => r.ReglaId == id)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<ReglaDeAcceso?> GetReglaAccesoByApiIdAsync(string idApi)
+        {
+            return await _connection.Table<ReglaDeAcceso>()
+                .Where(r => r.idApi == idApi)
+                .FirstOrDefaultAsync();
+        }
+
+        // Método para obtener reglas de acceso aplicables a un usuario específico
+        public async Task<List<ReglaDeAcceso>> GetReglasAccesoParaUsuarioAsync(string usuarioEmail, string espacioIdApi)
+        {
+            try
+            {
+                // Obtener usuario y sus roles
+                var usuario = await GetUsuarioByEmailAsync(usuarioEmail);
+                if (usuario == null)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario no encontrado: {usuarioEmail}");
+                    return new List<ReglaDeAcceso>();
+                }
+
+                var rolesUsuario = usuario.RolesIDs ?? Array.Empty<string>();
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Usuario {usuarioEmail} tiene roles: [{string.Join(", ", rolesUsuario)}]");
+
+                // Obtener todas las reglas
+                var todasLasReglas = await GetReglasAccesoAsync();
+
+                // Filtrar reglas aplicables
+                var reglasAplicables = todasLasReglas
+                    .Where(r =>
+                        
+                        (!string.IsNullOrWhiteSpace(r.Rol) && rolesUsuario.Contains(r.Rol)) &&
+                        (r.EspaciosIDs == null || r.EspaciosIDs.Length == 0 || r.EspaciosIDs.Contains(espacioIdApi)) &&
+                        // Regla debe estar vigente
+                        (r.VigenciaInicio == null || r.VigenciaInicio <= DateTime.Now) &&
+                        (r.VigenciaFin == null || r.VigenciaFin >= DateTime.Now)
+                    )
+                    .OrderBy(r => r.Prioridad) // Ordenar por prioridad
+                    .ToList();
+
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Reglas aplicables encontradas: {reglasAplicables.Count}");
+                foreach (var regla in reglasAplicables)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[LocalDBService]   - {regla.VentanaHoraria} | {regla.Politica} | Prioridad: {regla.Prioridad}");
+                }
+
+                return reglasAplicables;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Error en GetReglasAccesoParaUsuarioAsync: {ex.Message}");
+                return new List<ReglaDeAcceso>();
+            }
+        }
+
+        public async Task<AccesoTipo> EvaluarAccesoAsync(string usuarioEmail, string espacioIdApi)
+        {
+            try
+            {
+                var reglasAplicables = await GetReglasAccesoParaUsuarioAsync(usuarioEmail, espacioIdApi);
+
+                if (!reglasAplicables.Any())
+                {
+                    System.Diagnostics.Debug.WriteLine("[LocalDBService] No hay reglas aplicables, denegando acceso por defecto");
+                    return AccesoTipo.Denegar;
+                }
+
+                // Evaluar reglas por prioridad (ya están ordenadas)
+                var horaActual = DateTime.Now.TimeOfDay;
+
+                foreach (var regla in reglasAplicables)
+                {
+                    if (EstaEnVentanaHoraria(horaActual, regla.VentanaHoraria))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[LocalDBService] Regla aplicable encontrada: {regla.Politica} (Ventana: {regla.VentanaHoraria})");
+                        return regla.Politica;
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine("[LocalDBService] Ninguna regla aplicable en ventana horaria actual, denegando acceso");
+                return AccesoTipo.Denegar;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Error evaluando acceso: {ex.Message}");
+                return AccesoTipo.Denegar; 
+            }
+        }
+
+        private bool EstaEnVentanaHoraria(TimeSpan horaActual, string? ventanaHoraria)
+        {
+            if (string.IsNullOrWhiteSpace(ventanaHoraria))
+                return true; // Sin restricción horaria
+
+            try
+            {
+                // Formato esperado: "08:00-17:00"
+                var partes = ventanaHoraria.Split('-');
+                if (partes.Length != 2) return true;
+
+                if (TimeSpan.TryParse(partes[0].Trim(), out var inicio) &&
+                    TimeSpan.TryParse(partes[1].Trim(), out var fin))
+                {
+                    if (inicio <= fin)
+                    {
+                        // Ventana normal (mismo día)
+                        return horaActual >= inicio && horaActual <= fin;
+                    }
+                    else
+                    {
+                        // Ventana que cruza medianoche
+                        return horaActual >= inicio || horaActual <= fin;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[LocalDBService] Error parseando ventana horaria '{ventanaHoraria}': {ex.Message}");
+            }
+
+            return true; // En caso de error, no restringir
+        }
+
 
 
         public async Task<Beneficio> CanjearBeneficio(string idUsuario, string idBeneficio)

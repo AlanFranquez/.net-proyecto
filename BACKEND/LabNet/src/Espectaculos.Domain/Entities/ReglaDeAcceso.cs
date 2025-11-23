@@ -9,6 +9,7 @@ public class ReglaDeAcceso
     public DateTime? VigenciaFin { get; set; }
     public int Prioridad { get; set; }
     public AccesoTipo Politica { get; set; }
+    public string? Rol { get; set; }
     public bool RequiereBiometriaConfirmacion { get; set; }
 
     public ICollection<EspacioReglaDeAcceso> Espacios { get; set; } = new List<EspacioReglaDeAcceso>();

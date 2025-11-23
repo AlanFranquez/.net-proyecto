@@ -15,6 +15,7 @@ public class ReglaDeAccesoConfiguration : IEntityTypeConfiguration<ReglaDeAcceso
         builder.Property(e => e.VigenciaFin).IsRequired();
         builder.Property(e => e.Prioridad).IsRequired();
         builder.Property(e => e.Politica).IsRequired();
+        builder.Property(e => e.Rol).IsRequired(false);
         builder.Property(e => e.RequiereBiometriaConfirmacion).IsRequired();
 
         builder.HasMany(e => e.Espacios)

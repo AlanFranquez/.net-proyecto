@@ -6,5 +6,6 @@ public class RolDTO
     public string? Tipo { get; set; } = null;
     public int? Prioridad { get; set; } = null;
     public DateTime? FechaAsignado { get; set; } = null;
+    
     public IEnumerable<Guid>? UsuariosIDs { get; set; } = null;
 }

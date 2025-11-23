@@ -29,6 +29,7 @@ public class CreateReglaHandler : IRequestHandler<CreateReglaCommand, Guid>
             VigenciaInicio = command.VigenciaInicio,
             VigenciaFin = command.VigenciaFin,
             Prioridad = command.Prioridad,
+            Rol = command.Rol,
             Politica = command.Politica,
             RequiereBiometriaConfirmacion = command.RequiereBiometriaConfirmacion.Equals(true),
         };

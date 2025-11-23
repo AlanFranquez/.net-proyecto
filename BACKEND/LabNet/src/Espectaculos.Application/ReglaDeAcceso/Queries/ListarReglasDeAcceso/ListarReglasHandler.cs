@@ -26,6 +26,7 @@ namespace Espectaculos.Application.ReglaDeAcceso.Queries.ListarReglasDeAcceso
                 VigenciaFin = r.VigenciaFin,
                 Prioridad = r.Prioridad,
                 Politica = r.Politica,
+                Rol = r.Rol,
                 RequiereBiometriaConfirmacion = r.RequiereBiometriaConfirmacion.Equals(true),
                 EspaciosIDs = r.Espacios.Select(r => r.EspacioId).ToList()
             }).ToList();

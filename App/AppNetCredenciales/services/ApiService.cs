@@ -27,6 +27,23 @@ namespace AppNetCredenciales.Services
             };
         }
 
+        public async Task<List<ReglaAccesoDto>> GetReglasAccesoAsync()
+        {
+            try
+            {
+                var list = await _httpClient.GetFromJsonAsync<List<ReglaAccesoDto>>("reglas", _jsonOptions) ?? new List<ReglaAccesoDto>();
+
+                
+
+                return list;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ApiService] Error fetching eventosAcceso: {ex}");
+                return new List<ReglaAccesoDto>();
+            }
+        }
+
         public async Task<BeneficioDto?> CreateBeneficioAsync(BeneficioDto beneficio)
         {
             try
@@ -61,7 +78,7 @@ namespace AppNetCredenciales.Services
                     }
                 }
 
-             
+
                 return beneficio;
             }
             catch (Exception ex)
@@ -89,7 +106,7 @@ namespace AppNetCredenciales.Services
                     return null;
                 }
 
-                
+
                 if (!string.IsNullOrWhiteSpace(content))
                 {
                     try
@@ -122,7 +139,7 @@ namespace AppNetCredenciales.Services
             try
             {
 
-                foreach(var u in beneficio.UsuariosIDs)
+                foreach (var u in beneficio.UsuariosIDs)
                 {
                     Debug.WriteLine($"USUARIO ID EN BENEFICIO: {u}");
                 }
@@ -141,9 +158,9 @@ namespace AppNetCredenciales.Services
                 }
 
                 if (string.IsNullOrWhiteSpace(content))
-                    return beneficio; 
+                    return beneficio;
 
-                
+
                 try
                 {
                     var updatedBeneficio = JsonSerializer.Deserialize<BeneficioDto>(content, _jsonOptions);
@@ -168,7 +185,7 @@ namespace AppNetCredenciales.Services
             {
                 var list = await _httpClient.GetFromJsonAsync<List<BeneficioDto>>("beneficios", _jsonOptions) ?? new List<BeneficioDto>();
 
-                foreach(var item in list)
+                foreach (var item in list)
                 {
                     Debug.WriteLine($"BENEFICIO => {item.Id} - {item.Tipo}");
                 }
@@ -182,7 +199,8 @@ namespace AppNetCredenciales.Services
             }
         }
 
-        public async Task<List<EventoAccesoDto>> GetEventosAccesoAsync() {             
+        public async Task<List<EventoAccesoDto>> GetEventosAccesoAsync()
+        {
             try
             {
                 var list = await _httpClient.GetFromJsonAsync<List<EventoAccesoDto>>("eventos", _jsonOptions)
@@ -243,7 +261,7 @@ namespace AppNetCredenciales.Services
                     return null;
                 }
 
-               
+
                 try
                 {
                     var responseDto = JsonSerializer.Deserialize<EventoAccesoDto>(content, _jsonOptions);
@@ -284,7 +302,7 @@ namespace AppNetCredenciales.Services
             }
         }
 
-        public async Task<List<RolDto>>GetRolesAsync()
+        public async Task<List<RolDto>> GetRolesAsync()
         {
             try
             {
@@ -347,7 +365,7 @@ namespace AppNetCredenciales.Services
                 }
                 catch (JsonException) { /* ignore and try other parsing strategies */ }
 
-               
+
                 try
                 {
                     using var doc = JsonDocument.Parse(content);
@@ -667,6 +685,9 @@ namespace AppNetCredenciales.Services
             [JsonPropertyName("beneficiosIds")]
             public string[]? BeneficiosIds { get; set; }
 
+            [JsonPropertyName("reglaIds")]
+            public string[]? ReglasIds { get; set; }
+
 
         }
 
@@ -807,7 +828,7 @@ namespace AppNetCredenciales.Services
             public string? Firma { get; set; }
 
             [JsonPropertyName("eventoAccesoId")]
-            public string? EventoAccesoId { get; set; } 
+            public string? EventoAccesoId { get; set; }
 
             [JsonPropertyName("id")]
             public string? Id { get; set; }
@@ -821,7 +842,7 @@ namespace AppNetCredenciales.Services
 
             [JsonPropertyName("descripcion")]
             public string Descripcion { get; set; }
-            
+
 
             [JsonPropertyName("tipo")]
             public string? Tipo { get; set; }
@@ -854,7 +875,7 @@ namespace AppNetCredenciales.Services
             [JsonPropertyName("usuariosIDs")]
             public string[]? UsuariosIDs { get; set; }
 
-    }
+        }
 
         public class NewUsuarioDto
         {
@@ -876,6 +897,28 @@ namespace AppNetCredenciales.Services
             public string[]? RolesIDs { get; set; }
         }
 
-        
+        public class ReglaAccesoDto
+        {
+            [JsonPropertyName("id")]
+            public string? ReglaId { get; set; }
+            [JsonPropertyName("ventanaHoraria")]
+            public string? VentanaHoraria { get; set; }
+            [JsonPropertyName("vigenciaInicio")]
+            public DateTime? VigenciaInicio { get; set; }
+            [JsonPropertyName("vigenciaFin")]
+            public DateTime? VigenciaFin { get; set; }
+            [JsonPropertyName("prioridad")]
+            public int Prioridad { get; set; }
+            [JsonPropertyName("politica")]
+            public string? Politica { get; set; }
+            [JsonPropertyName("requiereBiometriaConfirmacion")]
+            public bool RequiereBiometriaConfirmacion { get; set; }
+            [JsonPropertyName("rol")]
+            public string? Rol { get; set; }
+            [JsonPropertyName("espaciosIDs")]
+            public string[]? EspaciosIDs { get; set; }
+
+
+        }
     }
 }

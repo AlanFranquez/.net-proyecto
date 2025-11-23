@@ -134,13 +134,7 @@ namespace AppNetCredenciales.ViewModel
         {
             try
             {
-                // Obtener todos los roles del usuario
                 List<Rol> rolesDelUsuario = new List<Rol>();
-
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] === VERIFICANDO ROLES PARA USUARIO ===");
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] Usuario: {usuario.Email}");
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] RolId principal: {usuario.RolId}");
-                System.Diagnostics.Debug.WriteLine($"[LoginViewModel] RolesIDs count: {usuario.RolesIDs?.Length ?? 0}");
 
                 // Método 1: Verificar RolId principal (si existe)
                 if (usuario.RolId.HasValue && usuario.RolId > 0)

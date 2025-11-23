@@ -88,6 +88,7 @@ namespace AppNetCredenciales
 
 
                 await SyncBeneficiosOfflineAsync(syncResults);
+                await SyncEventosAccesoOfflineAsync(syncResults);
 
 
             }
@@ -201,54 +202,51 @@ namespace AppNetCredenciales
         {
             try
             {
-                var eventosPendientes = await _localDBService.GetEventosAccesoPendientesSyncAsync();
+                System.Diagnostics.Debug.WriteLine("[AppShell] === SINCRONIZACIÓN DE EVENTOS DE ACCESO ===");
+
+                // 1. Obtener eventos locales que NO tienen idApi (creados offline)
+                var eventosLocales = await _localDBService.GetEventosAccesoAsync();
+                var eventosPendientes = eventosLocales.Where(e => string.IsNullOrWhiteSpace(e.idApi) &&
+                                                                !string.IsNullOrWhiteSpace(e.CredencialIdApi) &&
+                                                                !string.IsNullOrWhiteSpace(e.EspacioIdApi))
+                                                      .ToList();
+
                 results.EventosTotal = eventosPendientes.Count;
-
-                System.Diagnostics.Debug.WriteLine($"[AppShell] Sincronizando {results.EventosTotal} eventos de acceso...");
-
-                
-                var eventosEnApi = new List<string>();
-                try
-                {
-                    var eventosApiDto = await _localDBService.GetEventosAccesoAsync();
-                    eventosEnApi = eventosApiDto?.Select(e => e.idApi).Where(id => !string.IsNullOrWhiteSpace(id)).ToList() ?? new List<string>();
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos existentes en API: {eventosEnApi.Count}");
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error obteniendo eventos de API: {ex.Message}");
-           
-                }
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos locales pendientes de sincronización: {results.EventosTotal}");
 
                 foreach (var evento in eventosPendientes)
                 {
                     try
                     {
-                       
-                        if (!string.IsNullOrWhiteSpace(evento.idApi) && eventosEnApi.Contains(evento.idApi))
-                        {
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] Evento {evento.idApi} ya existe en API, omitiendo...");
-                            results.EventosSuccess++;
-                            continue;
-                        }
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] === PROCESANDO EVENTO ===");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] EventoId local: {evento.EventoId}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] CredencialIdApi: {evento.CredencialIdApi}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] EspacioIdApi: {evento.EspacioIdApi}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] MomentoDeAcceso: {evento.MomentoDeAcceso}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] Resultado: {evento.Resultado}");
 
+                        // 2. Intentar enviar el evento a la API
                         var eventoActualizado = await _localDBService.SaveAndPushEventoAccesoAsync(evento);
 
                         if (!string.IsNullOrWhiteSpace(eventoActualizado.idApi))
                         {
                             results.EventosSuccess++;
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] Evento sincronizado: {eventoActualizado.idApi}");
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Evento sincronizado exitosamente: {eventoActualizado.idApi}");
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] Error sincronizando evento: {evento.EventoId}");
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] ⚠️ Evento aún pendiente de sincronización: {evento.EventoId}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] Excepción evento {evento.EventoId}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error sincronizando evento {evento.EventoId}: {ex.Message}");
                     }
                 }
+
+                System.Diagnostics.Debug.WriteLine($"[AppShell] === RESUMEN SINCRONIZACIÓN EVENTOS ===");
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Total eventos procesados: {results.EventosTotal}");
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos sincronizados exitosamente: {results.EventosSuccess}");
             }
             catch (Exception ex)
             {
