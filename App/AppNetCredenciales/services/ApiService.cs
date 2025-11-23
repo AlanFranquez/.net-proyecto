@@ -23,7 +23,7 @@ namespace AppNetCredenciales.Services
         {
             _httpClient = new HttpClient
             {
-                BaseAddress = new Uri("https://6f9f8ef46b0e.ngrok-free.app/api/")
+                BaseAddress = new Uri("https://0b14a40e43cb.ngrok-free.app/api/")
             };
         }
 
