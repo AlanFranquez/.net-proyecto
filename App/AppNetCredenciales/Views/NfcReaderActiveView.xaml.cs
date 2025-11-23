@@ -16,10 +16,11 @@ namespace AppNetCredenciales.Views
             var db = App.Services?.GetRequiredService<LocalDBService>();
             var nfcService = App.Services?.GetRequiredService<NfcService>();
             var apiService = App.Services?.GetRequiredService<ApiService>();
+            var biometricService = App.Services?.GetRequiredService<BiometricService>();
 
-            if (db != null && nfcService != null && apiService != null)
+            if (db != null && nfcService != null && apiService != null && biometricService != null)
             {
-                BindingContext = new NfcReaderActiveViewModel(db, nfcService, apiService);
+                BindingContext = new NfcReaderActiveViewModel(db, nfcService, apiService, biometricService);
             }
         }
 
