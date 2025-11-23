@@ -63,6 +63,7 @@ namespace AppNetCredenciales.models
             set => Resultado = Enum.Parse<AccesoTipo>(value);
         }
 
+        public bool faltaCarga { get; set; } = false;
         public string? Motivo { get; set; }
 
         [Ignore]

@@ -2,7 +2,9 @@
 using AppNetCredenciales.models;
 using AppNetCredenciales.Services;
 using AppNetCredenciales.Views;
+using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
+using System.Text.Json.Serialization;
 
 namespace AppNetCredenciales
 {
@@ -202,51 +204,71 @@ namespace AppNetCredenciales
         {
             try
             {
-                System.Diagnostics.Debug.WriteLine("[AppShell] === SINCRONIZACIÓN DE EVENTOS DE ACCESO ===");
+                
 
-                // 1. Obtener eventos locales que NO tienen idApi (creados offline)
                 var eventosLocales = await _localDBService.GetEventosAccesoAsync();
-                var eventosPendientes = eventosLocales.Where(e => string.IsNullOrWhiteSpace(e.idApi) &&
-                                                                !string.IsNullOrWhiteSpace(e.CredencialIdApi) &&
-                                                                !string.IsNullOrWhiteSpace(e.EspacioIdApi))
+                var eventosPendientes = eventosLocales.Where(e => e.faltaCarga == true)
                                                       .ToList();
 
                 results.EventosTotal = eventosPendientes.Count;
-                System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos locales pendientes de sincronización: {results.EventosTotal}");
+
+                int contador = 0;
+
+
+
+
+                var eventosEnApi = new List<ApiService.EventoAccesoDto>();
+                try
+                {
+                    eventosEnApi = await _apiService.GetEventosAccesoAsync();
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos existentes en API: {eventosEnApi?.Count ?? 0}");
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[AppShell] Error obteniendo eventos de API: {ex.Message}");
+                }
 
                 foreach (var evento in eventosPendientes)
                 {
                     try
                     {
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] === PROCESANDO EVENTO ===");
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] EventoId local: {evento.EventoId}");
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] CredencialIdApi: {evento.CredencialIdApi}");
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] EspacioIdApi: {evento.EspacioIdApi}");
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] MomentoDeAcceso: {evento.MomentoDeAcceso}");
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] Resultado: {evento.Resultado}");
+                        System.Diagnostics.Debug.WriteLine("Accediendo al priemr evento pendiente...");
+                        
+                        bool yaExiste = eventosEnApi?.Any(apiEvento =>
+                            apiEvento.CredencialId == evento.CredencialIdApi &&
+                            apiEvento.EspacioId == evento.EspacioIdApi &&
+                            Math.Abs((apiEvento.MomentoDeAcceso - evento.MomentoDeAcceso).TotalMinutes) < 1) == true;
 
-                        // 2. Intentar enviar el evento a la API
+                        if (yaExiste)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] Evento similar ya existe en API, omitiendo...");
+
+                            continue;
+                        }
+
+                        evento.faltaCarga = false;
+
                         var eventoActualizado = await _localDBService.SaveAndPushEventoAccesoAsync(evento);
 
                         if (!string.IsNullOrWhiteSpace(eventoActualizado.idApi))
                         {
                             results.EventosSuccess++;
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Evento sincronizado exitosamente: {eventoActualizado.idApi}");
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Evento sincronizado: {eventoActualizado.idApi}");
+                            contador++;
                         }
                         else
                         {
-                            System.Diagnostics.Debug.WriteLine($"[AppShell] ⚠️ Evento aún pendiente de sincronización: {evento.EventoId}");
+                            System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error sincronizando evento: {evento.EventoId}");
                         }
                     }
                     catch (Exception ex)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Error sincronizando evento {evento.EventoId}: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Excepción evento {evento.EventoId}: {ex.Message}");
                     }
                 }
 
                 System.Diagnostics.Debug.WriteLine($"[AppShell] === RESUMEN SINCRONIZACIÓN EVENTOS ===");
-                System.Diagnostics.Debug.WriteLine($"[AppShell] Total eventos procesados: {results.EventosTotal}");
-                System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos sincronizados exitosamente: {results.EventosSuccess}");
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Eventos sincronizados exitosamente: {contador}");
             }
             catch (Exception ex)
             {
@@ -254,13 +276,10 @@ namespace AppNetCredenciales
             }
         }
 
-
-
         private async Task SyncBeneficiosOfflineAsync(SyncResults results)
         {
             try
             {
-         
                 var beneficiosLocalesConCanje = await _localDBService.GetBeneficiosPendientesSyncAsync();
 
                 System.Diagnostics.Debug.WriteLine($"[AppShell] Beneficios locales con canjes pendientes: {beneficiosLocalesConCanje.Count}");
@@ -282,18 +301,23 @@ namespace AppNetCredenciales
                                 {
                                     try
                                     {
-                                        
-                                        
-                                        var resultado = await _localDBService.CanjearBeneficio(usuarioId, beneficioLocal.idApi);
-
-                                        if (resultado != null && !resultado.FaltaCarga)
+                                        if (!string.IsNullOrWhiteSpace(beneficioLocal.idApi))
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Canje sincronizado exitosamente: usuario {usuarioId} -> beneficio {beneficioLocal.Nombre}");
-                                            results.BeneficiosSuccess++;
+                                            var resultado = await _localDBService.CanjearBeneficio(usuarioId, beneficioLocal.idApi);
+
+                                            if (resultado != null && !resultado.FaltaCarga)
+                                            {
+                                                System.Diagnostics.Debug.WriteLine($"[AppShell] ✅ Canje sincronizado exitosamente: usuario {usuarioId} -> beneficio {beneficioLocal.Nombre}");
+                                                results.BeneficiosSuccess++;
+                                            }
+                                            else
+                                            {
+                                                System.Diagnostics.Debug.WriteLine($"[AppShell] ⚠️ Canje aún pendiente para usuario {usuarioId}");
+                                            }
                                         }
                                         else
                                         {
-                                            System.Diagnostics.Debug.WriteLine($"[AppShell] ⚠️ Canje aún pendiente para usuario {usuarioId}");
+                                            System.Diagnostics.Debug.WriteLine($"[AppShell] ❌ Beneficio {beneficioLocal.Nombre} no tiene idApi válido");
                                         }
                                     }
                                     catch (Exception ex)

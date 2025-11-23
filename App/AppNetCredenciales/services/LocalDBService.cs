@@ -411,6 +411,10 @@ namespace AppNetCredenciales.Data
                 evento.MomentoDeAcceso = evento.MomentoDeAcceso.ToUniversalTime();
             }
 
+            if(!connectivityService.IsConnected)
+            {
+                evento.faltaCarga = true;
+            }
             await SaveEventoAccesoAsync(evento);
 
             try
