@@ -51,21 +51,42 @@ spec:
         - name: ASPNETCORE_URLS
           value: "http://+:8080"
         - name: CORS_ORIGINS
-          value: "http://localhost:8080,http://mi-frontend-react-58b37209876tyg9.s3-website-us-east-1.amazonaws.com,http://localhost:5262"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: cors_origins
         - name: Cors__AllowedOrigins
-          value: "http://localhost:8080,http://mi-frontend-react-58b37209876tyg9.s3-website-us-east-1.amazonaws.com,http://localhost:5262"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: cors_origins
         - name: ConnectionStrings__Default
-          value: "Host=postgres-db.cb6u64euqqve.us-east-1.rds.amazonaws.com;Port=5432;Database=espectaculosdb;Username=postgres_user;Password=postgres_user"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: db_endpoint
         - name: DEFAULT_CONNECTION
-          value: "Host=postgres-db.cb6u64euqqve.us-east-1.rds.amazonaws.com;Port=5432;Database=espectaculosdb;Username=postgres_user;Password=postgres_user"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: db_endpoint
         - name: REDIS_CONNECTION_STRING
-          value: "redis-cluster.qatxfp.0001.use1.cache.amazonaws.com:6379"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: redis_endpoint
         - name: AWS__Region
           value: "us-east-1"
         - name: AWS__Cognito__UserPoolId
-          value: "us-east-1_TBr5rbzDq"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_cognito_userpool_id
         - name: AWS__Cognito__ClientId
-          value: "4s35v2gjsnc6l2rgc8bh9tsbuj"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: aws_cognito_client_id
         - name: AWS__Cognito__Region
           value: "us-east-1"
         - name: AWS_ACCESS_KEY_ID
@@ -84,7 +105,10 @@ spec:
               name: aws-creds
               key: aws_session_token
         - name: REDIS__ENDPOINT
-          value: "redis-cluster.qatxfp.0001.use1.cache.amazonaws.com"
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: redis_endpoint
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: "http://otel-collector:4318"
         - name: OTEL_METRICS_EXPORTER

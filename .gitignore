@@ -14,3 +14,4 @@ terraform.tfstate
 terraform.tfstate.backup
 .env
 aws-creds.yaml
+terraform.tfvars

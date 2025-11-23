@@ -1,0 +1,5 @@
+region = "us-east-1"
+
+node_role_arn = "arn:aws:iam::<uid>:role/<idrol>-LabEksNodeRole-<id>"
+
+cluster_role_arn = "arn:aws:iam::<uid>:role/<idrol>-LabEksClusterRole-<id>"

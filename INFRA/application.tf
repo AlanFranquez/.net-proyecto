@@ -61,7 +61,7 @@ resource "aws_lb_listener" "http" {
 # EKS Cluster
 resource "aws_eks_cluster" "main" {
   name     = "eks-lab-cluster"
-  role_arn = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060-LabEksClusterRole-UAoaMXxwnHCl"
+  role_arn = var.cluster_role_arn
 
   vpc_config {
     subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
@@ -74,7 +74,7 @@ resource "aws_eks_cluster" "main" {
 resource "aws_eks_node_group" "default" {
   cluster_name    = aws_eks_cluster.main.name
   node_group_name = "eks-lab-nodes"
-  node_role_arn   = "arn:aws:iam::466060356317:role/c186660a4830571l12339800t1w466060356-LabEksNodeRole-jHAS2pPr2WQi"
+  node_role_arn   = var.node_role_arn
 
   subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 
