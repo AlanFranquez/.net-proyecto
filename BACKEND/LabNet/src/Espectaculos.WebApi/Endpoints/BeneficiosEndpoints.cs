@@ -31,21 +31,19 @@ var items = await mediator.Send(new ListBeneficiosQuery());
 
         api.MapGet("/beneficios/{id:guid}", async (Guid id, IMediator mediator, [FromServices] RabbitMqService rabbit) =>
         {
-            try {
+            try
+            {
                 var item = await mediator.Send(new GetBeneficioByIdQuery(id));
                 rabbit.SendMessage("beneficios.obtener", $"Se ha obtenido el beneficio con id {id}");
                 return item is null ? Results.NotFound() : Results.Ok(item);
-            } catch(Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 rabbit.SendMessage("beneficios.obtener-dlq", $"Error al obtener beneficio con id {id}: {ex.Message}");
                 return Results.StatusCode(500);
             }
-            
-            
-            
-            
-            
-            return item is null ? Results.NotFound() : Results.Ok(item);
         });
+
 
         api.MapPost("/beneficios", async (Espectaculos.WebApi.Endpoints.Dtos.CreateBeneficioDto dto, IMediator mediator, [FromServices] RabbitMqService rabbit) =>
         {

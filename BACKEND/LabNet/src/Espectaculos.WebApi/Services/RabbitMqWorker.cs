@@ -4,8 +4,8 @@ using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Microsoft.AspNetCore.Mvc;
-using MediatR; // Asegúrate de incluir MediatR
-using Espectaculos.Application.Beneficios.Commands.CanjearBeneficio; // Comando para el canje
+using MediatR;
+using Espectaculos.Application.Beneficios.Commands.CanjearBeneficio;
 
 namespace Espectaculos.WebApi.Services;
 
@@ -13,10 +13,13 @@ public class RabbitMqWorker : BackgroundService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<RabbitMqWorker> _logger;
-    private readonly IMediator _mediator; // Inyectamos MediatR para manejar el comando
+    private readonly IMediator _mediator;
     private readonly HashSet<string> _processedMessages = new();
 
-    public RabbitMqWorker(IConfiguration configuration, ILogger<RabbitMqWorker> logger, IMediator mediator)
+    public RabbitMqWorker(
+        IConfiguration configuration,
+        ILogger<RabbitMqWorker> logger,
+        IMediator mediator)
     {
         _configuration = configuration;
         _logger = logger;
@@ -28,48 +31,46 @@ public class RabbitMqWorker : BackgroundService
         var factory = new ConnectionFactory
         {
             HostName = _configuration["RabbitMQ:Host"],
-            Port = int.Parse(_configuration["RabbitMQ:Port"]),
+            Port = int.Parse(_configuration["RabbitMQ:Port"] ?? "5672"),
             UserName = _configuration["RabbitMQ:Username"],
-            Password = _configuration["RabbitMQ:Password"]
+            Password = _configuration["RabbitMQ:Password"],
+
+            // Needed if you want an async handler that RabbitMQ awaits properly
+            DispatchConsumersAsync = true
         };
 
-        using var connection = factory.CreateConnection();
-        using var channel = connection.CreateModel();
-
-        channel.QueueDeclare(queue: "usuarios-dlq", durable: true, exclusive: false, autoDelete: false, arguments: null);
-
-        // Declarar la cola principal con soporte para DLQ
-        channel.QueueDeclare(queue: "usuarios",
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: new Dictionary<string, object>
-            {
-                { "x-dead-letter-exchange", "" }, // Enviar a la DLQ en caso de error
-                { "x-dead-letter-routing-key", "usuarios-dlq" },
-                { "x-max-length", 200 }
-            }
-        );
-
-        // channel.QueueDeclare(
-        //     queue: "usuarios",
-        //     durable: true,
-        //     exclusive: false,
-        //     autoDelete: false,
-        //     arguments: null
-        // );
-        // La cola ya debe existir, creada por RabbitMqService
-
-        var consumer = new EventingBasicConsumer(channel);
-
-        consumer.Received += async (model, ea) =>
+        while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
                 using var connection = factory.CreateConnection();
                 using var channel = connection.CreateModel();
 
-                var consumer = new EventingBasicConsumer(channel);
+                // DLQ
+                channel.QueueDeclare(
+                    queue: "usuarios-dlq",
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+
+                // Main queue with DLQ support
+                channel.QueueDeclare(
+                    queue: "usuarios",
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: new Dictionary<string, object>
+                    {
+                        { "x-dead-letter-exchange", "" },
+                        { "x-dead-letter-routing-key", "usuarios-dlq" },
+                        { "x-max-length", 200 }
+                    });
+
+                // Process one at a time (avoids concurrency issues with HashSet)
+                channel.BasicQos(prefetchSize: 0, prefetchCount: 1, global: false);
+
+                var consumer = new AsyncEventingBasicConsumer(channel);
 
                 consumer.Received += async (model, ea) =>
                 {
@@ -85,7 +86,14 @@ public class RabbitMqWorker : BackgroundService
                             return;
                         }
 
-                        // Evitar procesar mensajes duplicados
+                        if (string.IsNullOrWhiteSpace(data.MessageId))
+                        {
+                            _logger.LogWarning("Mensaje sin MessageId recibido");
+                            channel.BasicAck(ea.DeliveryTag, false);
+                            return;
+                        }
+
+                        // Avoid duplicates
                         if (_processedMessages.Contains(data.MessageId))
                         {
                             _logger.LogWarning($"Mensaje duplicado detectado: {data.MessageId}");
@@ -93,25 +101,39 @@ public class RabbitMqWorker : BackgroundService
                             return;
                         }
 
-                        // Agregar el mensaje al conjunto de procesados
                         _processedMessages.Add(data.MessageId);
 
-                        
+                        // Your Content should contain the payload
+                        var payload = JsonSerializer.Deserialize<CanjeBeneficioPayload>(data.Content);
 
-                        // OK → ACK
+                        if (payload == null)
+                        {
+                            _logger.LogWarning("Payload inválido en Content");
+                            channel.BasicNack(ea.DeliveryTag, false, false);
+                            return;
+                        }
+
+                        // Your command ONLY takes 2 params
+                        var command = new CanjearBeneficioCommand(
+                            payload.BeneficioId,
+                            payload.UsuarioId
+                        );
+
+                        await _mediator.Send(command, stoppingToken);
+
+                        // OK -> ACK
                         channel.BasicAck(ea.DeliveryTag, false);
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error al procesar el mensaje");
-
-                        // NACK → No volver a reenviar el mensaje
+                        // NACK without requeue -> goes to DLQ
                         channel.BasicNack(ea.DeliveryTag, false, false);
                     }
                 };
 
                 channel.BasicConsume(
-                    queue: _configuration["RabbitMQ:QueueName"],
+                    queue: _configuration["RabbitMQ:QueueName"] ?? "usuarios",
                     autoAck: false,
                     consumer: consumer
                 );
@@ -122,6 +144,7 @@ public class RabbitMqWorker : BackgroundService
             }
             catch (OperationCanceledException)
             {
+                // service stopping
                 break;
             }
             catch (Exception ex)
@@ -131,11 +154,7 @@ public class RabbitMqWorker : BackgroundService
             }
         }
     }
-
-   
 }
-
-
 
 public class MyMessage
 {
@@ -143,7 +162,7 @@ public class MyMessage
     public string Content { get; set; }
 }
 
-// Clase para deserializar el contenido del mensaje
+// Payload inside Content
 public class CanjeBeneficioPayload
 {
     public Guid BeneficioId { get; set; }

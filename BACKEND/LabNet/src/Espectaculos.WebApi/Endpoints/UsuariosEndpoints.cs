@@ -59,76 +59,65 @@ public static class UsuariosEndpoints
         }).WithName("EliminarUsuario").WithTags("Usuarios");
 
         group.MapPost("/registro", async (
-    [FromBody] CreateUsuarioDto dto,
-    HttpContext http,
-    IMediator mediator,
-    ICognitoService cognito) =>
-{
-    Serilog.Log.Information("DTO recibido: {@Dto}", dto);
-
-    var cmd = new CreateUsuarioCommand
-    {
-        Nombre = dto.Nombre,
-        Apellido = dto.Apellido,
-        Documento = dto.Documento,
-        Email = dto.Email,
-        Password = dto.Password,
-        RolesIDs = dto.RolesIDs?.ToList()
-    };
-
-    try
-    {
-        var id = await mediator.Send(cmd);
-        var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
-
-        
-        http.Response.Cookies.Append("espectaculos_session", idToken,
-            new CookieOptions
+                [FromBody] CreateUsuarioDto dto,
+                HttpContext http,
+                IMediator mediator,
+                ICognitoService cognito,
+                CancellationToken ct) =>
             {
-                Nombre = dto.Nombre,
-                Apellido = dto.Apellido,
-                Documento = dto.Documento,
-                Email = dto.Email,
-                Password = dto.Password,
-                RolesIDs = dto.RolesIDs?.ToList()
-            };
+                Serilog.Log.Information("DTO recibido: {@Dto}", dto);
 
-            try
-            {
-                var id = await mediator.Send(cmd);
-                var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
+                var cmd = new CreateUsuarioCommand
+                {
+                    Nombre = dto.Nombre,
+                    Apellido = dto.Apellido,
+                    Documento = dto.Documento,
+                    Email = dto.Email,
+                    Password = dto.Password,
+                    RolesIDs = dto.RolesIDs?.ToList()
+                };
 
-                // Publicar un mensaje en RabbitMQ (deshabilitado)
-                // rabbitMqService.SendMessage($"Usuario registrado: {dto.Email}");
+                try
+                {
+                    // 1) Crear usuario en tu BD/local
+                    var id = await mediator.Send(cmd, ct);
 
-                http.Response.Cookies.Append("espectaculos_session", idToken,
-                    new CookieOptions
-                    {
-                        HttpOnly = true,
-                        Secure = false,
-                        SameSite = SameSiteMode.Lax,
-                        Expires = DateTimeOffset.UtcNow.AddHours(8)
-                    });
+                    // 2) Loguearlo en Cognito y obtener token
+                    var idToken = await cognito.LoginAsync(dto.Email, dto.Password, ct);
 
-                return Results.Ok(id);
-            }
-            catch (FluentValidation.ValidationException vf)
-            {
-                var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
-                // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
-                return Results.BadRequest(new { message = "Validation failed", errors });
+                    // 3) Guardar cookie de sesión
+                    http.Response.Cookies.Append(
+                        "espectaculos_session",
+                        idToken,
+                        new CookieOptions
+                        {
+                            HttpOnly = true,
+                            Secure = false, // en prod con HTTPS => true
+                            SameSite = SameSiteMode.Lax,
+                            Expires = DateTimeOffset.UtcNow.AddHours(8)
+                        });
 
-            }
-            catch (Exception ex)
-            {
-                Serilog.Log.Error(ex, "Error en registro");
-                // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {ex.Message}");
-        
-                return Results.StatusCode(500);
-            }
-        })
-        .WithName("CrearUsuario")
-        .WithTags("Usuarios");
+                    return Results.Ok(id);
+                }
+                catch (FluentValidation.ValidationException vf)
+                {
+                    var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
+                    return Results.BadRequest(new { message = "Validation failed", errors });
+                }
+                catch (NotAuthorizedException)
+                {
+                    return Results.Unauthorized();
+                }
+                catch (Exception ex)
+                {
+                    Serilog.Log.Error(ex, "Error en registro");
+                    return Results.StatusCode(500);
+                }
+            })
+            .WithName("CrearUsuario")
+            .WithTags("Usuarios")
+            .WithOpenApi();
+
 
 group.MapPost("/test-dlq", async ([FromServices] RabbitMqService rabbit) =>
 {
