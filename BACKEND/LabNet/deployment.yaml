@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: espectaculos-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: espectaculos
@@ -138,8 +138,8 @@ spec:
     apiVersion: apps/v1
     kind: Deployment
     name: espectaculos-app
-  minReplicas: 2
-  maxReplicas: 10
+  minReplicas: 1
+  maxReplicas: 5
   metrics:
   - type: Resource
     resource:
@@ -1429,6 +1429,10 @@ spec:
                 path: 04-soak-test.js
               - key: 05-spike-test.js
                 path: 05-spike-test.js
+              - key: 06-breakpoint-test.js
+                path: 06-breakpoint-test.js
+              - key: 07-constant-arrival-rate.js
+                path: 07-constant-arrival-rate.js
         - name: k6-server
           configMap:
             name: k6-scripts
@@ -1460,48 +1464,3 @@ spec:
       port: 80
       targetPort: 8080
       protocol: TCP
-
----
-# CronJob: Baseline diario
-apiVersion: batch/v1
-kind: CronJob
-metadata:
-  name: k6-baseline-daily
-  namespace: default
-spec:
-  schedule: "0 2 * * *"
-  concurrencyPolicy: Forbid
-  successfulJobsHistoryLimit: 3
-  failedJobsHistoryLimit: 3
-  jobTemplate:
-    spec:
-      template:
-        spec:
-          restartPolicy: OnFailure
-          containers:
-            - name: k6
-              image: grafana/k6:latest
-              command: ["k6"]
-              args:
-                - "run"
-                - "/scripts/01-baseline.js"
-              env:
-                - name: BASE_URL
-                  value: "http://backend-service:80"
-              volumeMounts:
-                - name: k6-scripts
-                  mountPath: /scripts
-              resources:
-                requests:
-                  memory: "256Mi"
-                  cpu: "500m"
-                limits:
-                  memory: "1Gi"
-                  cpu: "1000m"
-          volumes:
-            - name: k6-scripts
-              configMap:
-                name: k6-scripts
-                items:
-                  - key: 01-baseline.js
-                    path: 01-baseline.js

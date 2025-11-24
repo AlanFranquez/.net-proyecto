@@ -46,6 +46,14 @@ resource "aws_security_group" "redis_sg" {
     cidr_blocks = ["10.0.0.0/16"]
   }
 
+  ingress {
+    description = "Redis from EKS nodes"
+    from_port   = 6379
+    to_port     = 6379
+    protocol    = "tcp"
+    security_groups = [aws_security_group.nodes_sg.id]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0

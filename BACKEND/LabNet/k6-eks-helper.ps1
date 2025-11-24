@@ -10,6 +10,8 @@
         VU: Virtual User
         RPS: Requests Per Second
 
+|   # Ver acciones posibles
+    .\k6-eks-helper.ps1 -Action scenarios
 
     # Baseline agresivo (50 VUs - 6 minutos)
     .\k6-eks-helper.ps1 -Action run -Scenario baseline

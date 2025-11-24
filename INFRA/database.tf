@@ -12,7 +12,7 @@ resource "aws_db_instance" "postgres" {
   identifier        = "postgres-db"
   engine            = "postgres"
   engine_version    = "16.6"
-  instance_class    = "db.t3.micro"
+  instance_class    = "db.t3.small"
   allocated_storage = 20
   username          = "postgres_user"
   password          = "postgres_user"

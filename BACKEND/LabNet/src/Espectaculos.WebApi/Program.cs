@@ -62,7 +62,6 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
-using StackExchange.Redis;
 using Espectaculos.Infrastructure.Persistence;
 using Espectaculos.Infrastructure.Security;
 using Espectaculos.WebApi.Endpoints;
@@ -71,6 +70,14 @@ using Espectaculos.WebApi.Services;
 using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.Extensions.FileProviders;
 using System.IO;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.StackExchangeRedis;
+using StackExchange.Redis;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Antiforgery;
+using Microsoft.AspNetCore.Http;
+
 
 var envPath = Path.Combine(Directory.GetCurrentDirectory(), "../../.env");
 
@@ -85,15 +92,17 @@ else
 }
 
 var builder = WebApplication.CreateBuilder(args);
+// registrar implementación NO-OP de antiforgery
+builder.Services.AddSingleton<IAntiforgery, NoOpAntiforgery>();
 
 // ---------- Logging (Serilog) ----------
 builder.AddSerilogLogging();
 
 // RabbitMQ deshabilitado temporalmente
-// builder.Services.AddSingleton<RabbitMqService>();
+builder.Services.AddSingleton<RabbitMqService>();
 
 // Configurar RabbitMQ en appsettings.json
-// builder.Configuration.GetSection("RabbitMQ");
+builder.Configuration.GetSection("RabbitMQ");
 
 // builder.Services.AddSingleton<RabbitMqService>();
 
@@ -131,7 +140,7 @@ if (string.IsNullOrWhiteSpace(cognitoSettings.Region) ||
 
 var authority = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
 // RabbitMQ Worker deshabilitado temporalmente
-// builder.Services.AddHostedService<RabbitMqWorker>();
+builder.Services.AddHostedService<RabbitMqWorker>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -254,6 +263,8 @@ builder.Services.AddRazorPages()
         // Allow anonymous access to login + logout pages
         o.Conventions.AllowAnonymousToAreaPage("Admin", "/Account/Login");
         o.Conventions.AllowAnonymousToAreaPage("Admin", "/Account/Logout");
+        
+        o.Conventions.ConfigureFilter(new IgnoreAntiforgeryTokenAttribute());
     });
 
 // ---------- OpenTelemetry ----------
@@ -331,7 +342,11 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
-builder.Services.AddControllers()
+builder.Services.AddControllers(options =>
+    {
+        // Ignora validación antiforgery para todos los controllers/endpoints
+        options.Filters.Add(new IgnoreAntiforgeryTokenAttribute());
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -492,7 +507,7 @@ if (!string.IsNullOrWhiteSpace(redisEndpoint))
     {
         var opts = new ConfigurationOptions
         {
-            EndPoints = { $"{redisEndpoint}:6379" },
+            EndPoints = { $"{redisEndpoint}" },
             AbortOnConnectFail = false,
             ResolveDns = true,
             ConnectTimeout = 10000,
@@ -505,7 +520,7 @@ if (!string.IsNullOrWhiteSpace(redisEndpoint))
         // NO password si no configuraste AUTH
         return ConnectionMultiplexer.Connect(opts);
     });
-
+    
     builder.Services.AddSingleton<ICacheService, RedisCacheService>();
 }
 else
