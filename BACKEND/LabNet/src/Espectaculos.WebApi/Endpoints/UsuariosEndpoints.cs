@@ -12,6 +12,7 @@ using Espectaculos.Application.Usuarios.Commands.LoginUsuario;
 using Espectaculos.Application.Usuarios.Commands.UpdateUsuario;
 using Espectaculos.Application.Usuarios.Queries.GetUsuarioByEmail;
 using Espectaculos.Application.Usuarios.Queries.ListarUsuarios;
+using Espectaculos.Application.Dispositivos.Queries.ListarDispositivos;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -58,61 +59,61 @@ public static class UsuariosEndpoints
         }).WithName("EliminarUsuario").WithTags("Usuarios");
 
         group.MapPost("/registro", async (
-    [FromBody] CreateUsuarioDto dto,
-    HttpContext http,
-    IMediator mediator,
-    ICognitoService cognito
-    // RabbitMqService deshabilitado temporalmente
-    /* RabbitMqService rabbitMqService */) =>
-{
-    Serilog.Log.Information("DTO recibido: {@Dto}", dto);
+            [FromBody] CreateUsuarioDto dto,
+            HttpContext http,
+            IMediator mediator,
+            ICognitoService cognito
+            // RabbitMqService deshabilitado temporalmente
+            /* RabbitMqService rabbitMqService */) =>
+        {
+            Serilog.Log.Information("DTO recibido: {@Dto}", dto);
 
-    var cmd = new CreateUsuarioCommand
-    {
-        Nombre = dto.Nombre,
-        Apellido = dto.Apellido,
-        Documento = dto.Documento,
-        Email = dto.Email,
-        Password = dto.Password,
-        RolesIDs = dto.RolesIDs?.ToList()
-    };
-
-    try
-    {
-        var id = await mediator.Send(cmd);
-        var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
-
-        // Publicar un mensaje en RabbitMQ (deshabilitado)
-        // rabbitMqService.SendMessage($"Usuario registrado: {dto.Email}");
-
-        http.Response.Cookies.Append("espectaculos_session", idToken,
-            new CookieOptions
+            var cmd = new CreateUsuarioCommand
             {
-                HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
-                Expires = DateTimeOffset.UtcNow.AddHours(8)
-            });
+                Nombre = dto.Nombre,
+                Apellido = dto.Apellido,
+                Documento = dto.Documento,
+                Email = dto.Email,
+                Password = dto.Password,
+                RolesIDs = dto.RolesIDs?.ToList()
+            };
 
-        return Results.Ok(id);
-    }
-    catch (FluentValidation.ValidationException vf)
-    {
-        var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
-        // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
-        return Results.BadRequest(new { message = "Validation failed", errors });
+            try
+            {
+                var id = await mediator.Send(cmd);
+                var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
 
-    }
-    catch (Exception ex)
-    {
-        Serilog.Log.Error(ex, "Error en registro");
-        // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {ex.Message}");
+                // Publicar un mensaje en RabbitMQ (deshabilitado)
+                // rabbitMqService.SendMessage($"Usuario registrado: {dto.Email}");
+
+                http.Response.Cookies.Append("espectaculos_session", idToken,
+                    new CookieOptions
+                    {
+                        HttpOnly = true,
+                        Secure = false,
+                        SameSite = SameSiteMode.Lax,
+                        Expires = DateTimeOffset.UtcNow.AddHours(8)
+                    });
+
+                return Results.Ok(id);
+            }
+            catch (FluentValidation.ValidationException vf)
+            {
+                var errors = vf.Errors.Select(e => new { e.PropertyName, e.ErrorMessage });
+                // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {vf.Message}");
+                return Results.BadRequest(new { message = "Validation failed", errors });
+
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Error en registro");
+                // rabbitMqService.SendMessage($"Error al registrar usuario: {dto.Email}. Detalle: {ex.Message}");
         
-        return Results.StatusCode(500);
-    }
-})
-.WithName("CrearUsuario")
-.WithTags("Usuarios");
+                return Results.StatusCode(500);
+            }
+        })
+        .WithName("CrearUsuario")
+        .WithTags("Usuarios");
 
 
 
@@ -142,25 +143,54 @@ public static class UsuariosEndpoints
             //return Results.Ok(id);
         }).WithName("IniciarSesion").WithTags("Usuarios");
         
-        group.MapGet("/me", [Authorize] async (ClaimsPrincipal user, IMediator mediator, CancellationToken ct) =>
+        group.MapGet("/me", [Authorize] async (HttpContext http, ClaimsPrincipal user, IMediator mediator, CancellationToken ct) =>
             {
-                // Obtener email desde el token JWT validado por Cognito
                 var email = user.FindFirstValue(ClaimTypes.Email);
                 if (string.IsNullOrEmpty(email))
                     return Results.Unauthorized();
 
-                // Ejecutar query de tu aplicación
                 var query = new GetUsuarioByEmailQuery(email);
                 var usuario = await mediator.Send(query, ct);
 
                 if (usuario is null)
                     return Results.NotFound("Usuario no encontrado en base de datos local.");
 
+                // ✅ validar dispositivo actual por huella
+                var browserId = http.Request.Headers["X-Device-Id"].FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(browserId))
+                {
+                    var dispositivos = await mediator.Send(new ListarDispositivosQuery(), ct);
+
+                    // usuario.UsuarioId es Guid seguro (DTO o entidad)
+                    var usuarioId = usuario.UsuarioId;
+                    var current = dispositivos.FirstOrDefault(d =>
+                        d.UsuarioId == usuarioId &&
+                        d.HuellaDispositivo == browserId
+                    );
+
+                    if (current != null)
+                    {
+                        var estadoStr = current.Estado.ToString().ToLowerInvariant();
+
+                        var revoked =
+                            estadoStr.Contains("revoc") ||
+                            estadoStr.Contains("baja") ||
+                            estadoStr.Contains("inactiv");
+
+                        if (revoked)
+                        {
+                            http.Response.Cookies.Delete("espectaculos_session");
+                            return Results.Unauthorized();
+                        }
+                    }
+                }
+
                 return Results.Ok(usuario);
             })
             .WithName("GetUsuarioActual")
             .WithTags("Usuarios")
             .WithOpenApi();
+
 
        
         
@@ -187,47 +217,47 @@ public static class UsuariosEndpoints
                 [FromBody] CambiarPasswordDto dto,
                 ICognitoService cognito,
                 CancellationToken ct) =>
+        {
+            var email = user.FindFirstValue(ClaimTypes.Email);
+            if (string.IsNullOrWhiteSpace(email))
+                return Results.Unauthorized();
+
+            if (string.IsNullOrWhiteSpace(dto.CurrentPassword) ||
+                string.IsNullOrWhiteSpace(dto.NewPassword))
             {
-                var email = user.FindFirstValue(ClaimTypes.Email);
-                if (string.IsNullOrWhiteSpace(email))
-                    return Results.Unauthorized();
+                return Results.BadRequest(new { error = "CurrentPassword y NewPassword son obligatorios." });
+            }
 
-                if (string.IsNullOrWhiteSpace(dto.CurrentPassword) ||
-                    string.IsNullOrWhiteSpace(dto.NewPassword))
-                {
-                    return Results.BadRequest(new { error = "CurrentPassword y NewPassword son obligatorios." });
-                }
+            try
+            {
+                await cognito.ChangePasswordAsync(email, dto.CurrentPassword, dto.NewPassword, ct);
+                return Results.NoContent();
+            }
+            catch (NotAuthorizedException)
+            {
+                return Results.BadRequest(new { error = "Contraseña actual incorrecta o no autorizado." });
+            }
+            catch (Exception ex)
+            {
+                Serilog.Log.Error(ex, "Error en cambiar-password");
+                return Results.StatusCode(500);
+            }
+        })
+        .WithName("CambiarPassword")
+        .WithTags("Usuarios");
 
-                try
-                {
-                    await cognito.ChangePasswordAsync(email, dto.CurrentPassword, dto.NewPassword, ct);
-                    return Results.NoContent();
-                }
-                catch (NotAuthorizedException)
-                {
-                    return Results.BadRequest(new { error = "Contraseña actual incorrecta o no autorizado." });
-                }
-                catch (Exception ex)
-                {
-                    Serilog.Log.Error(ex, "Error en cambiar-password");
-                    return Results.StatusCode(500);
-                }
-            })
-            .WithName("CambiarPassword")
-            .WithTags("Usuarios");
         group.MapPut("/bucleInfinito", async ([FromServices] RabbitMqService rabbitMqService) =>
-{
-    while (true)
-    {
-
-        rabbitMqService.SendMessage("Mensaje enviado desde el bucle infinito.");
-    }
+        {
+            while (true)
+            {
+                rabbitMqService.SendMessage("Mensaje enviado desde el bucle infinito.");
+            }
 
     
-        Console.WriteLine($"Publicando mensaje: mensaje de prueba");
-})
-.WithName("BucleInfinito")
-.WithTags("Usuarios");
+            Console.WriteLine($"Publicando mensaje: mensaje de prueba");
+        })
+        .WithName("BucleInfinito")
+        .WithTags("Usuarios");
         
 
 #if DEMO_ENABLE_ADMIN

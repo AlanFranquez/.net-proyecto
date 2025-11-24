@@ -100,3 +100,51 @@
   background: #ef4444; color: #fff; border: none; padding: 8px 12px;
   border-radius: 8px; cursor: pointer;
 }
+.disp-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.btn-nuevo, .btn-edit {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn-edit {
+  margin-right: 8px;
+}
+
+.disp-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disp-form {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 6px;
+}
+
+.disp-form label {
+  display: grid;
+  font-size: 14px;
+  gap: 6px;
+}
+
+.disp-form input, .disp-form select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.disp-form .inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

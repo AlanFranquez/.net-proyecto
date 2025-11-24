@@ -23,7 +23,6 @@ namespace Espectaculos.Application.Dispositivos.Commands.CreateDispositivo
             var usuario = await _uow.Usuarios.GetByIdAsync(command.UsuarioId, ct)
                           ?? throw new KeyNotFoundException("El usuario indicado no existe.");
 
-            
             var e = new Dispositivo
             {
                 DispositivoId = Guid.NewGuid(),
@@ -33,7 +32,7 @@ namespace Espectaculos.Application.Dispositivos.Commands.CreateDispositivo
                 BiometriaHabilitada = command.BiometriaHabilitada,
                 Estado = command.Estado,
                 UsuarioId = command.UsuarioId,
-                Usuario = usuario,
+                Usuario = null,
                 Notificaciones = new List<Notificacion>(),
                 Sincronizaciones = new List<Sincronizacion>()
             };

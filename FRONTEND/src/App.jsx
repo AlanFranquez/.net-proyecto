@@ -1,7 +1,9 @@
-// src/App.jsx
 import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "./services/AuthService.jsx";
+
+import useAutoRegisterBrowserDevice from "./hooks/useAutoRegisterBrowserDevice";
+import useDeviceSessionGuard from "./hooks/useDeviceSessionGuard";
 
 import Home from "./pages/Homepage.jsx";
 import Dispositivos from "./pages/Dispositivos.jsx";
@@ -19,6 +21,9 @@ import Notificaciones from "./pages/Notificaciones.jsx";
 
 
 export default function App() {
+    useAutoRegisterBrowserDevice();
+    useDeviceSessionGuard();
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
@@ -26,7 +31,6 @@ export default function App() {
       <Route path="/registrarse" element={<Registrarse />} />
       <Route path="/login" element={<Login />} />
 
-      {/* Rutas protegidas */}
       <Route
         path="/perfil"
         element={

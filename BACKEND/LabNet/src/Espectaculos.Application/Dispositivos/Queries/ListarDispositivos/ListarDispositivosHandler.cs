@@ -1,6 +1,5 @@
 ﻿using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.DTOs;
-using FluentValidation;
 using MediatR;
 
 namespace Espectaculos.Application.Dispositivos.Queries.ListarDispositivos
@@ -24,11 +23,15 @@ namespace Espectaculos.Application.Dispositivos.Queries.ListarDispositivos
                 NumeroTelefono = e.NumeroTelefono,
                 Plataforma = e.Plataforma,
                 HuellaDispositivo = e.HuellaDispositivo,
+                NavegadorNombre = e.NavegadorNombre,
+                NavegadorVersion = e.NavegadorVersion,
+
                 BiometriaHabilitada = e.BiometriaHabilitada,
                 Estado = e.Estado,
                 UsuarioId = e.UsuarioId,
-                NotificacionesIds = e.Notificaciones.Select(n => n.NotificacionId).ToList(),
-                SincronizacionesIds = e.Sincronizaciones.Select(s => s.SincronizacionId).ToList(),
+
+                NotificacionesIds = e.Notificaciones?.Select(n => n.NotificacionId).ToList(),
+                SincronizacionesIds = e.Sincronizaciones?.Select(s => s.SincronizacionId).ToList(),
             }).ToList();
         }
     }

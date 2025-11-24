@@ -477,6 +477,7 @@ builder.Services.AddScoped<INovedadRepository, NovedadRepository>();
 
 // Notificador realtime de accesos (SignalR)
 builder.Services.AddScoped<IAccesosRealtimeNotifier, AccesosSignalRNotifier>();
+builder.Services.AddScoped<IDispositivosRealtimeNotifier, DispositivosSignalRNotifier>();
 
 builder.Services.AddSingleton<INotificationSender, Espectaculos.Infrastructure.Notifications.LoggingNotificationSender>();
 
@@ -629,6 +630,7 @@ app.MapRazorPages();
 
 // ---------- SignalR hubs compartidos ----------
 app.MapHub<AccesosHub>("/hubs/accesos");
+app.MapHub<DispositivosHub>("/hubs/dispositivos");
 
 // ---------- Health ----------
 app.MapHealthChecks("/health");
