@@ -1,68 +1,175 @@
+/* src/styles/Registrarse.css */
+
+/* =========== Page layout =========== */
 .page {
+  min-height: calc(100dvh - 64px);
   display: grid;
   place-items: start center;
-  padding: 40px 16px;
+  padding: 36px 16px 64px;
+  background: #f6f6f7;
 }
 
+/* =========== Card =========== */
 .register-card {
   width: 100%;
   max-width: 520px;
-  border: 4px solid #000;
-  padding: 28px;
-  box-shadow: 8px 8px 0 rgba(0,0,0,.85);
   background: #fff;
+  border: 4px solid #000;
+  border-radius: 16px;
+  padding: 22px 22px 18px;
+  box-shadow: 6px 6px 0 rgba(0,0,0,.9);
+  position: relative;
+}
+
+/* Accent “tape” */
+.register-card::before {
+  content: "";
+  position: absolute;
+  inset: -4px -4px auto -4px;
+  height: 10px;
+  background: #000;
+  border-radius: 12px 12px 0 0;
 }
 
 .register-title {
   text-align: center;
-  font-size: 32px;
-  font-weight: 800;
-  margin-bottom: 22px;
+  font-size: clamp(24px, 3.5vw, 34px);
+  font-weight: 900;
+  margin: 8px 0 18px;
+  letter-spacing: .2px;
 }
 
+/* =========== Error =========== */
+.register-error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 3px solid #000;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #7f1d1d;
+  font-weight: 900;
+  font-size: 13px;
+  text-align: center;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.9);
+}
+
+/* =========== Form =========== */
 .register-form {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
+/* Field wrapper */
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+/* Label */
 .field .label {
   display: block;
-  font-size: 14px;
-  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: #111827;
 }
 
+/* Inputs */
 .input {
   width: 100%;
-  padding: 10px 0;
-  border: 0;
-  border-bottom: 1px solid #cfcfcf;
+  padding: 11px 12px;
+  border: 3px solid #000;
+  border-radius: 10px;
   outline: none;
+  font-size: 14px;
+  font-weight: 800;
+  background: #fff;
+  transition: transform .06s ease, box-shadow .06s ease, background .12s ease;
+}
+
+.input::placeholder {
+  color: #9ca3af;
+  font-weight: 700;
 }
 
 .input:focus {
-  border-bottom-color: #000;
+  background: #f9fafb;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.95);
+  transform: translate(-1px, -1px);
 }
 
+/* Autofill fix (Chrome) */
+.input:-webkit-autofill {
+  -webkit-text-fill-color: #111827;
+  box-shadow: 0 0 0px 1000px #fff inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+/* =========== Button =========== */
 .register-btn {
   display: block;
-  margin: 10px auto 0;
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
   background: #000;
   color: #fff;
-  padding: 10px 20px;
-  border-radius: 6px;
+  border: 3px solid #000;
+  border-radius: 12px;
+  font-weight: 900;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.9);
+  transition: transform .06s ease, box-shadow .06s ease, opacity .12s ease;
 }
 
+.register-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 rgba(0,0,0,.95);
+}
+
+.register-btn:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0 rgba(0,0,0,.9);
+}
+
+.register-btn:disabled {
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+/* =========== Sign-in link =========== */
 .signin {
   text-align: center;
-  margin-top: 18px;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #111827;
 }
 
 .signin a {
   color: #0ea5e9;
-  font-weight: 600;
+  font-weight: 900;
   text-decoration: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  transition: background .12s ease, color .12s ease;
 }
 
 .signin a:hover {
+  background: #e0f2fe;
+  color: #0369a1;
   text-decoration: underline;
+}
+
+/* =========== Responsive =========== */
+@media (max-width: 520px) {
+  .register-card {
+    padding: 18px 16px 14px;
+    border-radius: 14px;
+    box-shadow: 5px 5px 0 rgba(0,0,0,.9);
+  }
+  .register-title {
+    margin-bottom: 14px;
+  }
 }

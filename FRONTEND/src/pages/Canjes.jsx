@@ -224,10 +224,9 @@ export default function Canjes({ isLoggedIn = true, onToggle }) {
           <div className="filters" role="region" aria-label="Filtros">
             <div className="search">
               <span className="search-icon" aria-hidden>
-                🔎
+                
               </span>
               <input
-                placeholder="Buscar por ID, beneficio, estado o firma"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 aria-label="Buscar"

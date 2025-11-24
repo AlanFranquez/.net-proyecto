@@ -4,7 +4,7 @@ import { ProtectedRoute } from "./services/AuthService.jsx";
 
 import useAutoRegisterBrowserDevice from "./hooks/useAutoRegisterBrowserDevice";
 import useDeviceSessionGuard from "./hooks/useDeviceSessionGuard";
-
+import Espacios from "./pages/Espacios.jsx";
 import Home from "./pages/Homepage.jsx";
 import Dispositivos from "./pages/Dispositivos.jsx";
 import Canjes from "./pages/Canjes.jsx";
@@ -101,6 +101,14 @@ export default function App() {
           </ProtectedRoute>
         }
       />
+      <Route
+       path="/espacios"
+       element={
+         <ProtectedRoute fallback={<Navigate to="/login" replace />}>
+           <Espacios />
+         </ProtectedRoute>
+       }
+     />
       <Route path="/canjes" element={<Canjes />} />
       <Route path="/test-api" element={<TestApi />} />
 

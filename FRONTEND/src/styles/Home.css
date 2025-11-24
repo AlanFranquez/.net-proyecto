@@ -1,119 +1,171 @@
-.home {
-  position: relative;
-  height: 100vh;               /* Always full viewport height */
-  display: grid;
-  place-items: center;
-  padding: 16px;               /* Reduced padding for less vertical space */
-  background:
-    url("../assets/library-bg.jpg") center/cover no-repeat fixed;
-}
-
-.backdrop {
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(4px);
-  background: rgba(255,255,255,0.55);
-}
-
-/* Card */
-.hero-card {
-  position: relative;
-  width: 100%;
-  max-width: 520px;            /* Slightly narrower */
-  background: #fff;
-  border-radius: 10px;
-  padding: 22px 22px 18px;     /* Smaller padding */
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  border: 1px solid rgba(0,0,0,.05);
-}
-
-.hand { font-size: 26px; margin-bottom: 6px; }
-
-.title {
-  font-size: 26px;
-  line-height: 1.2;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0 0 8px;
-}
-
-.subtitle {
-  color: #334155;
-  margin: 0 0 14px;
-  line-height: 1.4;
-}
-
-.cta { display: flex; gap: 12px; margin-bottom: 14px; }
-
-.btn {
-  display: inline-block;
-  padding: 8px 14px;           /* Slightly smaller buttons */
-  border-radius: 8px;
-  background: #0f172a;
-  color: #fff;
-  text-decoration: none;
-  font-weight: 500;
-}
-.btn.primary { background: #0b1220; } 
-.btn + .btn { background: #111827; opacity: .92; }
-.btn:hover { opacity: .9; }
-
-.features {
-  list-style: none;
-  padding: 0;
-  margin: 12px 0 0;
-  color: #111827;
-}
-.features li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 6px 0;              /* More compact */
-}
-.home {
-  display: grid;
-  place-items: center;
-}
-
-/* Centrar todo dentro del hero-card */
-.hero-card {
-  text-align: center;        /* Centra todo el texto */
-  display: flex;
-  flex-direction: column;
-  align-items: center;        /* Centra botones, listas y elementos internos */
-  justify-content: center;
-}
-
-/* Asegura que los botones queden centrados */
-.cta {
-  display: flex;
-  flex-direction: column;     /* Uno abajo del otro (opcional) */
-  gap: 12px;
-  align-items: center;
-}
-
-/* Lista centrada */
-.features {
-  list-style: none;
-  padding: 0;
-  text-align: center;
-}
 /* src/styles/Home.css */
 
-.home-guest {
-  /* tu fondo actual */
-  background-image: url("../assets\library-bg.jpg");
-  background-size: cover;
+/* =========== Base safety =========== */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* =========== Page background =========== */
+.home {
+  position: relative;
+  min-height: calc(100vh - 64px); /* keeps navbar space in mind */
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 3vw, 32px);
   background-position: center;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
+.home-guest {
+  background-image: url("../assets/library-bg.jpg");
 }
 
 .home-logged {
-  background-image: url("../assets/home-logged-bg.jpg");
-  background-size: cover;
-  background-position: center;
+  background-image: url("../assets/wp10046816.jpg");
+}
+
+/* soft blur + gradient veil */
+.backdrop {
+  position: absolute;
+  inset: 0;
+  backdrop-filter: blur(2px);
+
+}
+
+/* =========== Hero card =========== */
+.hero-card {
+  position: relative;
+  width: min(620px, 100%);
+  background: #fff;
+  border: 5px solid #000;
+  border-radius: 14px;
+  padding: clamp(18px, 3vw, 28px);
+  text-align: center;
+  display: grid;
+  gap: 12px;
+  box-shadow:
+    inset 0 0 0 6px #fff,
+    10px 10px 0 rgba(0,0,0,0.75);
+  animation: cardIn .35s ease-out both;
+}
+
+@keyframes cardIn {
+  from { transform: translateY(6px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+/* tiny decorative top bar */
+.hero-card::before {
+  content: "";
+  position: absolute;
+  left: 12px; right: 12px; top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: repeating-linear-gradient(
+    90deg,
+    #000 0 18px,
+    transparent 18px 28px
+  );
+  opacity: .08;
+}
+
+/* =========== Title / text =========== */
+.title {
+  font-size: clamp(22px, 3.2vw, 34px);
+  line-height: 1.15;
+  font-weight: 900;
+  color: #0b1220;
+  margin: 6px 0 2px;
+  letter-spacing: .2px;
 }
 
 .username-highlight {
-  font-weight: 600;
+  font-weight: 900;
+  display: inline-block;
+  padding: 2px 8px;
+  border: 3px solid #000;
+  border-radius: 999px;
+  background: #f4f4f5;
+  margin-left: 4px;
+}
 
+/* subtitle text blocks */
+.subtitle {
+  color: #111827;
+  font-size: clamp(14px, 2.1vw, 16px);
+  line-height: 1.5;
+  margin: 0;
+  opacity: .9;
+}
+
+/* =========== CTA buttons =========== */
+.cta {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.cta-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 14px;
+  border-radius: 10px;
+  background: #111827;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 700;
+  border: 2px solid #111827;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  box-shadow: 4px 4px 0 rgba(0,0,0,.6);
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 6px 6px 0 rgba(0,0,0,.75);
+}
+
+.btn.primary {
+  background: #000;
+  border-color: #000;
+}
+
+.btn.ghost {
+  background: #fff;
+  color: #000;
+  border-color: #000;
+}
+
+/* =========== Features (still empty list safe) =========== */
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* =========== Responsive =========== */
+@media (min-width: 680px) {
+  .cta-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-card {
+    box-shadow:
+      inset 0 0 0 6px #fff,
+      6px 6px 0 rgba(0,0,0,0.75);
+  }
 }

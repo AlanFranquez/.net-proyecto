@@ -1,122 +1,148 @@
+/* src/styles/Dispositivos.css */
+
+/* -------- Page wrap -------- */
 .disp-wrap {
-  padding: 32px 16px 60px;
+  padding: 28px 16px 60px;
   display: grid;
   place-items: start center;
+  background: #fff;
 }
 
+/* Main card */
 .disp-card {
   width: 100%;
-  max-width: 820px;
+  max-width: 860px;
   background: #fff;
+  border: 4px solid #000;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.08);
-  border: 1px solid rgba(0,0,0,.07);
+  padding: 14px 14px 10px;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.9);
 }
 
+/* Header row */
+.disp-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 6px 0;
+}
+
+/* Title */
 .disp-title {
-  font-size: 32px;
-  margin: 24px 24px 12px;
-  font-weight: 800;
-  color: #262626;
+  font-size: 30px;
+  font-weight: 900;
+  margin: 8px 0 10px;
+  color: #000;
 }
 
+/* Subtitles (h3 inline in JSX) */
+.disp-card h3 {
+  font-size: 16px;
+  font-weight: 900;
+  margin: 10px 6px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Loading, empty & errors */
+.disp-loading,
+.disp-empty,
+.disp-error {
+  font-size: 14px;
+  font-weight: 800;
+  margin: 8px 6px;
+}
+
+.disp-error {
+  padding: 8px 10px;
+  border: 3px solid #000;
+  border-radius: 10px;
+  background: #f3f3f3;
+}
+
+/* -------- Lists -------- */
 .disp-list {
   list-style: none;
   margin: 0;
-  padding: 0 24px 16px;
+  padding: 6px;
+  display: grid;
+  gap: 10px;
 }
 
+/* Each device row as card */
 .disp-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 18px 0;
-}
-.disp-row.with-top {
-  border-top: 1px solid #ededed;
+  gap: 12px;
+
+  padding: 12px 12px;
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.85);
+  transition: transform 0.06s ease, background 0.12s ease, box-shadow 0.06s ease;
 }
 
+.disp-row:hover {
+  transform: translate(-1px, -1px);
+  background: #f7f7f7;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.95);
+}
+
+/* keep class used in JSX but no longer needed for borders */
+.disp-row.with-top {
+  border-top: 3px solid #000; /* harmless fallback */
+}
+
+/* Left block */
 .left {
   display: flex;
-  gap: 14px;
-  align-items: center;
+  gap: 12px;
+  align-items: flex-start;
 }
 
+/* Icon */
 .dev-icon {
   width: 44px;
   height: 44px;
   border-radius: 10px;
   display: grid;
   place-items: center;
-  font-size: 26px;
-  background: #f5f6f7;
-  color: #374151;
+  font-size: 22px;
+  background: #fff;
+  border: 3px solid #000;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.85);
 }
 
-.dev-texts { line-height: 1.35; }
-.dev-name { font-size: 20px; font-weight: 700; color: #2b2b2b; }
-.dev-meta { font-size: 14px; color: #606060; }
-
-.right { display: flex; align-items: center; }
-
-.btn-baja {
-  background: #f3f4f6;
-  color: #222;
-  border: 1px solid #e5e7eb;
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-}
-.btn-baja:hover { background: #eaecef; }
-
-.estado-baja {
-  background: #e5e7eb;
-  color: #444;
-  font-weight: 600;
-  padding: 10px 14px;
-  border-radius: 10px;
+/* Texts */
+.dev-texts {
+  line-height: 1.35;
+  display: grid;
+  gap: 2px;
 }
 
-.disp-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,.35);
-  display: flex; align-items: center; justify-content: center;
-}
-.disp-modal {
-  width: 420px; max-width: calc(100% - 32px);
-  background: #fff; border-radius: 12px;
-  padding: 18px 18px 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,.25);
-}
-.disp-modal h3 { margin: 0 0 8px; }
-.modal-actions {
-  display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px;
-}
-.btn-cancel {
-  background: #e5e7eb; border: none; padding: 8px 12px;
-  border-radius: 8px; cursor: pointer;
-}
-.btn-confirm {
-  background: #ef4444; color: #fff; border: none; padding: 8px 12px;
-  border-radius: 8px; cursor: pointer;
-}
-.disp-header-row {
+.dev-name {
+  font-size: 18px;
+  font-weight: 900;
+  color: #000;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-.btn-nuevo, .btn-edit {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
-  background: #fff;
-  cursor: pointer;
+.dev-meta {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  opacity: 0.8;
 }
 
-.btn-edit {
-  margin-right: 8px;
+/* Right side */
+.right {
+  display: flex;
+  align-items: center;
 }
 
 .disp-actions {
@@ -125,26 +151,209 @@
   gap: 8px;
 }
 
+/* Buttons */
+.btn-baja {
+  background: #fff;
+  color: #000;
+  border: 3px solid #000;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 13px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.85);
+  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.12s ease;
+}
+
+.btn-baja:hover {
+  transform: translate(-1px, -1px);
+  background: #f3f3f3;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.95);
+}
+
+.btn-baja:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.6);
+}
+
+/* Toggle button (btn-secondary used in JSX) */
+.btn-secondary {
+  background: #fff;
+  color: #000;
+  border: 3px solid #000;
+  padding: 7px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 12px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.85);
+  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.12s ease;
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  transform: translate(-1px, -1px);
+  background: #f3f3f3;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.95);
+}
+
+/* Revoked state chip */
+.estado-baja {
+  background: #eee;
+  color: #000;
+  font-weight: 900;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 2px solid #000;
+}
+
+/* -------- Modal -------- */
+.disp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 50;
+  backdrop-filter: blur(2px);
+}
+
+.disp-modal {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 14px 14px 16px;
+  border: 4px solid #000;
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.9);
+}
+
+.disp-modal h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.disp-modal p {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+/* Modal actions */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* Modal buttons */
+.btn-cancel,
+.btn-confirm {
+  border: 3px solid #000;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 13px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.85);
+  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.12s ease;
+}
+
+.btn-cancel {
+  background: #fff;
+  color: #000;
+}
+
+.btn-confirm {
+  background: #000;
+  color: #fff;
+}
+
+.btn-cancel:hover,
+.btn-confirm:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.95);
+}
+
+.btn-cancel:disabled,
+.btn-confirm:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* -------- Optional classes kept (from your old CSS) -------- */
+.btn-nuevo,
+.btn-edit {
+  background: #fff;
+  color: #000;
+  border: 3px solid #000;
+  padding: 7px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 12px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.85);
+}
+
+.btn-edit { margin-right: 6px; }
+
 .disp-form {
   display: grid;
   gap: 10px;
-  margin: 12px 0 6px;
+  margin: 10px 6px 6px;
 }
 
 .disp-form label {
   display: grid;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 900;
   gap: 6px;
+  text-transform: uppercase;
 }
 
-.disp-form input, .disp-form select {
+.disp-form input,
+.disp-form select {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: 2px solid #000;
+  font-weight: 700;
 }
 
 .disp-form .inline {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* -------- Responsive -------- */
+@media (max-width: 720px) {
+  .disp-card {
+    padding: 12px;
+  }
+
+  .disp-title {
+    font-size: 26px;
+  }
+
+  .disp-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .btn-secondary {
+    width: 100%;
+    text-align: center;
+  }
 }

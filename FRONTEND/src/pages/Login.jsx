@@ -6,11 +6,7 @@ import { Link, useNavigate } from "react-router-dom";
 import "../styles/Login.css";
 
 export default function Login({ isLoggedIn, onToggle }) {
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
   const [localError, setLocalError] = useState(null);
 
   const { login, error: authError } = useAuth();
@@ -27,11 +23,7 @@ export default function Login({ isLoggedIn, onToggle }) {
     const obj = {
       email: form.email,
       password: form.password,
-      // si prefieres las propiedades en mayúscula:
-      // Email: form.email,
-      // Password: form.password,
     };
-
 
     try {
       const ok = await login(obj);
@@ -40,11 +32,7 @@ export default function Login({ isLoggedIn, onToggle }) {
         return;
       }
 
-      setForm({
-        email: "",
-        password: "",
-      });
-
+      setForm({ email: "", password: "" });
       navigate("/");
     } catch (err) {
       console.log(err);
@@ -58,13 +46,13 @@ export default function Login({ isLoggedIn, onToggle }) {
     <>
       <Navbar isLoggedIn={isLoggedIn} onToggle={onToggle} />
 
-      <main className="page">
+      <main className="page login-page">
+        <div className="backdrop" />
+
         <section className="login-card">
           <h1 className="login-title">Login</h1>
 
-          {combinedError && (
-            <p className="login-error">{combinedError}</p>
-          )}
+          {combinedError && <p className="login-error">{combinedError}</p>}
 
           <form onSubmit={handleSubmit} className="login-form">
             <label className="field">

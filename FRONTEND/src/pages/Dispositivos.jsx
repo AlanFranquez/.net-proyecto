@@ -125,10 +125,9 @@ export default function Dispositivos({ isLoggedIn, onToggle }) {
       const huella = d.HuellaDispositivo ?? d.huellaDispositivo ?? "—";
       const isCurrent = String(huella) === String(currentBrowserId);
 
-      // helpful short huella to show (still based on huella, not DB id)
       const huellaShort =
         huella && huella !== "—"
-          ? `${String(huella).slice(0, 6)}…${String(huella).slice(-4)}`
+          ? `${String(huella)}`
           : "—";
 
       return {
@@ -146,7 +145,6 @@ export default function Dispositivos({ isLoggedIn, onToggle }) {
       };
     });
 
-    // sort: current first, then active, then revoked
     mapped.sort((a, b) => {
       if (a.isCurrent && !b.isCurrent) return -1;
       if (!a.isCurrent && b.isCurrent) return 1;

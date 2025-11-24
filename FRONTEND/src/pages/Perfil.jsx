@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import { useAuth, toApi } from "../services/AuthService.jsx";
+import { Link } from "react-router-dom"; // ✅ added for UI navigation
 import "../styles/Perfil.css";
 
 export default function Perfil({ isLoggedIn, onToggle }) {
@@ -27,13 +28,11 @@ export default function Perfil({ isLoggedIn, onToggle }) {
 
   const loggedIn = !!user;
 
-  // Debug: ver qué llega desde /me
   if (user) {
     // eslint-disable-next-line no-console
     console.log("Usuario desde /api/usuarios/me:", user);
   }
 
-  // --------- Inicializar formulario cuando cambia el usuario o currentUsuario ----------
   useEffect(() => {
     const src = currentUsuario ?? user;
 
@@ -56,7 +55,6 @@ export default function Perfil({ isLoggedIn, onToggle }) {
     currentUsuario?.email,
   ]);
 
-  // ---------- Cargar usuario completo desde /usuarios (para tener RolesIDs, BeneficiosIDs, etc) ----------
   useEffect(() => {
     if (authLoading || !user) {
       setCurrentUsuario(null);
@@ -114,7 +112,6 @@ export default function Perfil({ isLoggedIn, onToggle }) {
     fetchUsuarios();
   }, [authLoading, user?.usuarioId, user?.email, user?.id]);
 
-  // ------------------ Cargar roles del usuario (igual que en Credencial) ------------------
   useEffect(() => {
     if (authLoading || !user || !currentUsuario) {
       setRoles([]);
@@ -201,7 +198,6 @@ export default function Perfil({ isLoggedIn, onToggle }) {
     currentUsuario?.rolesIDs,
   ]);
 
-  // Roles normalizados para mostrar
   const rolesNormalizados = useMemo(() => {
     if (loadingRoles || loadingUsuario) return [];
     if (!roles || !roles.length) return [];
@@ -218,7 +214,6 @@ export default function Perfil({ isLoggedIn, onToggle }) {
     );
   }, [roles, loadingRoles, loadingUsuario]);
 
-  // ------------------ Guardar cambios (PUT /usuarios/{id} con solo campos modificados) ------------------
   const handleSave = async (e) => {
     e.preventDefault();
     if (!user) return;
@@ -240,18 +235,10 @@ export default function Perfil({ isLoggedIn, onToggle }) {
     const originalEmail = src.email ?? src.Email ?? "";
     const originalDocumento = src.documento ?? src.Documento ?? "";
 
-    if (formNombre.trim() !== originalNombre) {
-      payload.nombre = formNombre.trim();
-    }
-    if (formApellido.trim() !== originalApellido) {
-      payload.apellido = formApellido.trim();
-    }
-    if (formEmail.trim() !== originalEmail) {
-      payload.email = formEmail.trim();
-    }
-    if (formDocumento.trim() !== originalDocumento) {
-      payload.documento = formDocumento.trim();
-    }
+    if (formNombre.trim() !== originalNombre) payload.nombre = formNombre.trim();
+    if (formApellido.trim() !== originalApellido) payload.apellido = formApellido.trim();
+    if (formEmail.trim() !== originalEmail) payload.email = formEmail.trim();
+    if (formDocumento.trim() !== originalDocumento) payload.documento = formDocumento.trim();
 
     if (Object.keys(payload).length === 0) {
       setSaveSuccess("No hay cambios para guardar.");
@@ -263,9 +250,7 @@ export default function Perfil({ isLoggedIn, onToggle }) {
       const res = await fetch(toApi(`/usuarios/${usuarioId}`), {
         method: "PUT",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -283,8 +268,6 @@ export default function Perfil({ isLoggedIn, onToggle }) {
       setSaving(false);
     }
   };
-
-  // ------------------ VISTAS ------------------
 
   if (authLoading) {
     return (
@@ -322,10 +305,24 @@ export default function Perfil({ isLoggedIn, onToggle }) {
       <main className="profile-wrap">
         <section className="profile-card" aria-labelledby="profile-title">
           <header className="profile-head">
+            {/* ✅ Black & white avatar */}
             <div className="avatar" aria-hidden="true">
-              <span role="img" aria-label="user">
-                👤
-              </span>
+              <svg
+                className="avatar-svg"
+                viewBox="0 0 64 64"
+                role="img"
+                aria-label="Avatar"
+              >
+                <circle cx="32" cy="32" r="30" fill="#fff" stroke="#000" strokeWidth="3" />
+                <circle cx="32" cy="24" r="10" fill="#000" />
+                <path
+                  d="M14 52c3.5-9 12-14 18-14s14.5 5 18 14"
+                  fill="none"
+                  stroke="#000"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
+              </svg>
             </div>
 
             <div className="title-block">
@@ -333,9 +330,19 @@ export default function Perfil({ isLoggedIn, onToggle }) {
                 {nombre} {apellido}
               </h1>
               <p className="profile-subtitle">
-                {email} ·{" "}
-                <span className="badge badge--state">{estado}</span>
+                {email} · <span className="badge badge--state">{estado}</span>
               </p>
+
+              {/* ✅ New quick navigation buttons */}
+              <div className="profile-quick-actions" role="navigation" aria-label="Acciones rápidas">
+                {/* adjust routes if your app uses different paths */}
+                <Link to="/autenticacion" className="qa-btn qa-btn--ghost">
+                  Autenticación
+                </Link>
+                <Link to="/credencial" className="qa-btn qa-btn--primary">
+                  Ver Credencial
+                </Link>
+              </div>
             </div>
 
             <aside className="roles" aria-label="Roles">
@@ -358,12 +365,7 @@ export default function Perfil({ isLoggedIn, onToggle }) {
             </aside>
           </header>
 
-          {/* Datos de la cuenta (EDITABLES) */}
-          <section
-            className="data-box"
-            role="region"
-            aria-labelledby="datos-title"
-          >
+          <section className="data-box" role="region" aria-labelledby="datos-title">
             <div className="data-box-header">
               <h2 id="datos-title" className="data-title">
                 Datos de la cuenta
@@ -418,11 +420,7 @@ export default function Perfil({ isLoggedIn, onToggle }) {
               </dl>
 
               <div className="profile-actions">
-                <button
-                  type="submit"
-                  className="primary-btn"
-                  disabled={saving}
-                >
+                <button type="submit" className="primary-btn" disabled={saving}>
                   {saving ? "Guardando..." : "Guardar cambios"}
                 </button>
               </div>
@@ -440,7 +438,6 @@ export default function Perfil({ isLoggedIn, onToggle }) {
             )}
           </section>
 
-          {/* Errores globales */}
           {(authError || errorUsuario || errorRoles) && (
             <div className="profile-error" role="alert">
               <strong>Ocurrió un error:</strong>{" "}

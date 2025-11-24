@@ -1,85 +1,226 @@
+/* src/styles/Beneficios.css */
+
+/* Page wrap */
 .beneficios-container {
-  max-width: 600px;
-  margin: 2rem auto;
+  max-width: 980px;
+  margin: 24px auto 60px;
   background: #fff;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  padding: 28px 18px 40px;
 }
 
+/* Title */
 .beneficios-container h2 {
-  margin-bottom: 1.5rem;
+  text-align: center;
+  font-size: 32px;
+  font-weight: 800;
+  margin: 8px 0 18px;
 }
 
-.beneficios-list {
+/* Error / empty messages */
+.beneficios-error,
+.beneficios-empty {
+  max-width: 720px;
+  margin: 10px auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 2px solid #000;
+  background: #fff;
+  font-weight: 600;
+}
+
+.beneficios-error {
+  background: #f3f3f3;
+}
+
+/* Section subtitles */
+.beneficios-subtitle {
+  max-width: 720px;
+  margin: 18px auto 10px;
+  font-size: 18px;
+  font-weight: 800;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  align-items: center;
+  gap: 8px;
 }
 
+.beneficios-subtitle::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: #000;
+  opacity: 0.9;
+}
+
+/* Lists */
+.beneficios-list {
+  max-width: 720px;
+  margin: 0 auto 6px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+/* Each benefit card */
 .beneficio-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 10px;
+
+  background: #fff;
+  border: 3px solid #000;
+  border-radius: 12px;
+  padding: 12px 14px;
+
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.8);
+  transition: transform 0.06s ease, background 0.12s ease;
+}
+
+.beneficio-item:hover {
+  transform: translate(-1px, -1px);
+  background: #f7f7f7;
+}
+
+.beneficio-item span {
+  font-size: 15px;
+  font-weight: 800;
+  color: #000;
+}
+
+/* Buttons */
+.btn-obtener,
+.btn-disabled {
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 8px 12px;
+  min-width: 110px;
+  border: 3px solid #000;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  text-align: center;
 }
 
 .btn-obtener {
-  background: #2563eb;
+  background: #000;
   color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
+}
+
+.btn-obtener:hover {
+  transform: translate(-1px, -1px);
+}
+
+.btn-obtener:active {
+  transform: translate(0, 0);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
 }
 
 .btn-disabled {
-  background: #d1d5db;
-  color: #444;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
+  background: #e9ffe9;
+  color: #000;
   cursor: not-allowed;
+  opacity: 0.9;
 }
 
+/* Modal overlay */
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  z-index: 999;
+  backdrop-filter: blur(2px);
 }
 
+/* Modal box */
 .modal {
+  width: 100%;
+  max-width: 420px;
   background: #fff;
-  padding: 2rem;
-  border-radius: 10px;
-  width: 350px;
+  border: 4px solid #000;
+  border-radius: 12px;
+  padding: 18px 18px 16px;
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.9);
 }
 
+.modal h3 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.modal p {
+  margin: 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Modal actions */
 .modal-actions {
-  margin-top: 1.5rem;
+  margin-top: 14px;
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
+  gap: 8px;
+}
+
+.btn-cancelar,
+.btn-solicitar {
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 8px 12px;
+  border: 3px solid #000;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.8);
+  background: #fff;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.btn-cancelar:hover,
+.btn-solicitar:hover {
+  transform: translate(-1px, -1px);
+}
+
+.btn-cancelar:active,
+.btn-solicitar:active {
+  transform: translate(0, 0);
+  box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8);
 }
 
 .btn-cancelar {
-  background: #e5e7eb;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
+  background: #fff;
+  color: #000;
 }
 
 .btn-solicitar {
-  background: #16a34a;
+  background: #000;
   color: #fff;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .beneficios-container {
+    padding: 22px 14px 34px;
+  }
+
+  .beneficios-container h2 {
+    font-size: 26px;
+  }
+
+  .beneficio-item span {
+    font-size: 14px;
+  }
+
+  .btn-obtener,
+  .btn-disabled,
+  .btn-cancelar,
+  .btn-solicitar {
+    font-size: 13px;
+    min-width: 96px;
+  }
 }

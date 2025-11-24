@@ -74,13 +74,12 @@ export default function Navbar() {
   }, [isLoggedIn, user?.usuarioId, user?.UsuarioId, user?.id]);
 
   const authedMenu = [
+    { label: "Novedades", to: "/novedades" },
     { label: "Accesos", to: "/accesos" },
-    { label: "Credencial", to: "/credencial" },
+    { label: "Espacios", to: "/espacios" },
     { label: "Beneficios", to: "/beneficios" },
     { label: "Canjes", to: "/canjes" },
-    { label: "Autenticación", to: "/autenticacion" },
     { label: "Dispositivos", to: "/dispositivos" },
-    { label: "Novedades", to: "/novedades" },
   ];
 
   const menu = isLoggedIn ? authedMenu : [];
@@ -112,6 +111,7 @@ export default function Navbar() {
             </MenuBtn>
           ))}
 
+          {/* Mobile CTA */}
           <div className="menu-mobile-cta">
             {!isLoggedIn ? (
               <Link
@@ -126,20 +126,24 @@ export default function Navbar() {
                 <Link
                   to="/notificaciones"
                   className="bell"
+                  aria-label="Notificaciones"
                   onClick={() => setOpen(false)}
                 >
-                  🔔
+                  <BellIcon />
                   {notifCount > 0 && (
                     <span className="badge">{notifCount}</span>
                   )}
                 </Link>
+
                 <Link
                   to="/perfil"
                   className="avatar"
+                  aria-label="Perfil"
                   onClick={() => setOpen(false)}
                 >
-                  👤
+                  <UserIcon />
                 </Link>
+
                 <button
                   className="logout-btn"
                   style={{ color: "black" }}
@@ -155,6 +159,7 @@ export default function Navbar() {
           </div>
         </nav>
 
+        {/* Desktop right cluster */}
         <div className="right">
           {!isLoggedIn ? (
             <Link to="/login" className="login-pill">
@@ -162,15 +167,15 @@ export default function Navbar() {
             </Link>
           ) : (
             <div className="icons">
-              <Link to="/notificaciones" className="bell">
-                🔔
-                {notifCount > 0 && (
-                  <span className="badge">{notifCount}</span>
-                )}
+              <Link to="/notificaciones" className="bell" aria-label="Notificaciones">
+                <BellIcon />
+                {notifCount > 0 && <span className="badge">{notifCount}</span>}
               </Link>
-              <Link to="/perfil" className="avatar">
-                👤
+
+              <Link to="/perfil" className="avatar" aria-label="Perfil">
+                <UserIcon />
               </Link>
+
               <button className="logout-btn" onClick={logout}>
                 Salir
               </button>
@@ -187,5 +192,61 @@ function MenuBtn({ to, active, children }) {
     <Link to={to} className={`menu-btn${active ? " is-active" : ""}`}>
       {children}
     </Link>
+  );
+}
+
+/* ---------- Icons (black/white placeholders) ---------- */
+
+function BellIcon() {
+  return (
+    <svg
+      className="icon-svg"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      role="img"
+    >
+      <path
+        d="M15 17H9m6-8a3 3 0 00-6 0c0 3-1.5 4.5-2.5 5.5h11C16.5 13.5 15 12 15 9z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10 17a2 2 0 004 0"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function UserIcon() {
+  return (
+    <svg
+      className="icon-svg"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      role="img"
+    >
+      <circle
+        cx="12"
+        cy="8"
+        r="4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M4 20c2.5-4 6-6 8-6s5.5 2 8 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }

@@ -4,6 +4,8 @@ import { useAuth } from "../services/AuthService.jsx";
 import { Link, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import "../styles/Registrarse.css";
+import "../styles/Login.css";
+
 
 export default function Registrarse({ isLoggedIn, onToggle }) {
   const [form, setForm] = useState({
@@ -72,7 +74,7 @@ export default function Registrarse({ isLoggedIn, onToggle }) {
     <>
       <Navbar isLoggedIn={isLoggedIn} onToggle={onToggle} />
 
-      <main className="page">
+      <main className="page login-page">
         <section className="register-card">
           <h1 className="register-title">Registrarse</h1>
 

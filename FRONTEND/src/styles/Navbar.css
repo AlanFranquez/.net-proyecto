@@ -288,3 +288,66 @@
   --badge-size: clamp(16px, 1.8vw, 18px); /* slightly bigger */
   --badge-font: clamp(9px, 1vw, 11px);
 }
+/* Icons */
+:root{
+  --icon-size: clamp(34px, 3.2vw, 40px);
+  --badge-size: clamp(14px, 1.4vw, 16px);
+  --badge-font: clamp(9px, 1vw, 10px);
+}
+.icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1;
+  height: var(--icon-size);
+}
+
+.bell,
+.avatar {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  color: #fff;                 /* ✅ so SVG uses white via currentColor */
+  position: relative;
+}
+
+/* ✅ SVG inside icon buttons */
+.icon-svg{
+  width: 60%;
+  height: 60%;
+  display: block;
+}
+
+/* keep badge as-is */
+.badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+
+  min-width: var(--badge-size);
+  height: var(--badge-size);
+  padding: 0 4px;
+  box-sizing: border-box;
+
+  font-size: var(--badge-font);
+  color: #fff;
+  background: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  box-shadow: 0 0 0 2px #000;
+  line-height: 1;
+}
+
+/* (optional) you can keep this; doesn't hurt if no img */
+.nav .icons .avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
