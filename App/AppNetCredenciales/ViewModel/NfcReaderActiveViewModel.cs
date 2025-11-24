@@ -415,7 +415,12 @@ namespace AppNetCredenciales.ViewModel
                 }
 
                 // === VERIFICAR ESTADO DE CREDENCIAL ===
-                if (credencial.Estado != models.CredencialEstado.Activada)
+                System.Diagnostics.Debug.WriteLine($"[NfcReaderActive] === VERIFICANDO ESTADO DE CREDENCIAL ===");
+                System.Diagnostics.Debug.WriteLine($"[NfcReaderActive] Estado actual: {credencial.Estado}");
+                
+                // Permitir credenciales en estado "Emitida" o "Activada"
+                if (credencial.Estado != models.CredencialEstado.Emitida && 
+                    credencial.Estado != models.CredencialEstado.Activada)
                 {
                     System.Diagnostics.Debug.WriteLine($"[NfcReaderActive] ? Estado inválido: {credencial.Estado}");
                     FailedReads++;
@@ -423,15 +428,18 @@ namespace AppNetCredenciales.ViewModel
                     await CreateEventoAccesoAsync(
                         credencialId: credencial.idApi,
                         resultado: "Denegar",
-                        motivo: $"Estado inválido: {credencial.Estado}"
+                        motivo: $"Estado no válido: {credencial.Estado}"
                     );
                     
                     await Shell.Current.DisplayAlert(
                         "?? Acceso Denegado",
-                        $"Credencial en estado: {credencial.Estado}",
+                        $"La credencial está en estado: {credencial.Estado}\n\n" +
+                        $"Solo se permiten credenciales Emitidas o Activadas.",
                         "OK");
                     return;
                 }
+                
+                System.Diagnostics.Debug.WriteLine($"[NfcReaderActive] ? Estado de credencial válido: {credencial.Estado}");
 
                 // === VERIFICAR EXPIRACIÓN ===
                 if (credencial.FechaExpiracion.HasValue)
