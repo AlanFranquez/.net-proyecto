@@ -20,7 +20,7 @@ public class RabbitMqCanjeWorker : BackgroundService
 {
     private readonly IConfiguration _config;
     private readonly ILogger<RabbitMqCanjeWorker> _logger;
-    private readonly IServiceProvider _serviceProvider; // Use IServiceProvider for scoped services
+    private readonly IServiceProvider _serviceProvider;
 
     public RabbitMqCanjeWorker(IConfiguration config, ILogger<RabbitMqCanjeWorker> logger, IServiceProvider serviceProvider)
     {
@@ -45,7 +45,6 @@ public class RabbitMqCanjeWorker : BackgroundService
     var connection = factory.CreateConnection();
     var channel = connection.CreateModel();
 
-    // Declarar DLQ
     channel.QueueDeclare(
         dlqName,
         durable: true,
@@ -53,7 +52,6 @@ public class RabbitMqCanjeWorker : BackgroundService
         autoDelete: false
     );
 
-    // Declarar cola principal
     channel.QueueDeclare(
         queueName,
         durable: true,
@@ -66,59 +64,69 @@ public class RabbitMqCanjeWorker : BackgroundService
         }
     );
 
-    Console.WriteLine("RabbitMqCanjeWorker iniciado y escuchando en la cola de canjes...");
+    _logger.LogInformation("RabbitMqCanjeWorker iniciado y escuchando en la cola de canjes...");
 
     var consumer = new EventingBasicConsumer(channel);
 
     consumer.Received += async (_, ea) =>
-{
-    try
     {
-        var json = Encoding.UTF8.GetString(ea.Body.ToArray());
-        var message = JsonSerializer.Deserialize<CanjearBeneficioMessage>(json);
-
-        if (message == null)
+        if (stoppingToken.IsCancellationRequested)
         {
-            _logger.LogError("Invalid message format");
-            channel.BasicAck(ea.DeliveryTag, false);
+            _logger.LogInformation("Cancelando el procesamiento de mensajes...");
+            channel.BasicNack(ea.DeliveryTag, false, true);
             return;
         }
 
-        _logger.LogInformation($"Processing canje: BeneficioId={message.BeneficioId}, UsuarioId={message.UsuarioId}");
-
-        using var scope = _serviceProvider.CreateScope();
-        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
-        var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-
-        // Check if canje already exists
-        var canjeExists = await uow.Canjes.ExistsAsync(
-            x => x.BeneficioId == message.BeneficioId && x.UsuarioId == message.UsuarioId,
-            stoppingToken
-        );
-        if (canjeExists)
+        try
         {
-            _logger.LogWarning($"Canje Existe: BeneficioId={message.BeneficioId}, UsuarioId={message.UsuarioId}");
+            var json = Encoding.UTF8.GetString(ea.Body.ToArray());
+            var message = JsonSerializer.Deserialize<CanjearBeneficioMessage>(json);
+
+            if (message == null)
+            {
+                _logger.LogError("Formato de mensaje inválido");
+                channel.BasicAck(ea.DeliveryTag, false);
+                return;
+            }
+
+            _logger.LogInformation($"Procesando canje: BeneficioId={message.BeneficioId}, UsuarioId={message.UsuarioId}");
+
+            using var scope = _serviceProvider.CreateScope();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            var canjeExists = await uow.Canjes.ExistsAsync(
+                x => x.BeneficioId == message.BeneficioId && x.UsuarioId == message.UsuarioId,
+                stoppingToken
+            );
+
+            if (canjeExists)
+            {
+                _logger.LogWarning($"Canje ya existe: BeneficioId={message.BeneficioId}, UsuarioId={message.UsuarioId}");
+                channel.BasicAck(ea.DeliveryTag, false);
+                return;
+            }
+
+            var cmd = new CanjearBeneficioCommand(message.BeneficioId, message.UsuarioId);
+            await mediator.Send(cmd, stoppingToken);
+
+            _logger.LogInformation($"Canje exitoso: BeneficioId={message.BeneficioId}, UsuarioId={message.UsuarioId}");
             channel.BasicAck(ea.DeliveryTag, false);
-            return;
         }
-
-        var cmd = new CanjearBeneficioCommand(message.BeneficioId, message.UsuarioId);
-        await mediator.Send(cmd, stoppingToken);
-
-        _logger.LogInformation($"Canje exitoso: BeneficioId={message.BeneficioId}, UsuarioId={message.UsuarioId}");
-        channel.BasicAck(ea.DeliveryTag, false);
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "Error processing message, sending to DLQ");
-        channel.BasicNack(ea.DeliveryTag, false, false);
-    }
-};
+        catch (JsonException jsonEx)
+        {
+            _logger.LogError(jsonEx, "Error deserializando el mensaje");
+            channel.BasicAck(ea.DeliveryTag, false);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error inesperado al procesar el mensaje");
+            channel.BasicNack(ea.DeliveryTag, false, false);
+        }
+    };
 
     channel.BasicConsume(queueName, false, consumer);
 
-    _logger.LogInformation("RabbitMqCanjeWorker escuchando mensajes...");
-
-    await Task.CompletedTask; // ← mantener el worker vivo sin bloquearlo
+    await Task.Delay(Timeout.Infinite, stoppingToken);
 }
 }

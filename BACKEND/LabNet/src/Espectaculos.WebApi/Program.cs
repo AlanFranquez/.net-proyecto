@@ -425,7 +425,7 @@ builder.Services.AddCors(o =>
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
 
-//builder.Services.AddHostedService<RabbitMqCanjeWorker>();
+builder.Services.AddHostedService<RabbitMqCanjeWorker>();
 
 
 // ---------- FluentValidation ----------

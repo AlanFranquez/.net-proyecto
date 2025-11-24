@@ -35,7 +35,6 @@ public class RabbitMqWorker : BackgroundService
             UserName = _configuration["RabbitMQ:Username"],
             Password = _configuration["RabbitMQ:Password"],
 
-            // Needed if you want an async handler that RabbitMQ awaits properly
             DispatchConsumersAsync = true
         };
 
@@ -54,7 +53,6 @@ public class RabbitMqWorker : BackgroundService
                     autoDelete: false,
                     arguments: null);
 
-                // Main queue with DLQ support
                 channel.QueueDeclare(
                     queue: "usuarios",
                     durable: true,
@@ -93,7 +91,6 @@ public class RabbitMqWorker : BackgroundService
                             return;
                         }
 
-                        // Avoid duplicates
                         if (_processedMessages.Contains(data.MessageId))
                         {
                             _logger.LogWarning($"Mensaje duplicado detectado: {data.MessageId}");
@@ -103,7 +100,6 @@ public class RabbitMqWorker : BackgroundService
 
                         _processedMessages.Add(data.MessageId);
 
-                        // Your Content should contain the payload
                         var payload = JsonSerializer.Deserialize<CanjeBeneficioPayload>(data.Content);
 
                         if (payload == null)
@@ -113,7 +109,6 @@ public class RabbitMqWorker : BackgroundService
                             return;
                         }
 
-                        // Your command ONLY takes 2 params
                         var command = new CanjearBeneficioCommand(
                             payload.BeneficioId,
                             payload.UsuarioId
@@ -127,7 +122,6 @@ public class RabbitMqWorker : BackgroundService
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error al procesar el mensaje");
-                        // NACK without requeue -> goes to DLQ
                         channel.BasicNack(ea.DeliveryTag, false, false);
                     }
                 };
@@ -162,7 +156,6 @@ public class MyMessage
     public string Content { get; set; }
 }
 
-// Payload inside Content
 public class CanjeBeneficioPayload
 {
     public Guid BeneficioId { get; set; }

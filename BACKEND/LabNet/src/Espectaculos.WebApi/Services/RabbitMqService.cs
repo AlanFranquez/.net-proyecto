@@ -56,8 +56,7 @@ public class RabbitMqService
             arguments: new Dictionary<string, object>
             {
                 { "x-dead-letter-exchange", "" },
-                { "x-dead-letter-routing-key", dlq },
-                { "x-max-length", 1000 }
+                { "x-dead-letter-routing-key", dlq }
             }
         );
 
