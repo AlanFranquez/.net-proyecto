@@ -59,16 +59,31 @@ public static class UsuariosEndpoints
         }).WithName("EliminarUsuario").WithTags("Usuarios");
 
         group.MapPost("/registro", async (
-            [FromBody] CreateUsuarioDto dto,
-            HttpContext http,
-            IMediator mediator,
-            ICognitoService cognito
-            // RabbitMqService deshabilitado temporalmente
-            /* RabbitMqService rabbitMqService */) =>
-        {
-            Serilog.Log.Information("DTO recibido: {@Dto}", dto);
+    [FromBody] CreateUsuarioDto dto,
+    HttpContext http,
+    IMediator mediator,
+    ICognitoService cognito) =>
+{
+    Serilog.Log.Information("DTO recibido: {@Dto}", dto);
 
-            var cmd = new CreateUsuarioCommand
+    var cmd = new CreateUsuarioCommand
+    {
+        Nombre = dto.Nombre,
+        Apellido = dto.Apellido,
+        Documento = dto.Documento,
+        Email = dto.Email,
+        Password = dto.Password,
+        RolesIDs = dto.RolesIDs?.ToList()
+    };
+
+    try
+    {
+        var id = await mediator.Send(cmd);
+        var idToken = await cognito.LoginAsync(dto.Email, dto.Password);
+
+        
+        http.Response.Cookies.Append("espectaculos_session", idToken,
+            new CookieOptions
             {
                 Nombre = dto.Nombre,
                 Apellido = dto.Apellido,
@@ -115,7 +130,17 @@ public static class UsuariosEndpoints
         .WithName("CrearUsuario")
         .WithTags("Usuarios");
 
+group.MapPost("/test-dlq", async ([FromServices] RabbitMqService rabbit) =>
+{
 
+    return Results.Ok(new
+    {
+        status = "Mensaje enviado a la DLQ",
+        cola = "usuarios-dlq"
+    });
+})
+.WithName("EnviarDLQ")
+.WithTags("Usuarios");
 
         group.MapPost("/login", async (HttpContext http, LoginUsuarioCommand command, ICognitoService cognito) =>
         {
@@ -248,13 +273,25 @@ public static class UsuariosEndpoints
 
         group.MapPut("/bucleInfinito", async ([FromServices] RabbitMqService rabbitMqService) =>
         {
+            int requestCount = 0;
+            const int maxRequests = 200;
+
             while (true)
             {
-                rabbitMqService.SendMessage("Mensaje enviado desde el bucle infinito.");
+                if (requestCount >= maxRequests)
+                {
+                    rabbitMqService.SendToDlq("usuarios-dlq", "Se alcanzó el límite de peticiones en el bucle infinito.");
+                    Console.WriteLine("Mensaje enviado a la DLQ después de alcanzar el límite de peticiones.");
+                    break;
+                }
+
+                rabbitMqService.SendMessage("usuario", $"Mensaje {requestCount + 1} enviado desde el bucle infinito.");
+                Console.WriteLine($"Publicando mensaje: Mensaje {requestCount + 1}");
+
+                requestCount++;
             }
 
-    
-            Console.WriteLine($"Publicando mensaje: mensaje de prueba");
+            return Results.Ok(new { status = "Bucle terminado", totalRequests = requestCount });
         })
         .WithName("BucleInfinito")
         .WithTags("Usuarios");

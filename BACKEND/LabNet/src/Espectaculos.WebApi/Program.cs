@@ -98,13 +98,15 @@ builder.Services.AddSingleton<IAntiforgery, NoOpAntiforgery>();
 // ---------- Logging (Serilog) ----------
 builder.AddSerilogLogging();
 
+builder.Services.AddMemoryCache();
+
 // RabbitMQ deshabilitado temporalmente
 builder.Services.AddSingleton<RabbitMqService>();
 
 // Configurar RabbitMQ en appsettings.json
 builder.Configuration.GetSection("RabbitMQ");
 
-// builder.Services.AddSingleton<RabbitMqService>();
+builder.Services.AddSingleton<RabbitMqService>();
 
 // ---------- Configuración base ----------
 var config = builder.Configuration;
@@ -422,6 +424,9 @@ builder.Services.AddCors(o =>
 
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
+
+builder.Services.AddHostedService<RabbitMqCanjeWorker>();
+
 
 // ---------- FluentValidation ----------
 builder.Services.AddScoped<IValidator<CreateEspacioCommand>, CreateEspacioValidator>();

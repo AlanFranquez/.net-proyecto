@@ -1,7 +1,11 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Hosting;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using Microsoft.AspNetCore.Mvc;
+using MediatR; // Asegúrate de incluir MediatR
+using Espectaculos.Application.Beneficios.Commands.CanjearBeneficio; // Comando para el canje
 
 namespace Espectaculos.WebApi.Services;
 
@@ -9,11 +13,14 @@ public class RabbitMqWorker : BackgroundService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<RabbitMqWorker> _logger;
+    private readonly IMediator _mediator; // Inyectamos MediatR para manejar el comando
+    private readonly HashSet<string> _processedMessages = new();
 
-    public RabbitMqWorker(IConfiguration configuration, ILogger<RabbitMqWorker> logger)
+    public RabbitMqWorker(IConfiguration configuration, ILogger<RabbitMqWorker> logger, IMediator mediator)
     {
         _configuration = configuration;
         _logger = logger;
+        _mediator = mediator;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -57,31 +64,89 @@ public class RabbitMqWorker : BackgroundService
 
         consumer.Received += async (model, ea) =>
         {
-            var message = Encoding.UTF8.GetString(ea.Body.ToArray());
-
             try
             {
-                _logger.LogInformation($"Procesando mensaje: {message}");
+                using var connection = factory.CreateConnection();
+                using var channel = connection.CreateModel();
 
-                await Task.Delay(1000, stoppingToken);
+                var consumer = new EventingBasicConsumer(channel);
 
-                channel.BasicAck(ea.DeliveryTag, multiple: false);
+                consumer.Received += async (model, ea) =>
+                {
+                    try
+                    {
+                        var json = Encoding.UTF8.GetString(ea.Body.ToArray());
+                        var data = JsonSerializer.Deserialize<MyMessage>(json);
+
+                        if (data == null)
+                        {
+                            _logger.LogWarning("Mensaje inválido recibido");
+                            channel.BasicAck(ea.DeliveryTag, false);
+                            return;
+                        }
+
+                        // Evitar procesar mensajes duplicados
+                        if (_processedMessages.Contains(data.MessageId))
+                        {
+                            _logger.LogWarning($"Mensaje duplicado detectado: {data.MessageId}");
+                            channel.BasicAck(ea.DeliveryTag, false);
+                            return;
+                        }
+
+                        // Agregar el mensaje al conjunto de procesados
+                        _processedMessages.Add(data.MessageId);
+
+                        
+
+                        // OK → ACK
+                        channel.BasicAck(ea.DeliveryTag, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Error al procesar el mensaje");
+
+                        // NACK → No volver a reenviar el mensaje
+                        channel.BasicNack(ea.DeliveryTag, false, false);
+                    }
+                };
+
+                channel.BasicConsume(
+                    queue: _configuration["RabbitMQ:QueueName"],
+                    autoAck: false,
+                    consumer: consumer
+                );
+
+                _logger.LogInformation("RabbitMQ Worker escuchando mensajes...");
+
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                break;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al procesar el mensaje");
-
-                // Esto manda a DLQ gracias a los argumentos ya declarados por el producer
-                channel.BasicNack(ea.DeliveryTag, multiple: false, requeue: false);
+                _logger.LogError(ex, "Error en RabbitMQ Worker. Reintentando en 5s...");
+                await Task.Delay(5000, stoppingToken);
             }
-        };
-
-        channel.BasicConsume(
-            queue: _configuration["RabbitMQ:QueueName"],
-            autoAck: false,
-            consumer: consumer
-        );
-
-        await Task.CompletedTask;
+        }
     }
+
+   
+}
+
+
+
+public class MyMessage
+{
+    public string MessageId { get; set; }
+    public string Content { get; set; }
+}
+
+// Clase para deserializar el contenido del mensaje
+public class CanjeBeneficioPayload
+{
+    public Guid BeneficioId { get; set; }
+    public Guid UsuarioId { get; set; }
+    public int Cantidad { get; set; }
 }
