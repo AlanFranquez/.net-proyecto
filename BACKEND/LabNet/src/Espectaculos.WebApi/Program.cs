@@ -142,7 +142,7 @@ if (string.IsNullOrWhiteSpace(cognitoSettings.Region) ||
 
 var authority = $"https://cognito-idp.{cognitoSettings.Region}.amazonaws.com/{cognitoSettings.UserPoolId}";
 // RabbitMQ Worker deshabilitado temporalmente
-builder.Services.AddHostedService<RabbitMqWorker>();
+//builder.Services.AddHostedService<RabbitMqWorker>();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -425,7 +425,7 @@ builder.Services.AddCors(o =>
 // ---------- SignalR ----------
 builder.Services.AddSignalR();
 
-builder.Services.AddHostedService<RabbitMqCanjeWorker>();
+//builder.Services.AddHostedService<RabbitMqCanjeWorker>();
 
 
 // ---------- FluentValidation ----------

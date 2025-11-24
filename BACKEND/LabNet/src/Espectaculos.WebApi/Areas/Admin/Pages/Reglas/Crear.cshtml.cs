@@ -1,5 +1,6 @@
 ﻿using Espectaculos.Application.Espacios.Queries.ListarEspacios;
 using Espectaculos.Application.ReglaDeAcceso.Commands.CreateReglaDeAcceso;
+using Espectaculos.Application.Roles.Queries.ListarRoles; // 👈 add
 using Espectaculos.Domain.Enums;
 using FluentValidation;
 using MediatR;
@@ -19,6 +20,9 @@ public class CrearModel : PageModel
     public IEnumerable<SelectListItem> Politicas { get; set; } = Enumerable.Empty<SelectListItem>();
     public IEnumerable<SelectListItem> EspaciosOptions { get; set; } = Enumerable.Empty<SelectListItem>();
 
+    // 👇 NEW: roles combo
+    public IEnumerable<SelectListItem> RolesOptions { get; set; } = Enumerable.Empty<SelectListItem>();
+
     public async Task OnGetAsync(CancellationToken ct)
     {
         await LoadCombosAsync(ct);
@@ -26,19 +30,28 @@ public class CrearModel : PageModel
 
     private async Task LoadCombosAsync(CancellationToken ct)
     {
-        // Combo de políticas (enum)
         Politicas = Enum.GetValues(typeof(AccesoTipo))
             .Cast<AccesoTipo>()
             .Select(v => new SelectListItem { Value = v.ToString(), Text = v.ToString() })
             .ToList();
 
-        // Combo / multiselect de espacios desde la BD
         var espacios = await _mediator.Send(new ListarEspaciosQuery(), ct);
         EspaciosOptions = espacios
             .Select(e => new SelectListItem
             {
                 Value = e.Id.ToString(),
                 Text = e.Nombre
+            })
+            .ToList();
+
+        // 👇 NEW: roles from BD
+        var roles = await _mediator.Send(new ListarRolesQuery(), ct);
+        RolesOptions = roles
+            .OrderBy(r => r.Prioridad) // optional, but nice
+            .Select(r => new SelectListItem
+            {
+                Value = r.Tipo,  // store Tipo in ReglaDeAcceso.Rol
+                Text = r.Tipo
             })
             .ToList();
     }
@@ -74,7 +87,7 @@ public class CrearModel : PageModel
                 VigenciaFin = vigFinUtc,
                 Prioridad = Vm.Prioridad,
                 Politica = Vm.Politica,
-                Rol = Vm.Rol,
+                Rol = Vm.Rol, // will be Tipo from combo
                 RequiereBiometriaConfirmacion = Vm.RequiereBiometriaConfirmacion,
                 EspaciosIDs = Vm.EspaciosIDs ?? new List<Guid>()
             }, ct);
@@ -107,8 +120,6 @@ public class CrearModel : PageModel
         [BindProperty] public AccesoTipo Politica { get; set; }
         [BindProperty] public bool RequiereBiometriaConfirmacion { get; set; }
         [BindProperty] public string? Rol { get; set; }
-
-        // Lista de GUIDs para los espacios seleccionados
         [BindProperty] public List<Guid>? EspaciosIDs { get; set; } = new();
     }
 }
