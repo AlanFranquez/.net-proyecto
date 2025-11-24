@@ -3,15 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.8.34330.188
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Espectaculos.Domain", "src\Espectaculos.Domain\Espectaculos.Domain.csproj", "{4C8C4B9E-3E7B-4DFA-9D7C-9CF7A6B4B1A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SistemaCredencial.Domain", "src\SistemaCredencial.Domain\SistemaCredencial.Domain.csproj", "{4C8C4B9E-3E7B-4DFA-9D7C-9CF7A6B4B1A0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Espectaculos.Application", "src\Espectaculos.Application\Espectaculos.Application.csproj", "{E9F35F2D-2F7E-4E1E-9B1F-4B4E2C3A8B22}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SistemaCredencial.Application", "src\SistemaCredencial.Application\SistemaCredencial.Application.csproj", "{E9F35F2D-2F7E-4E1E-9B1F-4B4E2C3A8B22}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Espectaculos.Infrastructure", "src\Espectaculos.Infrastructure\Espectaculos.Infrastructure.csproj", "{2C9A8D21-9F3C-4E7F-84A6-9B1C1EAE4F88}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Espectaculos.WebApi", "src\Espectaculos.WebApi\Espectaculos.WebApi.csproj", "{8D2E3A54-6F2D-4E17-BE7C-3D7B9A4D1F11}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Espectaculos.Backoffice", "src\Espectaculos.Backoffice\Espectaculos.Backoffice.csproj", "{B59D464B-F336-447D-B54A-BA5F5D6A814B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,10 +33,6 @@ Global
 		{8D2E3A54-6F2D-4E17-BE7C-3D7B9A4D1F11}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D2E3A54-6F2D-4E17-BE7C-3D7B9A4D1F11}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D2E3A54-6F2D-4E17-BE7C-3D7B9A4D1F11}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B59D464B-F336-447D-B54A-BA5F5D6A814B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B59D464B-F336-447D-B54A-BA5F5D6A814B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B59D464B-F336-447D-B54A-BA5F5D6A814B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B59D464B-F336-447D-B54A-BA5F5D6A814B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

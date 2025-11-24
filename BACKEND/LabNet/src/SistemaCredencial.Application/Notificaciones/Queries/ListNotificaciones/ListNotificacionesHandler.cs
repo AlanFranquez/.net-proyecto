@@ -1,4 +1,4 @@
-// Espectaculos.Application/Notificaciones/Queries/ListNotificaciones/ListNotificacionesHandler.cs
+// SistemaCredencial.Application/Notificaciones/Queries/ListNotificaciones/ListNotificacionesHandler.cs
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Notificaciones.Dtos;
 using Espectaculos.Domain.Enums;

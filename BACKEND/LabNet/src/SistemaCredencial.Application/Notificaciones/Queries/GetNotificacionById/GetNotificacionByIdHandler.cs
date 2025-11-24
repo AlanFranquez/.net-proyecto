@@ -1,4 +1,4 @@
-// Espectaculos.Application/Notificaciones/Queries/GetNotificacionById/GetNotificacionByIdHandler.cs
+// SistemaCredencial.Application/Notificaciones/Queries/GetNotificacionById/GetNotificacionByIdHandler.cs
 using Espectaculos.Application.Abstractions;
 using Espectaculos.Application.Notificaciones.Dtos;
 using MediatR;

@@ -1,4 +1,4 @@
-﻿// Espectaculos.Application/ApplicationAssembly.cs
+﻿// SistemaCredencial.Application/ApplicationAssembly.cs
 using System.Reflection;
 
 namespace Espectaculos.Application;

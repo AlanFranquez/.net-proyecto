@@ -1,4 +1,7 @@
-﻿@using Microsoft.AspNetCore.Mvc.RazorPages
+﻿@using System
+@using Microsoft.AspNetCore.Mvc.RazorPages
+@using Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
+@inherits Microsoft.AspNetCore.Mvc.Razor.RazorPage<dynamic>
 
 <!DOCTYPE html>
 <html lang="es">
@@ -12,11 +15,14 @@
 </head>
 <body>
 @{
-// Página actual (para marcar item activo en la sidebar)
-var pad = ViewContext.ActionDescriptor as PageActionDescriptor;
-string? currentPage = pad?.ViewEnginePath;
-string Active(string prefix)
-=> (currentPage?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?? false) ? "active" : "";
+    // Página actual (para marcar item activo en la sidebar)
+    var pad = ViewContext?.ActionDescriptor as PageActionDescriptor;
+    string? currentPage = pad?.ViewEnginePath;
+
+    string Active(string prefix)
+        => (currentPage?.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ?? false)
+            ? "active"
+            : "";
 }
 
 <div class="shell">
@@ -107,9 +113,6 @@ string Active(string prefix)
     </main>
 </div>
 
-@RenderSection("Scripts", required: false)
-
-
 <style>
     .nav a { display:block; padding:.5rem .75rem; border-radius:.5rem; text-decoration:none; color:inherit; }
     .nav a.active { background:rgba(13,110,253,.1); color:#0d6efd; font-weight:600; }
@@ -129,5 +132,8 @@ string Active(string prefix)
         text-decoration: underline;
     }
 </style>
+
+@* ✅ Sección Scripts para páginas *@
+@await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

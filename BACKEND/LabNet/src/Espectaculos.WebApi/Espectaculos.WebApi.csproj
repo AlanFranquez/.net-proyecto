@@ -45,7 +45,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Espectaculos.Application\Espectaculos.Application.csproj" />
+    <ProjectReference Include="..\SistemaCredencial.Application\SistemaCredencial.Application.csproj" />
     <ProjectReference Include="..\Espectaculos.Infrastructure\Espectaculos.Infrastructure.csproj" />
   </ItemGroup>
 

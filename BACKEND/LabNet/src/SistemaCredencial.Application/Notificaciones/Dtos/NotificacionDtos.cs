@@ -1,4 +1,4 @@
-// Espectaculos.Application/Notificaciones/Dtos/NotificacionDto.cs
+// SistemaCredencial.Application/Notificaciones/Dtos/NotificacionDto.cs
 using Espectaculos.Domain.Enums;
 
 namespace Espectaculos.Application.Notificaciones.Dtos;

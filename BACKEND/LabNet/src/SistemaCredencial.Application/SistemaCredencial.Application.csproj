@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>12.0</LangVersion>
+    <RootNamespace>Espectaculos.Application</RootNamespace>
   </PropertyGroup>
 
     <ItemGroup>
@@ -22,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Espectaculos.Domain\Espectaculos.Domain.csproj" />
+    <ProjectReference Include="..\SistemaCredencial.Domain\SistemaCredencial.Domain.csproj" />
   </ItemGroup>
 
 </Project>

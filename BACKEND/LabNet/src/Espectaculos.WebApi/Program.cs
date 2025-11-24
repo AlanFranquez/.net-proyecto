@@ -434,7 +434,7 @@ builder.Services.AddScoped<IValidator<CreateDispositivoCommand>, CreateDispositi
 builder.Services.AddScoped<IValidator<UpdateDispositivoCommand>, UpdateDispositivoValidator>();
 builder.Services.AddScoped<IValidator<DeleteDispositivoCommand>, DeleteDispositivoValidator>();
 
-builder.Services.AddValidatorsFromAssembly(Assembly.Load("Espectaculos.Application"));
+builder.Services.AddValidatorsFromAssembly(Assembly.Load("SistemaCredencial.Application"));
 
 // ---------- MediatR + pipeline de validación ----------
 builder.Services.AddMediatR(cfg =>

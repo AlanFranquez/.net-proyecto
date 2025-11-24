@@ -18,8 +18,8 @@
     </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Espectaculos.Domain\Espectaculos.Domain.csproj" />
-    <ProjectReference Include="..\Espectaculos.Application\Espectaculos.Application.csproj" />
+    <ProjectReference Include="..\SistemaCredencial.Domain\SistemaCredencial.Domain.csproj" />
+    <ProjectReference Include="..\SistemaCredencial.Application\SistemaCredencial.Application.csproj" />
   </ItemGroup>
 
   <ItemGroup>
